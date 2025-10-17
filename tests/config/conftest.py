@@ -21,6 +21,84 @@ from sash.config.models import (
 
 
 @pytest.fixture
+def sample_yaml_file(tmp_path: Path) -> Path:
+    """Create a sample YAML config file for testing.
+
+    Parameters
+    ----------
+    tmp_path : Path
+        Temporary directory path provided by pytest.
+
+    Returns
+    -------
+    Path
+        Path to the created YAML config file.
+    """
+    config_file = tmp_path / "config.yaml"
+    config_file.write_text(
+        """
+profile: test
+paths:
+  data_dir: /test/data
+  output_dir: /test/output
+logging:
+  level: DEBUG
+"""
+    )
+    return config_file
+
+
+@pytest.fixture
+def malformed_yaml_file(tmp_path: Path) -> Path:
+    """Create a malformed YAML file for testing.
+
+    Parameters
+    ----------
+    tmp_path : Path
+        Temporary directory path provided by pytest.
+
+    Returns
+    -------
+    Path
+        Path to the created malformed YAML file.
+    """
+    config_file = tmp_path / "bad.yaml"
+    config_file.write_text(
+        """
+profile: test
+  paths:
+    data_dir: /test/data
+    this is not valid yaml: [
+"""
+    )
+    return config_file
+
+
+@pytest.fixture
+def env_vars(monkeypatch: pytest.MonkeyPatch) -> dict[str, str]:
+    """Set up test environment variables.
+
+    Parameters
+    ----------
+    monkeypatch : pytest.MonkeyPatch
+        Pytest monkeypatch fixture for modifying environment.
+
+    Returns
+    -------
+    dict[str, str]
+        Dictionary of environment variables that were set.
+    """
+    test_vars = {
+        "SASH_LOGGING__LEVEL": "DEBUG",
+        "SASH_PATHS__DATA_DIR": "/env/data",
+        "SASH_TEMPLATES__BATCH_SIZE": "500",
+    }
+    for key, value in test_vars.items():
+        monkeypatch.setenv(key, value)
+    return test_vars
+
+
+@pytest.fixture
 def sample_paths_config() -> PathsConfig:
     """Provide sample PathsConfig for testing.
 

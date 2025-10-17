@@ -503,17 +503,16 @@ class SashConfig(BaseModel):
         str
             Configuration as YAML string.
 
-        Raises
-        ------
-        NotImplementedError
-            This feature will be implemented in Phase 4.
-
-        Notes
-        -----
-        This method is a placeholder for Phase 4 implementation.
+        Examples
+        --------
+        >>> config = SashConfig()
+        >>> yaml_str = config.to_yaml()
+        >>> 'profile: default' in yaml_str
+        True
         """
-        msg = "to_yaml() will be implemented in Phase 4"
-        raise NotImplementedError(msg)
+        from sash.config.serialization import to_yaml
+
+        return to_yaml(self, include_defaults=False)
 
     def validate_paths(self) -> list[str]:
         """Validate all path fields exist.

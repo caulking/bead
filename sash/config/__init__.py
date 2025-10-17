@@ -23,6 +23,8 @@ Examples
 from __future__ import annotations
 
 from sash.config.defaults import DEFAULT_CONFIG, get_default_config
+from sash.config.env import load_from_env
+from sash.config.loader import load_config, load_yaml_file, merge_configs
 from sash.config.models import (
     DeploymentConfig,
     ItemConfig,
@@ -43,6 +45,8 @@ from sash.config.profiles import (
     get_profile,
     list_profiles,
 )
+from sash.config.serialization import save_yaml, to_yaml
+from sash.config.validation import validate_config
 
 __all__ = [
     # Main config
@@ -67,4 +71,15 @@ __all__ = [
     "PROFILES",
     "get_profile",
     "list_profiles",
+    # Loading
+    "load_config",
+    "load_yaml_file",
+    "merge_configs",
+    # Environment
+    "load_from_env",
+    # Validation
+    "validate_config",
+    # Serialization
+    "to_yaml",
+    "save_yaml",
 ]

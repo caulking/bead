@@ -113,9 +113,8 @@ class TestTemplateConfig:
         """Test filling strategy validation with invalid value."""
         with pytest.raises(ValidationError) as exc_info:
             TemplateConfig(filling_strategy="invalid")  # type: ignore[arg-type]
-        assert (
-            "Input should be 'exhaustive', 'random' or 'stratified'"
-            in str(exc_info.value)
+        assert "Input should be 'exhaustive', 'random' or 'stratified'" in str(
+            exc_info.value
         )
 
     def test_batch_size_validation_positive(self) -> None:
@@ -180,9 +179,8 @@ class TestModelConfig:
         """Test provider validation with invalid value."""
         with pytest.raises(ValidationError) as exc_info:
             ModelConfig(provider="invalid")  # type: ignore[arg-type]
-        assert (
-            "Input should be 'huggingface', 'openai' or 'anthropic'"
-            in str(exc_info.value)
+        assert "Input should be 'huggingface', 'openai' or 'anthropic'" in str(
+            exc_info.value
         )
 
     def test_valid_device(self) -> None:
@@ -529,9 +527,9 @@ class TestSashConfig:
         assert config2.profile == config.profile
         assert config2.paths.data_dir == config.paths.data_dir
 
-    def test_to_yaml_not_implemented(self) -> None:
-        """Test to_yaml() raises NotImplementedError."""
+    def test_to_yaml_implemented(self) -> None:
+        """Test to_yaml() is now implemented and works."""
         config = SashConfig()
-        with pytest.raises(NotImplementedError) as exc_info:
-            config.to_yaml()
-        assert "Phase 4" in str(exc_info.value)
+        yaml_str = config.to_yaml()
+        assert isinstance(yaml_str, str)
+        assert len(yaml_str) > 0
