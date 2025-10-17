@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+from uuid import uuid4
+
 import pytest
 
 from sash.data.base import SashBaseModel
+from sash.data.metadata import MetadataTracker
 
 
 class SimpleTestModel(SashBaseModel):
@@ -40,3 +44,35 @@ def sample_test_objects() -> list[SimpleTestModel]:
         SimpleTestModel(name="test2", value=2),
         SimpleTestModel(name="test3", value=3),
     ]
+
+
+@pytest.fixture
+def repository_storage(tmp_path: Path) -> Path:
+    """Create empty repository storage path.
+
+    Parameters
+    ----------
+    tmp_path : Path
+        Pytest's tmp_path fixture
+
+    Returns
+    -------
+    Path
+        Path to repository storage file
+    """
+    return tmp_path / "repository.jsonl"
+
+
+@pytest.fixture
+def sample_metadata() -> MetadataTracker:
+    """Create sample metadata tracker.
+
+    Returns
+    -------
+    MetadataTracker
+        Metadata tracker with sample data
+    """
+    metadata = MetadataTracker()
+    metadata.add_provenance(uuid4(), "Template", "filled_from")
+    metadata.add_processing("fill_template", {"strategy": "exhaustive"})
+    return metadata
