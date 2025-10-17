@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from sash.dsl import ast
+from sash.dsl import EvaluationContext, ast, register_stdlib
 
 
 @pytest.fixture
@@ -35,3 +35,28 @@ def sample_binary_op(
         left=sample_variable,
         right=sample_literal_string,
     )
+
+
+@pytest.fixture
+def empty_context() -> EvaluationContext:
+    """Provide empty evaluation context."""
+    return EvaluationContext()
+
+
+@pytest.fixture
+def context_with_stdlib() -> EvaluationContext:
+    """Provide evaluation context with standard library."""
+    ctx = EvaluationContext()
+    register_stdlib(ctx)
+    return ctx
+
+
+@pytest.fixture
+def context_with_variables() -> EvaluationContext:
+    """Provide evaluation context with sample variables."""
+    ctx = EvaluationContext()
+    ctx.set_variable("pos", "VERB")
+    ctx.set_variable("lemma", "walk")
+    ctx.set_variable("transitive", True)
+    ctx.set_variable("count", 5)
+    return ctx

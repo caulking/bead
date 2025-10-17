@@ -4,7 +4,6 @@ This module provides pre-flight validation for configuration objects,
 checking for common issues before the configuration is used.
 """
 
-
 from sash.config.models import SashConfig
 
 
