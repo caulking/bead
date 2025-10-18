@@ -290,7 +290,7 @@ class TemplateSequence(SashBaseModel):
         return v
 
 
-def _empty_tree_list() -> list["TemplateTree"]:
+def _empty_tree_list() -> list[TemplateTree]:
     """Factory for empty template tree list."""
     return []
 

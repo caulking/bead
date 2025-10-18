@@ -11,6 +11,7 @@ from sash.resources.constraints import (
     IntensionalConstraint,
     RelationalConstraint,
 )
+from sash.resources.lexicon import Lexicon
 from sash.resources.models import LexicalItem
 from sash.resources.structures import (
     Slot,
@@ -18,10 +19,13 @@ from sash.resources.structures import (
     TemplateSequence,
     TemplateTree,
 )
+from sash.resources.template_collection import TemplateCollection
 
 __all__ = [
     # Lexical items
     "LexicalItem",
+    # Lexicon
+    "Lexicon",
     # Constraints
     "Constraint",
     "ExtensionalConstraint",
@@ -33,4 +37,6 @@ __all__ = [
     "Template",
     "TemplateSequence",
     "TemplateTree",
+    # Template collection
+    "TemplateCollection",
 ]

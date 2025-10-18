@@ -9,9 +9,11 @@ from sash.resources import (
     ExtensionalConstraint,
     IntensionalConstraint,
     LexicalItem,
+    Lexicon,
     RelationalConstraint,
     Slot,
     Template,
+    TemplateCollection,
 )
 
 
@@ -104,3 +106,34 @@ def sample_template(sample_slot: Slot) -> Template:
         },
         tags=["transitive", "simple"],
     )
+
+
+@pytest.fixture
+def sample_lexicon() -> Lexicon:
+    """Provide a sample lexicon with multiple items."""
+    lexicon = Lexicon(name="test_lexicon", language_code="en")
+    lexicon.add(LexicalItem(lemma="walk", pos="VERB", attributes={"frequency": 1000}))
+    lexicon.add(LexicalItem(lemma="run", pos="VERB", attributes={"frequency": 800}))
+    lexicon.add(LexicalItem(lemma="dog", pos="NOUN", attributes={"frequency": 500}))
+    return lexicon
+
+
+@pytest.fixture
+def sample_template_collection(sample_template: Template) -> TemplateCollection:
+    """Provide a sample template collection."""
+    collection = TemplateCollection(name="test_collection")
+
+    # Add the sample template
+    collection.add(sample_template)
+
+    # Add another simple template
+    slot_x = Slot(name="x", required=True)
+    template2 = Template(
+        name="intransitive",
+        template_string="{x} happened.",
+        slots={"x": slot_x},
+        tags=["intransitive", "simple"],
+    )
+    collection.add(template2)
+
+    return collection
