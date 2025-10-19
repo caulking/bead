@@ -17,12 +17,15 @@ dependencies = [
     "langcodes>=3.3.0",
     "glazing>=0.2.0",
     "unimorph>=0.0.4",
+    "torch>=2.0.0",
+    "transformers>=4.30.0",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest>=7.4.0",
     "pytest-cov>=4.1.0",
+    "pytest-mock>=3.11.0",
     "ruff>=0.1.0",
     "pyright>=1.1.0",
     "pandas-stubs>=2.0.0",
@@ -46,3 +49,5 @@ convention = "numpy"
 [tool.pyright]
 typeCheckingMode = "strict"
 pythonVersion = "3.13"
+reportMissingTypeStubs = false
+useLibraryCodeForTypes = true

@@ -4,12 +4,16 @@ This module provides an adapter to fetch morphological paradigms from UniMorph
 data and convert them to LexicalItem format with morphological features.
 """
 
+# pyright: reportUnknownMemberType=false, reportUnknownVariableType=false
+
 from __future__ import annotations
 
 from typing import Any
 
 import langcodes
+import pandas as pd
 import unimorph
+from unimorph import load_dataset
 
 from sash.adapters.base import ResourceAdapter
 from sash.adapters.cache import AdapterCache
@@ -109,14 +113,14 @@ class UniMorphAdapter(ResourceAdapter):
         # Fetch from UniMorph
         try:
             # Load dataset for language
-            dataset = unimorph.load_dataset(lang_code)
+            dataset: pd.DataFrame = load_dataset(lang_code)
 
             # Filter by lemma if query provided
             if query:
                 dataset = dataset[dataset["lemma"] == query]
 
             # Convert to LexicalItem objects
-            items = []
+            items: list[LexicalItem] = []
             for _, row in dataset.iterrows():
                 # Skip rows with NaN values
                 if (

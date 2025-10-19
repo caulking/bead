@@ -1,0 +1,211 @@
+"""Streaming template filling for large combinatorial spaces."""
+
+from __future__ import annotations
+
+from collections.abc import Iterator
+
+from sash.adapters.registry import AdapterRegistry
+from sash.data.language_codes import LanguageCode
+from sash.resources.lexicon import Lexicon
+from sash.resources.models import LexicalItem
+from sash.resources.structures import Template
+from sash.templates.combinatorics import cartesian_product
+from sash.templates.filler import FilledTemplate
+from sash.templates.resolver import ConstraintResolver
+
+
+class StreamingFiller:
+    """Fill templates with lazy evaluation.
+
+    Generate filled templates one at a time without storing
+    all combinations in memory. Use for very large combinatorial
+    spaces where ExhaustiveStrategy would cause OOM.
+
+    Parameters
+    ----------
+    lexicon : Lexicon
+        Lexicon containing candidate items.
+    adapter_registry : AdapterRegistry | None
+        Adapter registry for resource-based constraints.
+    max_combinations : int | None
+        Maximum combinations to generate. Default: None (unlimited).
+
+    Examples
+    --------
+    >>> filler = StreamingFiller(lexicon, max_combinations=1000)
+    >>> for filled in filler.stream(template):
+    ...     process(filled)  # Process one at a time
+    ...     if some_condition:
+    ...         break  # Can stop early
+    """
+
+    def __init__(
+        self,
+        lexicon: Lexicon,
+        adapter_registry: AdapterRegistry | None = None,
+        max_combinations: int | None = None,
+    ) -> None:
+        """Initialize streaming filler.
+
+        Parameters
+        ----------
+        lexicon : Lexicon
+            Lexicon with candidate items.
+        adapter_registry : AdapterRegistry | None
+            Adapter registry.
+        max_combinations : int | None
+            Max combinations to generate.
+        """
+        self.lexicon = lexicon
+        self.adapter_registry = adapter_registry
+        self.max_combinations = max_combinations
+
+        self.resolver = ConstraintResolver(
+            lexicon=lexicon,
+            adapter_registry=adapter_registry,
+        )
+
+    def stream(
+        self,
+        template: Template,
+        language_code: LanguageCode | None = None,
+    ) -> Iterator[FilledTemplate]:
+        """Stream filled templates lazily.
+
+        Generate filled templates one at a time using lazy evaluation.
+        Memory-efficient for large combinatorial spaces.
+
+        Parameters
+        ----------
+        template : Template
+            Template to fill.
+        language_code : LanguageCode | None
+            Optional language filter.
+
+        Yields
+        ------
+        FilledTemplate
+            Filled template instances.
+
+        Raises
+        ------
+        ValueError
+            If any slot has no valid items.
+
+        Examples
+        --------
+        >>> for i, filled in enumerate(filler.stream(template)):
+        ...     if i >= 100:
+        ...         break  # Take first 100
+        ...     print(filled.rendered_text)
+        """
+        # Resolve slot constraints
+        slot_items = self._resolve_slot_constraints(template, language_code)
+
+        # Check for empty slots
+        empty_slots = [name for name, items in slot_items.items() if not items]
+        if empty_slots:
+            raise ValueError(f"No valid items for slots: {empty_slots}")
+
+        # Get ordered slot names and item lists
+        slot_names = list(slot_items.keys())
+        item_lists = [slot_items[name] for name in slot_names]
+
+        # Stream combinations
+        count = 0
+        for combo_tuple in cartesian_product(*item_lists):
+            if self.max_combinations and count >= self.max_combinations:
+                break
+
+            # Create slot_fillers dict
+            slot_fillers = dict(zip(slot_names, combo_tuple, strict=True))
+
+            # Render template
+            rendered = self._render_template(template, slot_fillers)
+
+            # Create FilledTemplate
+            filled = FilledTemplate(
+                template_id=str(template.id),
+                template_name=template.name,
+                slot_fillers=slot_fillers,
+                rendered_text=rendered,
+                strategy_name="streaming",
+            )
+
+            yield filled
+            count += 1
+
+    def _resolve_slot_constraints(
+        self,
+        template: Template,
+        language_code: LanguageCode | None,
+    ) -> dict[str, list[LexicalItem]]:
+        """Resolve constraints for each slot.
+
+        Parameters
+        ----------
+        template : Template
+            Template with slots and constraints.
+        language_code : LanguageCode | None
+            Optional language filter.
+
+        Returns
+        -------
+        dict[str, list[LexicalItem]]
+            Mapping of slot names to valid items.
+        """
+        slot_items: dict[str, list[LexicalItem]] = {}
+        for slot_name, slot in template.slots.items():
+            if slot.constraints:
+                # Resolve each constraint and find intersection
+                # (items must satisfy ALL constraints)
+                valid_items_list: list[LexicalItem] | None = None
+                for constraint in slot.constraints:
+                    items = self.resolver.resolve(constraint, language_code)
+                    if valid_items_list is None:
+                        valid_items_list = items
+                    else:
+                        # Find intersection using item IDs
+                        item_ids = {item.id for item in items}
+                        valid_items_list = [
+                            item for item in valid_items_list if item.id in item_ids
+                        ]
+
+                slot_items[slot_name] = valid_items_list if valid_items_list else []
+            else:
+                # No constraints means all items are valid
+                if language_code:
+                    items = [
+                        item
+                        for item in self.lexicon.items.values()
+                        if item.language_code == language_code
+                    ]
+                else:
+                    items = list(self.lexicon.items.values())
+                slot_items[slot_name] = items
+        return slot_items
+
+    def _render_template(
+        self,
+        template: Template,
+        slot_fillers: dict[str, LexicalItem],
+    ) -> str:
+        """Render template string with slot fillers.
+
+        Parameters
+        ----------
+        template : Template
+            Template with template_string.
+        slot_fillers : dict[str, LexicalItem]
+            Items filling each slot.
+
+        Returns
+        -------
+        str
+            Rendered template string.
+        """
+        rendered = template.template_string
+        for slot_name, item in slot_fillers.items():
+            placeholder = f"{{{slot_name}}}"
+            rendered = rendered.replace(placeholder, item.lemma)
+        return rendered

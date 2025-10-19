@@ -113,7 +113,7 @@ class TestTemplateConfig:
         """Test filling strategy validation with invalid value."""
         with pytest.raises(ValidationError) as exc_info:
             TemplateConfig(filling_strategy="invalid")  # type: ignore[arg-type]
-        assert "Input should be 'exhaustive', 'random' or 'stratified'" in str(
+        assert "Input should be 'exhaustive', 'random', 'stratified' or 'mlm'" in str(
             exc_info.value
         )
 

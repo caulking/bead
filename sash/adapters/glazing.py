@@ -9,9 +9,9 @@ from __future__ import annotations
 from typing import Any, Literal
 
 import glazing
-import glazing.framenet.loader as fn_loader
-import glazing.propbank.loader as pb_loader
-import glazing.verbnet.loader as vn_loader
+from glazing.framenet.loader import FrameNetLoader
+from glazing.propbank.loader import PropBankLoader
+from glazing.verbnet.loader import VerbNetLoader
 
 from sash.adapters.base import ResourceAdapter
 from sash.adapters.cache import AdapterCache
@@ -57,16 +57,9 @@ class GlazingAdapter(ResourceAdapter):
         """
         self.resource = resource
         self.cache = cache
-        self._loader: (
-            vn_loader.VerbNetLoader
-            | pb_loader.PropBankLoader
-            | fn_loader.FrameNetLoader
-            | None
-        ) = None
+        self._loader: VerbNetLoader | PropBankLoader | FrameNetLoader | None = None
 
-    def _get_loader(
-        self,
-    ) -> vn_loader.VerbNetLoader | pb_loader.PropBankLoader | fn_loader.FrameNetLoader:
+    def _get_loader(self) -> VerbNetLoader | PropBankLoader | FrameNetLoader:
         """Get or create the appropriate loader for the resource.
 
         Returns
@@ -76,11 +69,11 @@ class GlazingAdapter(ResourceAdapter):
         """
         if self._loader is None:
             if self.resource == "verbnet":
-                self._loader = vn_loader.VerbNetLoader()
+                self._loader = VerbNetLoader()
             elif self.resource == "propbank":
-                self._loader = pb_loader.PropBankLoader()
+                self._loader = PropBankLoader()
             else:  # framenet
-                self._loader = fn_loader.FrameNetLoader()
+                self._loader = FrameNetLoader()
         return self._loader
 
     def fetch_items(
@@ -194,7 +187,7 @@ class GlazingAdapter(ResourceAdapter):
             LexicalItem objects for matching verb classes.
         """
         loader = self._get_loader()
-        assert isinstance(loader, vn_loader.VerbNetLoader)
+        assert isinstance(loader, VerbNetLoader)
 
         items: list[LexicalItem] = []
 
@@ -240,7 +233,7 @@ class GlazingAdapter(ResourceAdapter):
             LexicalItem objects for matching predicates.
         """
         loader = self._get_loader()
-        assert isinstance(loader, pb_loader.PropBankLoader)
+        assert isinstance(loader, PropBankLoader)
 
         items: list[LexicalItem] = []
 
@@ -290,7 +283,7 @@ class GlazingAdapter(ResourceAdapter):
             LexicalItem objects for matching frames.
         """
         loader = self._get_loader()
-        assert isinstance(loader, fn_loader.FrameNetLoader)
+        assert isinstance(loader, FrameNetLoader)
 
         items: list[LexicalItem] = []
 

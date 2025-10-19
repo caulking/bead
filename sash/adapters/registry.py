@@ -63,7 +63,8 @@ class AdapterRegistry:
         """
         if not name or not name.strip():
             raise ValueError("Adapter name must be non-empty")
-        if not issubclass(adapter_class, ResourceAdapter):
+        # Runtime check for subclass - pyright can't verify this at compile time
+        if not issubclass(adapter_class, ResourceAdapter):  # type: ignore[reportUnnecessaryIsInstance]
             raise ValueError(f"{adapter_class} must be a subclass of ResourceAdapter")
         self._adapters[name] = adapter_class
 
