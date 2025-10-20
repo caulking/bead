@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import pytest
 
-from sash.adapters.glazing import GlazingAdapter
-from sash.adapters.registry import AdapterRegistry
-from sash.adapters.unimorph import UniMorphAdapter
+from sash.resources.adapters.glazing import GlazingAdapter
+from sash.resources.adapters.registry import AdapterRegistry
+from sash.resources.adapters.unimorph import UniMorphAdapter
 from sash.resources.lexicon import Lexicon
 from sash.resources.models import LexicalItem
 from sash.templates.resolver import ConstraintResolver

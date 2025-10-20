@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from sash.adapters.cache import AdapterCache
+from sash.resources.adapters.cache import AdapterCache
 from sash.resources.models import LexicalItem
 
 

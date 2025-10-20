@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from sash.adapters.base import ResourceAdapter
+from sash.resources.adapters.base import ResourceAdapter
 
 
 class AdapterRegistry:
@@ -19,7 +19,7 @@ class AdapterRegistry:
 
     Examples
     --------
-    >>> from sash.adapters.glazing import GlazingAdapter
+    >>> from sash.resources.adapters.glazing import GlazingAdapter
     >>> registry = AdapterRegistry()
     >>> registry.register("glazing", GlazingAdapter)
     >>> adapter = registry.get("glazing", resource="verbnet")
@@ -55,7 +55,7 @@ class AdapterRegistry:
 
         Examples
         --------
-        >>> from sash.adapters.glazing import GlazingAdapter
+        >>> from sash.resources.adapters.glazing import GlazingAdapter
         >>> registry = AdapterRegistry()
         >>> registry.register("glazing", GlazingAdapter)
         >>> "glazing" in registry.list_available()
@@ -90,7 +90,7 @@ class AdapterRegistry:
 
         Examples
         --------
-        >>> from sash.adapters.glazing import GlazingAdapter
+        >>> from sash.resources.adapters.glazing import GlazingAdapter
         >>> registry = AdapterRegistry()
         >>> registry.register("glazing", GlazingAdapter)
         >>> adapter = registry.get("glazing", resource="verbnet")
@@ -117,7 +117,7 @@ class AdapterRegistry:
         >>> registry = AdapterRegistry()
         >>> registry.list_available()
         []
-        >>> from sash.adapters.glazing import GlazingAdapter
+        >>> from sash.resources.adapters.glazing import GlazingAdapter
         >>> registry.register("glazing", GlazingAdapter)
         >>> registry.list_available()
         ['glazing']

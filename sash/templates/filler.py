@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from sash.adapters.registry import AdapterRegistry
 from sash.data.base import SashBaseModel
-from sash.data.language_codes import LanguageCode
+from sash.data.language_codes import LanguageCode, validate_iso639_code
+from sash.resources.adapters.registry import AdapterRegistry
 from sash.resources.lexicon import Lexicon
 from sash.resources.models import LexicalItem
 from sash.resources.structures import Template
@@ -136,8 +136,11 @@ class TemplateFiller:
         >>> all(f.template_name == template.name for f in filled)
         True
         """
+        # Normalize language code to ISO 639-3 format if provided
+        normalized_language_code = validate_iso639_code(language_code)
+
         # 1. Resolve constraints for each slot
-        slot_items = self._resolve_slot_constraints(template, language_code)
+        slot_items = self._resolve_slot_constraints(template, normalized_language_code)
 
         # 2. Check for empty slots
         empty_slots = [name for name, items in slot_items.items() if not items]

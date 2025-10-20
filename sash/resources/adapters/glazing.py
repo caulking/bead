@@ -13,9 +13,9 @@ from glazing.framenet.loader import FrameNetLoader
 from glazing.propbank.loader import PropBankLoader
 from glazing.verbnet.loader import VerbNetLoader
 
-from sash.adapters.base import ResourceAdapter
-from sash.adapters.cache import AdapterCache
 from sash.data.language_codes import LanguageCode
+from sash.resources.adapters.base import ResourceAdapter
+from sash.resources.adapters.cache import AdapterCache
 from sash.resources.models import LexicalItem
 
 

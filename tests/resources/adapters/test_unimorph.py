@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from sash.adapters.cache import AdapterCache
-from sash.adapters.unimorph import UniMorphAdapter
+from sash.resources.adapters.cache import AdapterCache
+from sash.resources.adapters.unimorph import UniMorphAdapter
 
 
 def test_unimorph_adapter_initialization() -> None:
@@ -31,7 +31,7 @@ def test_unimorph_adapter_fetch_items_english(
     """Test fetching English items from UniMorph."""
     items = unimorph_adapter.fetch_items(query="walk", language_code="en")
     assert len(items) > 0
-    assert all(item.language_code == "en" for item in items)
+    assert all(item.language_code == "eng" for item in items)
     # Check that items have lemma and form
     assert all(item.lemma == "walk" for item in items)
     assert all(item.form is not None for item in items)
@@ -47,7 +47,7 @@ def test_unimorph_adapter_fetch_items_multilingual(
     items_ko = unimorph_adapter.fetch_items(query=None, language_code="ko")
     # Should normalize to 'kor' internally
     if len(items_ko) > 0:
-        assert all(item.language_code == "ko" for item in items_ko)
+        assert all(item.language_code == "kor" for item in items_ko)
 
 
 def test_unimorph_adapter_requires_language_code() -> None:
@@ -94,8 +94,8 @@ def test_unimorph_adapter_language_code_normalization(
     """Test that 2-letter codes are normalized to 3-letter."""
     # Should handle 2-letter code
     items = unimorph_adapter.fetch_items(query=None, language_code="en")
-    # All items should preserve the original language_code passed in
-    assert all(item.language_code == "en" for item in items)
+    # All items should be normalized to ISO 639-3 format
+    assert all(item.language_code == "eng" for item in items)
 
 
 def test_unimorph_adapter_feature_parsing() -> None:

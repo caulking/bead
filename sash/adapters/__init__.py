@@ -1,20 +1,11 @@
-"""External resource adapters for linguistic databases.
+"""Shared adapter utilities for sash.
 
-This module provides adapters for fetching lexical items from external
-linguistic databases including VerbNet, PropBank, FrameNet (via glazing),
-and UniMorph morphological paradigms.
+This module contains shared utilities and base classes for adapters that
+integrate with external ML frameworks like HuggingFace Transformers.
 """
 
-from sash.adapters.base import ResourceAdapter
-from sash.adapters.cache import AdapterCache
-from sash.adapters.glazing import GlazingAdapter
-from sash.adapters.registry import AdapterRegistry
-from sash.adapters.unimorph import UniMorphAdapter
+from __future__ import annotations
 
-__all__ = [
-    "ResourceAdapter",
-    "AdapterCache",
-    "GlazingAdapter",
-    "UniMorphAdapter",
-    "AdapterRegistry",
-]
+from sash.adapters.huggingface import HuggingFaceAdapterMixin
+
+__all__ = ["HuggingFaceAdapterMixin"]

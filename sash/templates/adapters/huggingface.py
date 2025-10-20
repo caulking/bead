@@ -1,17 +1,22 @@
 """HuggingFace masked language model adapter for template filling."""
 
-# pyright: reportUnknownMemberType=false, reportOptionalMemberAccess=false, reportOptionalCall=false, reportUnknownVariableType=false, reportUnknownArgumentType=false, reportArgumentType=false, reportReturnType=false
-
 from __future__ import annotations
 
 from pathlib import Path
 
-from transformers import PreTrainedModel, PreTrainedTokenizer
+import torch
+from transformers import (
+    AutoModelForMaskedLM,
+    AutoTokenizer,
+    PreTrainedModel,
+    PreTrainedTokenizer,
+)
 
-from sash.templates.models.adapter import TemplateFillingModelAdapter
+from sash.adapters.huggingface import DeviceType, HuggingFaceAdapterMixin
+from sash.templates.adapters.base import TemplateFillingModelAdapter
 
 
-class HuggingFaceMLMAdapter(TemplateFillingModelAdapter):
+class HuggingFaceMLMAdapter(HuggingFaceAdapterMixin, TemplateFillingModelAdapter):
     """Adapter for HuggingFace masked language models.
 
     Supports BERT, RoBERTa, ALBERT, and other MLM architectures.
@@ -20,7 +25,7 @@ class HuggingFaceMLMAdapter(TemplateFillingModelAdapter):
     ----------
     model_name : str
         HuggingFace model identifier (e.g., "bert-base-uncased")
-    device : str
+    device : DeviceType
         Computation device ("cpu", "cuda", "mps")
     cache_dir : Path | None
         Directory for caching model files
@@ -42,7 +47,7 @@ class HuggingFaceMLMAdapter(TemplateFillingModelAdapter):
     def __init__(
         self,
         model_name: str,
-        device: str = "cpu",
+        device: DeviceType = "cpu",
         cache_dir: Path | None = None,
     ) -> None:
         """Initialize HuggingFace MLM adapter.
@@ -51,12 +56,14 @@ class HuggingFaceMLMAdapter(TemplateFillingModelAdapter):
         ----------
         model_name : str
             Model identifier
-        device : str
+        device : DeviceType
             Computation device
         cache_dir : Path | None
             Model cache directory
         """
-        super().__init__(model_name, device, cache_dir)
+        # Validate device before passing to parent
+        validated_device = self._validate_device(device)
+        super().__init__(model_name, validated_device, cache_dir)
         self.model: PreTrainedModel | None = None
         self.tokenizer: PreTrainedTokenizer | None = None
 
@@ -67,19 +74,9 @@ class HuggingFaceMLMAdapter(TemplateFillingModelAdapter):
         ------
         RuntimeError
             If model loading fails
-        ImportError
-            If transformers package is not installed
         """
         if self._model_loaded:
             return
-
-        try:
-            from transformers import AutoModelForMaskedLM, AutoTokenizer
-        except ImportError as e:
-            raise ImportError(
-                "transformers package required for HuggingFace models. "
-                "Install with: pip install transformers"
-            ) from e
 
         try:
             # Load tokenizer
@@ -161,11 +158,6 @@ class HuggingFaceMLMAdapter(TemplateFillingModelAdapter):
         """
         if not self._model_loaded:
             raise RuntimeError("Model not loaded. Call load_model() first.")
-
-        try:
-            import torch
-        except ImportError as e:
-            raise ImportError("torch required for inference") from e
 
         # Tokenize input
         inputs = self.tokenizer(text, return_tensors="pt")

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from sash.adapters.cache import AdapterCache
-from sash.adapters.glazing import GlazingAdapter
+from sash.resources.adapters.cache import AdapterCache
+from sash.resources.adapters.glazing import GlazingAdapter
 
 
 def test_glazing_adapter_initialization() -> None:
@@ -31,7 +31,7 @@ def test_glazing_adapter_fetch_items(glazing_adapter: GlazingAdapter) -> None:
     items = glazing_adapter.fetch_items(query="break", language_code="en")
     assert len(items) > 0
     assert all(item.lemma == "break" for item in items)
-    assert all(item.language_code == "en" for item in items)
+    assert all(item.language_code == "eng" for item in items)
     # Check VerbNet-specific attributes
     assert all("verbnet_class" in item.attributes for item in items)
 
@@ -92,7 +92,7 @@ def test_glazing_adapter_propbank() -> None:
     if len(items) > 0:
         item = items[0]
         assert item.lemma == "break"
-        assert item.language_code == "en"
+        assert item.language_code == "eng"
         assert "propbank_roleset_id" in item.attributes
         assert "roles" in item.attributes
 
@@ -108,6 +108,6 @@ def test_glazing_adapter_framenet() -> None:
     if len(items) > 0:
         item = items[0]
         assert item.lemma == "break"
-        assert item.language_code == "en"
+        assert item.language_code == "eng"
         assert "framenet_frame" in item.attributes
         assert "lexical_unit_name" in item.attributes

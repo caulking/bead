@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from sash.adapters.base import ResourceAdapter
+from sash.resources.adapters.base import ResourceAdapter
 from sash.resources.models import LexicalItem
 
 

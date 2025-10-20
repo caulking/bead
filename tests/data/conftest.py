@@ -7,15 +7,8 @@ from uuid import uuid4
 
 import pytest
 
-from sash.data.base import SashBaseModel
 from sash.data.metadata import MetadataTracker
-
-
-class SimpleTestModel(SashBaseModel):
-    """Simple test model for serialization tests."""
-
-    name: str
-    value: int
+from tests.data.data_helpers import SimpleTestModel
 
 
 @pytest.fixture

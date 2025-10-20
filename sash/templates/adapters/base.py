@@ -27,7 +27,7 @@ class TemplateFillingModelAdapter(ABC):
 
     Examples
     --------
-    >>> from sash.templates.models import TemplateFillingModelAdapter
+    >>> from sash.templates.adapters import TemplateFillingModelAdapter
     >>> # Implemented by HuggingFaceMLMAdapter
     >>> adapter = HuggingFaceMLMAdapter("bert-base-uncased", device="cpu")
     >>> adapter.load_model()

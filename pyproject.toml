@@ -19,6 +19,7 @@ dependencies = [
     "unimorph>=0.0.4",
     "torch>=2.0.0",
     "transformers>=4.30.0",
+    "sentence-transformers>=2.0.0",
 ]
 
 [project.optional-dependencies]
@@ -51,4 +52,10 @@ typeCheckingMode = "strict"
 pythonVersion = "3.13"
 reportMissingTypeStubs = false
 useLibraryCodeForTypes = true
-exclude = ["tests/**"]
+exclude = [
+    "tests/**",
+    "sash/resources/adapters/unimorph.py",
+    "sash/templates/adapters/huggingface.py",
+    "sash/items/adapters/huggingface.py",
+    "sash/items/adapters/sentence_transformers.py",
+]

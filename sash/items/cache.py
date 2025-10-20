@@ -5,7 +5,7 @@ construction. It supports multiple backends (filesystem, in-memory) and various
 operation types including log probabilities, NLI scores, embeddings, and
 similarity metrics.
 
-Note: This cache is distinct from sash.templates.models.cache, which handles
+Note: This cache is distinct from sash.templates.adapters.cache, which handles
 MLM predictions for template filling. This module caches judgment model outputs
 used in item construction.
 """

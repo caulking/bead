@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 
-from sash.adapters.registry import AdapterRegistry
-from sash.data.language_codes import LanguageCode
+from sash.data.language_codes import LanguageCode, validate_iso639_code
+from sash.resources.adapters.registry import AdapterRegistry
 from sash.resources.lexicon import Lexicon
 from sash.resources.models import LexicalItem
 from sash.resources.structures import Template
@@ -99,8 +99,11 @@ class StreamingFiller:
         ...         break  # Take first 100
         ...     print(filled.rendered_text)
         """
+        # Normalize language code to ISO 639-3 format if provided
+        normalized_language_code = validate_iso639_code(language_code)
+
         # Resolve slot constraints
-        slot_items = self._resolve_slot_constraints(template, language_code)
+        slot_items = self._resolve_slot_constraints(template, normalized_language_code)
 
         # Check for empty slots
         empty_slots = [name for name, items in slot_items.items() if not items]

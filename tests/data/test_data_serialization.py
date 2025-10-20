@@ -14,7 +14,7 @@ from sash.data.serialization import (
     stream_jsonlines,
     write_jsonlines,
 )
-from tests.data.conftest import SimpleTestModel
+from tests.data.data_helpers import SimpleTestModel
 
 
 def test_write_jsonlines_creates_file(

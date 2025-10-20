@@ -9,12 +9,12 @@ from __future__ import annotations
 import hashlib
 from typing import Any
 
-from sash.adapters.registry import AdapterRegistry
-from sash.data.language_codes import LanguageCode
+from sash.data.language_codes import LanguageCode, validate_iso639_code
 from sash.dsl.context import EvaluationContext
 from sash.dsl.evaluator import Evaluator
 from sash.dsl.parser import parse
 from sash.dsl.stdlib import register_stdlib
+from sash.resources.adapters.registry import AdapterRegistry
 from sash.resources.constraints import (
     Constraint,
     DSLConstraint,
@@ -133,13 +133,18 @@ class ConstraintResolver:
         >>> all(item.language_code == "en" for item in items)
         True
         """
+        # Normalize language code to ISO 639-3 format if provided
+        normalized_language_code = validate_iso639_code(language_code)
+
         # Get items from lexicon (items is a dict[UUID, LexicalItem])
         items_to_check = list(self.lexicon.items.values())
 
         # Filter by language code if specified
-        if language_code is not None:
+        if normalized_language_code is not None:
             items_to_check = [
-                item for item in items_to_check if item.language_code == language_code
+                item
+                for item in items_to_check
+                if item.language_code == normalized_language_code
             ]
 
         # Evaluate constraint against each item

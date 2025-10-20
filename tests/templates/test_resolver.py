@@ -339,7 +339,7 @@ def test_resolve_with_language_filter(resolver: ConstraintResolver) -> None:
     items = resolver.resolve(constraint, language_code="en")
 
     assert len(items) > 0
-    assert all(item.language_code == "en" for item in items)
+    assert all(item.language_code == "eng" for item in items)
     assert all(item.pos == "VERB" for item in items)
 
 
@@ -349,7 +349,7 @@ def test_resolve_language_filter_korean(resolver: ConstraintResolver) -> None:
     items = resolver.resolve(constraint, language_code="ko")
 
     assert len(items) > 0
-    assert all(item.language_code == "ko" for item in items)
+    assert all(item.language_code == "kor" for item in items)
     # Should only match kkakta
     assert all(item.lemma == "kkakta" for item in items)
 
@@ -363,8 +363,8 @@ def test_resolve_multilingual_no_filter(resolver: ConstraintResolver) -> None:
 
     # Should get items from both English and Korean
     languages = {item.language_code for item in items}
-    assert "en" in languages
-    assert "ko" in languages
+    assert "eng" in languages
+    assert "kor" in languages
 
 
 # Caching Tests

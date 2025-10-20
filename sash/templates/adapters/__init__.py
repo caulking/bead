@@ -6,9 +6,9 @@ These models are SEPARATE from judgment prediction models used later in the pipe
 
 from __future__ import annotations
 
-from sash.templates.models.adapter import TemplateFillingModelAdapter
-from sash.templates.models.cache import ModelOutputCache
-from sash.templates.models.huggingface_mlm import HuggingFaceMLMAdapter
+from sash.templates.adapters.base import TemplateFillingModelAdapter
+from sash.templates.adapters.cache import ModelOutputCache
+from sash.templates.adapters.huggingface import HuggingFaceMLMAdapter
 
 __all__ = [
     "TemplateFillingModelAdapter",

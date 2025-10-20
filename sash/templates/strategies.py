@@ -11,8 +11,8 @@ from sash.data.language_codes import LanguageCode
 from sash.resources.lexicon import Lexicon
 from sash.resources.models import LexicalItem
 from sash.resources.structures import Slot, Template
+from sash.templates.adapters import HuggingFaceMLMAdapter, ModelOutputCache
 from sash.templates.combinatorics import cartesian_product
-from sash.templates.models import HuggingFaceMLMAdapter, ModelOutputCache
 from sash.templates.resolver import ConstraintResolver
 
 
@@ -372,7 +372,7 @@ class MLMFillingStrategy(FillingStrategy):
 
     Examples
     --------
-    >>> from sash.templates.models import HuggingFaceMLMAdapter, ModelOutputCache
+    >>> from sash.templates.adapters import HuggingFaceMLMAdapter, ModelOutputCache
     >>> adapter = HuggingFaceMLMAdapter("bert-base-uncased")
     >>> adapter.load_model()
     >>> cache = ModelOutputCache(Path("/tmp/cache"))

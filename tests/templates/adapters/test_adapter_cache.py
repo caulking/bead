@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from sash.templates.models.cache import ModelOutputCache
+from sash.templates.adapters.cache import ModelOutputCache
 
 
 def test_cache_init(tmp_cache_dir: Path) -> None:
