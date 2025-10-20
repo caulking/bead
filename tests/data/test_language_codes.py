@@ -1,124 +1,70 @@
-"""Tests for ISO 639 language code validation and types."""
-
-from __future__ import annotations
+"""Test ISO 639 language code validation."""
 
 import pytest
-from pydantic import ValidationError
 
 from sash.data.language_codes import validate_iso639_code
-from sash.resources.lexicon import Lexicon
-from sash.resources.models import LexicalItem
-from sash.resources.structures import Slot, Template
 
 
-def test_validate_iso639_code_valid_2_letter() -> None:
-    """Test validation of valid ISO 639-1 codes."""
-    assert validate_iso639_code("en") == "en"
-    assert validate_iso639_code("ko") == "ko"
-    assert validate_iso639_code("zu") == "zu"
+def test_validate_iso639_1_codes() -> None:
+    """Test validation of ISO 639-1 codes (2-letter)."""
+    assert validate_iso639_code("en") == "eng"
+    assert validate_iso639_code("es") == "spa"
+    assert validate_iso639_code("fr") == "fra"
+    assert validate_iso639_code("de") == "deu"
+    assert validate_iso639_code("ko") == "kor"
+    assert validate_iso639_code("ja") == "jpn"
+    assert validate_iso639_code("zh") == "zho"
+    assert validate_iso639_code("ar") == "ara"
 
 
-def test_validate_iso639_code_valid_3_letter() -> None:
-    """Test validation of valid ISO 639-3 codes."""
+def test_validate_iso639_3_codes() -> None:
+    """Test validation of ISO 639-3 codes (3-letter)."""
     assert validate_iso639_code("eng") == "eng"
+    assert validate_iso639_code("spa") == "spa"
+    assert validate_iso639_code("fra") == "fra"
+    assert validate_iso639_code("deu") == "deu"
     assert validate_iso639_code("kor") == "kor"
-    assert validate_iso639_code("zul") == "zul"
+    assert validate_iso639_code("jpn") == "jpn"
+    assert validate_iso639_code("zho") == "zho"
 
 
-def test_validate_iso639_code_case_insensitive() -> None:
-    """Test that codes are normalized to lowercase."""
-    assert validate_iso639_code("EN") == "en"
-    assert validate_iso639_code("ENG") == "eng"
-    assert validate_iso639_code("Ko") == "ko"
-
-
-def test_validate_iso639_code_none() -> None:
-    """Test that None is allowed."""
+def test_validate_none_is_valid() -> None:
+    """Test that None is a valid language code (optional)."""
     assert validate_iso639_code(None) is None
 
 
-def test_validate_iso639_code_invalid_length() -> None:
-    """Test that invalid length codes are rejected."""
-    with pytest.raises(ValueError, match="Must be 2 letters.*or 3 letters"):
-        validate_iso639_code("e")
+def test_validate_invalid_code_raises() -> None:
+    """Test that invalid codes raise ValueError."""
+    with pytest.raises(ValueError, match="Invalid language code: 'invalid'"):
+        validate_iso639_code("invalid")
 
-    with pytest.raises(ValueError, match="Must be 2 letters.*or 3 letters"):
-        validate_iso639_code("engl")
+    with pytest.raises(ValueError, match="Invalid language code: 'zzzz'"):
+        validate_iso639_code("zzzz")
 
-
-def test_validate_iso639_code_invalid_code() -> None:
-    """Test that non-existent codes are rejected."""
-    with pytest.raises(ValueError, match="Invalid ISO 639"):
-        validate_iso639_code("xx")
-
-    with pytest.raises(ValueError, match="Invalid ISO 639"):
-        validate_iso639_code("zzz")
+    with pytest.raises(ValueError, match="Invalid language code: 'aaa1'"):
+        validate_iso639_code("aaa1")
 
 
-def test_validate_iso639_code_non_alpha() -> None:
-    """Test that non-alphabetic codes are rejected."""
-    with pytest.raises(ValueError, match="Invalid ISO 639"):
-        validate_iso639_code("e1")
-
-    with pytest.raises(ValueError, match="Invalid ISO 639"):
-        validate_iso639_code("en-")
+def test_validate_empty_string_raises() -> None:
+    """Test that empty string raises ValueError."""
+    with pytest.raises(ValueError, match="Invalid language code: ''"):
+        validate_iso639_code("")
 
 
-def test_lexical_item_valid_language_code() -> None:
-    """Test LexicalItem accepts valid language codes."""
-    item = LexicalItem(lemma="walk", language_code="en")
-    assert item.language_code == "en"
+def test_validate_less_common_languages() -> None:
+    """Test validation of less common language codes."""
+    # Igbo
+    assert validate_iso639_code("ig") == "ibo"
+    assert validate_iso639_code("ibo") == "ibo"
 
-    item = LexicalItem(lemma="먹다", language_code="ko")
-    assert item.language_code == "ko"
+    # Yoruba
+    assert validate_iso639_code("yo") == "yor"
+    assert validate_iso639_code("yor") == "yor"
 
+    # Zulu
+    assert validate_iso639_code("zu") == "zul"
+    assert validate_iso639_code("zul") == "zul"
 
-def test_lexical_item_invalid_language_code() -> None:
-    """Test LexicalItem rejects invalid language codes."""
-    with pytest.raises(ValidationError, match="Invalid ISO 639"):
-        LexicalItem(lemma="test", language_code="invalid")
-
-
-def test_lexical_item_none_language_code() -> None:
-    """Test LexicalItem accepts None for language_code."""
-    item = LexicalItem(lemma="test", language_code=None)
-    assert item.language_code is None
-
-
-def test_lexicon_valid_language_code() -> None:
-    """Test Lexicon accepts valid language codes."""
-    lex = Lexicon(name="test", language_code="en")
-    assert lex.language_code == "en"
-
-
-def test_lexicon_case_normalization() -> None:
-    """Test that language codes are normalized to lowercase."""
-    lex = Lexicon(name="test", language_code="EN")
-    assert lex.language_code == "en"
-
-    item = LexicalItem(lemma="test", language_code="KO")
-    assert item.language_code == "ko"
-
-
-def test_template_valid_language_code() -> None:
-    """Test Template accepts valid language codes."""
-    slot = Slot(name="x")
-    template = Template(
-        name="test",
-        template_string="{x}.",
-        slots={"x": slot},
-        language_code="en",
-    )
-    assert template.language_code == "en"
-
-
-def test_template_invalid_language_code() -> None:
-    """Test Template rejects invalid language codes."""
-    slot = Slot(name="x")
-    with pytest.raises(ValidationError, match="Invalid ISO 639"):
-        Template(
-            name="test",
-            template_string="{x}.",
-            slots={"x": slot},
-            language_code="invalid",
-        )
+    # Marathi
+    assert validate_iso639_code("mr") == "mar"
+    assert validate_iso639_code("mar") == "mar"

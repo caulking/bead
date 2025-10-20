@@ -221,25 +221,39 @@ class TestLexicalItemLanguageCode:
     def test_create_with_language_code(self) -> None:
         """Test creating a lexical item with language code."""
         item = LexicalItem(lemma="walk", pos="VERB", language_code="en")
-        assert item.language_code == "en"
+        assert item.language_code == "eng"  # Normalized to ISO 639-3
 
     def test_language_code_normalization(self) -> None:
-        """Test that language codes are normalized to lowercase."""
-        item = LexicalItem(lemma="test", language_code="EN")
-        assert item.language_code == "en"
+        """Test that language codes are normalized to ISO 639-3."""
+        # English: en → eng
+        item1 = LexicalItem(lemma="test", language_code="en")
+        assert item1.language_code == "eng"
+
+        # Korean: ko → kor
+        item2 = LexicalItem(lemma="테스트", language_code="ko")
+        assert item2.language_code == "kor"
+
+        # Already ISO 639-3 stays the same
+        item3 = LexicalItem(lemma="test", language_code="eng")
+        assert item3.language_code == "eng"
 
     def test_language_code_validation(self) -> None:
         """Test that invalid language codes are rejected."""
         with pytest.raises(ValidationError) as exc_info:
             LexicalItem(lemma="test", language_code="invalid")
-        assert "Invalid ISO 639" in str(exc_info.value)
+        assert "Invalid language code" in str(exc_info.value)
 
     def test_language_code_iso639_1(self) -> None:
         """Test ISO 639-1 (2-letter) language codes."""
         item = LexicalItem(lemma="먹다", language_code="ko")
-        assert item.language_code == "ko"
+        assert item.language_code == "kor"  # Normalized to ISO 639-3
 
     def test_language_code_iso639_3(self) -> None:
         """Test ISO 639-3 (3-letter) language codes."""
         item = LexicalItem(lemma="test", language_code="eng")
         assert item.language_code == "eng"
+
+    def test_language_code_none(self) -> None:
+        """Test that None language code is valid (optional)."""
+        item = LexicalItem(lemma="test", language_code=None)
+        assert item.language_code is None

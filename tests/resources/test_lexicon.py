@@ -37,7 +37,7 @@ def test_creation_with_all_fields() -> None:
     )
     assert lexicon.name == "verbs"
     assert lexicon.description == "A collection of verbs"
-    assert lexicon.language_code == "en"
+    assert lexicon.language_code == "eng"  # Normalized to ISO 639-3
     assert lexicon.tags == ["verbs", "test"]
 
 
@@ -367,12 +367,12 @@ def test_merge_preserves_language_code() -> None:
     lex2 = Lexicon(name="lex2", language_code="es")
 
     merged = lex1.merge(lex2)
-    assert merged.language_code == "en"  # From lex1
+    assert merged.language_code == "eng"  # From lex1 (normalized to ISO 639-3)
 
     # Test when lex1 has no language code
     lex3 = Lexicon(name="lex3")
     merged2 = lex3.merge(lex2)
-    assert merged2.language_code == "es"  # From lex2
+    assert merged2.language_code == "spa"  # From lex2 (normalized to ISO 639-3)
 
 
 # ============================================================================
@@ -597,3 +597,32 @@ def test_serialization_preserves_all_data(tmp_path: Path) -> None:
     assert item.attributes["frequency"] == 1000
     assert item.attributes["register"] == "informal"
     assert item.source == "manual"
+
+
+def test_filter_by_language_code() -> None:
+    """Test filtering lexicon by language code."""
+    lexicon = Lexicon(name="multi", language_code=None)
+
+    # Add items from different languages
+    en_item = LexicalItem(lemma="break", language_code="en")
+    ko_item = LexicalItem(lemma="깨다", language_code="ko")
+    es_item = LexicalItem(lemma="romper", language_code="es")
+
+    lexicon.add(en_item)
+    lexicon.add(ko_item)
+    lexicon.add(es_item)
+
+    # Filter by English (normalized to ISO 639-3)
+    en_items = lexicon.filter(lambda item: item.language_code == "eng")
+    assert len(en_items.items) == 1
+    assert list(en_items.items.values())[0].lemma == "break"
+
+    # Filter by Korean (normalized to ISO 639-3)
+    ko_items = lexicon.filter(lambda item: item.language_code == "kor")
+    assert len(ko_items.items) == 1
+    assert list(ko_items.items.values())[0].lemma == "깨다"
+
+    # Filter by Spanish (normalized to ISO 639-3)
+    es_items = lexicon.filter(lambda item: item.language_code == "spa")
+    assert len(es_items.items) == 1
+    assert list(es_items.items.values())[0].lemma == "romper"
