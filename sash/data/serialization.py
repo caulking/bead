@@ -9,14 +9,12 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from pathlib import Path
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ValidationError
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-
-T = TypeVar("T", bound=BaseModel)
 
 
 class SerializationError(Exception):
