@@ -343,7 +343,7 @@ class ModelOutputCache:
         else:
             raise ValueError(f"Unknown backend: {backend}")
 
-    def _generate_cache_key(
+    def generate_cache_key(
         self, model_name: str, operation: str, **inputs: Any
     ) -> str:
         """Generate deterministic cache key from inputs.
@@ -468,7 +468,7 @@ class ModelOutputCache:
         if not self.enabled:
             return None
 
-        cache_key = self._generate_cache_key(model_name, operation, **inputs)
+        cache_key = self.generate_cache_key(model_name, operation, **inputs)
         entry = self._backend.get(cache_key)
 
         if entry is None:
@@ -503,7 +503,7 @@ class ModelOutputCache:
         if not self.enabled:
             return
 
-        cache_key = self._generate_cache_key(model_name, operation, **inputs)
+        cache_key = self.generate_cache_key(model_name, operation, **inputs)
 
         # Create cache entry with metadata
         entry = {
@@ -530,7 +530,7 @@ class ModelOutputCache:
         **inputs : Any
             Input parameters.
         """
-        cache_key = self._generate_cache_key(model_name, operation, **inputs)
+        cache_key = self.generate_cache_key(model_name, operation, **inputs)
         self._backend.delete(cache_key)
 
     def clear_model(self, model_name: str) -> None:

@@ -72,9 +72,7 @@ class TestAnthropicAdapterInitialization:
         from sash.items.adapters.anthropic import AnthropicAdapter
 
         cache = ModelOutputCache(backend="memory")
-        adapter = AnthropicAdapter(
-            model_name="claude-3-5-sonnet-20241022", cache=cache
-        )
+        adapter = AnthropicAdapter(model_name="claude-3-5-sonnet-20241022", cache=cache)
 
         assert adapter.model_name == "claude-3-5-sonnet-20241022"
         mock_anthropic_module.Anthropic.assert_called_once_with(api_key="env-key")
@@ -92,17 +90,13 @@ class TestAnthropicAdapterInitialization:
         cache = ModelOutputCache(backend="memory")
 
         with pytest.raises(ValueError, match="Anthropic API key must be provided"):
-            AnthropicAdapter(
-                model_name="claude-3-5-sonnet-20241022", cache=cache
-            )
+            AnthropicAdapter(model_name="claude-3-5-sonnet-20241022", cache=cache)
 
 
 class TestAnthropicNotImplementedMethods:
     """Tests for methods that are not supported by Anthropic API."""
 
-    def test_compute_log_probability_not_implemented(
-        self, anthropic_adapter
-    ) -> None:
+    def test_compute_log_probability_not_implemented(self, anthropic_adapter) -> None:
         """Test that log probability computation raises NotImplementedError."""
         with pytest.raises(
             NotImplementedError,
@@ -110,9 +104,7 @@ class TestAnthropicNotImplementedMethods:
         ):
             anthropic_adapter.compute_log_probability("test text")
 
-    def test_compute_perplexity_not_implemented(
-        self, anthropic_adapter
-    ) -> None:
+    def test_compute_perplexity_not_implemented(self, anthropic_adapter) -> None:
         """Test that perplexity computation raises NotImplementedError."""
         with pytest.raises(
             NotImplementedError,
@@ -120,9 +112,7 @@ class TestAnthropicNotImplementedMethods:
         ):
             anthropic_adapter.compute_perplexity("test text")
 
-    def test_get_embedding_not_implemented(
-        self, anthropic_adapter
-    ) -> None:
+    def test_get_embedding_not_implemented(self, anthropic_adapter) -> None:
         """Test that embedding computation raises NotImplementedError."""
         with pytest.raises(
             NotImplementedError,
@@ -231,7 +221,7 @@ class TestAnthropicComputeNLI:
             result=cached_result,
             model_version="latest",
             premise="cached premise",
-            hypothesis="cached hypothesis"
+            hypothesis="cached hypothesis",
         )
 
         result = anthropic_adapter.compute_nli("cached premise", "cached hypothesis")

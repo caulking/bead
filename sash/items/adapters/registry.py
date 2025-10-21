@@ -26,7 +26,6 @@ class ModelAdapterRegistry:
     """
 
     def __init__(self) -> None:
-        """Initialize empty registry."""
         self.adapters: dict[str, type[ModelAdapter]] = {}
         self.instances: dict[str, ModelAdapter] = {}
 

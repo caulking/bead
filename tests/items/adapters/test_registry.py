@@ -14,21 +14,21 @@ class DummyAdapter(ModelAdapter):
     """Dummy adapter for testing registry."""
 
     def compute_log_probability(self, text: str) -> float:
-        """Dummy implementation."""
+        """Compute dummy log probability."""
         return 0.0
 
     def compute_perplexity(self, text: str) -> float:
-        """Dummy implementation."""
+        """Compute dummy perplexity."""
         return 1.0
 
     def get_embedding(self, text: str):
-        """Dummy implementation."""
+        """Get dummy embedding."""
         import numpy as np
 
         return np.array([0.0, 1.0, 2.0])
 
     def compute_nli(self, premise: str, hypothesis: str) -> dict[str, float]:
-        """Dummy implementation."""
+        """Compute dummy NLI scores."""
         return {"entailment": 1.0, "neutral": 0.0, "contradiction": 0.0}
 
 
@@ -176,9 +176,7 @@ class TestDefaultRegistry:
         cache = ModelOutputCache(backend="memory")
 
         # This should work without errors
-        adapter = default_registry.get_adapter(
-            "huggingface_lm", "gpt2", cache=cache
-        )
+        adapter = default_registry.get_adapter("huggingface_lm", "gpt2", cache=cache)
 
         assert adapter.model_name == "gpt2"
 
@@ -188,12 +186,8 @@ class TestDefaultRegistry:
 
         cache = ModelOutputCache(backend="memory")
 
-        adapter1 = default_registry.get_adapter(
-            "huggingface_lm", "gpt2", cache=cache
-        )
-        adapter2 = default_registry.get_adapter(
-            "huggingface_lm", "gpt2", cache=cache
-        )
+        adapter1 = default_registry.get_adapter("huggingface_lm", "gpt2", cache=cache)
+        adapter2 = default_registry.get_adapter("huggingface_lm", "gpt2", cache=cache)
 
         # Should be same instance
         assert adapter1 is adapter2

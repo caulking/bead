@@ -276,8 +276,8 @@ def test_cache_disabled(memory_cache: ModelOutputCache) -> None:
 
 def test_cache_key_generation_deterministic(memory_cache: ModelOutputCache) -> None:
     """Test cache key generation is deterministic."""
-    key1 = memory_cache._generate_cache_key("model", "op", text="hello", value=42)
-    key2 = memory_cache._generate_cache_key("model", "op", text="hello", value=42)
+    key1 = memory_cache.generate_cache_key("model", "op", text="hello", value=42)
+    key2 = memory_cache.generate_cache_key("model", "op", text="hello", value=42)
     assert key1 == key2
 
 
@@ -285,10 +285,10 @@ def test_cache_key_generation_order_independent(
     memory_cache: ModelOutputCache,
 ) -> None:
     """Test cache key generation is independent of kwarg order."""
-    key1 = memory_cache._generate_cache_key(
+    key1 = memory_cache.generate_cache_key(
         "model", "op", text="hello", value=42, flag=True
     )
-    key2 = memory_cache._generate_cache_key(
+    key2 = memory_cache.generate_cache_key(
         "model", "op", flag=True, value=42, text="hello"
     )
     assert key1 == key2
@@ -298,8 +298,8 @@ def test_cache_key_generation_different_inputs(
     memory_cache: ModelOutputCache,
 ) -> None:
     """Test different inputs produce different keys."""
-    key1 = memory_cache._generate_cache_key("model", "op", text="hello")
-    key2 = memory_cache._generate_cache_key("model", "op", text="world")
+    key1 = memory_cache.generate_cache_key("model", "op", text="hello")
+    key2 = memory_cache.generate_cache_key("model", "op", text="world")
     assert key1 != key2
 
 
@@ -360,7 +360,7 @@ def test_cache_set_with_model_version(memory_cache: ModelOutputCache) -> None:
     memory_cache.set("gpt2", "log_prob", -1.5, model_version="1.0.0", text="test")
 
     # Verify metadata is stored
-    cache_key = memory_cache._generate_cache_key("gpt2", "log_prob", text="test")
+    cache_key = memory_cache.generate_cache_key("gpt2", "log_prob", text="test")
     entry = memory_cache._backend.get(cache_key)
     assert entry is not None
     assert entry["model_version"] == "1.0.0"
@@ -370,7 +370,7 @@ def test_cache_metadata_fields(memory_cache: ModelOutputCache) -> None:
     """Test cache entry metadata fields."""
     memory_cache.set("model", "op", 42, model_version="2.0", text="hello")
 
-    cache_key = memory_cache._generate_cache_key("model", "op", text="hello")
+    cache_key = memory_cache.generate_cache_key("model", "op", text="hello")
     entry = memory_cache._backend.get(cache_key)
 
     assert entry is not None

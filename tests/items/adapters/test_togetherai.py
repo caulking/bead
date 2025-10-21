@@ -96,9 +96,7 @@ class TestTogetherAIAdapterInitialization:
         cache = ModelOutputCache(backend="memory")
 
         with pytest.raises(ValueError, match="Together AI API key must be provided"):
-            TogetherAIAdapter(
-                model_name="meta-llama/Llama-3-70b-chat-hf", cache=cache
-            )
+            TogetherAIAdapter(model_name="meta-llama/Llama-3-70b-chat-hf", cache=cache)
 
 
 class TestTogetherAIComputeLogProbability:
@@ -150,7 +148,7 @@ class TestTogetherAIComputeLogProbability:
             operation="log_probability",
             result=-2.5,
             model_version="latest",
-            text="cached text"
+            text="cached text",
         )
 
         result = togetherai_adapter.compute_log_probability("cached text")
@@ -162,13 +160,10 @@ class TestTogetherAIComputeLogProbability:
         self, togetherai_adapter, mock_openai, mocker: MockerFixture
     ) -> None:
         """Test that unsupported models raise NotImplementedError."""
-        import sys
-
-        openai_module = sys.modules["openai"]
-
         # Simulate BadRequestError for unsupported model
         # Create a proper exception instance without keyword arguments
-        bad_request_error = AttributeError("Bad request")  # Use AttributeError as stand-in
+        # Use AttributeError as stand-in
+        bad_request_error = AttributeError("Bad request")
         mock_openai.completions.create.side_effect = bad_request_error
         mocker.patch("time.sleep")
 
@@ -308,7 +303,7 @@ class TestTogetherAIComputeNLI:
             result=cached_result,
             model_version="latest",
             premise="cached premise",
-            hypothesis="cached hypothesis"
+            hypothesis="cached hypothesis",
         )
 
         result = togetherai_adapter.compute_nli("cached premise", "cached hypothesis")

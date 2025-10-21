@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import time
-
 import pytest
 from pytest_mock import MockerFixture
 
@@ -41,7 +39,10 @@ class TestRetryWithBackoff:
         )
 
         @retry_with_backoff(
-            max_retries=3, initial_delay=0.01, backoff_factor=1.5, exceptions=(ValueError,)
+            max_retries=3,
+            initial_delay=0.01,
+            backoff_factor=1.5,
+            exceptions=(ValueError,),
         )
         def test_func() -> str:
             return mock_func()
@@ -55,9 +56,7 @@ class TestRetryWithBackoff:
         """Test that exception is raised when retries are exhausted."""
         mock_func = mocker.Mock(side_effect=ValueError("persistent error"))
 
-        @retry_with_backoff(
-            max_retries=2, initial_delay=0.01, exceptions=(ValueError,)
-        )
+        @retry_with_backoff(max_retries=2, initial_delay=0.01, exceptions=(ValueError,))
         def test_func() -> None:
             mock_func()
 
@@ -79,7 +78,10 @@ class TestRetryWithBackoff:
         )
 
         @retry_with_backoff(
-            max_retries=3, initial_delay=1.0, backoff_factor=2.0, exceptions=(ValueError,)
+            max_retries=3,
+            initial_delay=1.0,
+            backoff_factor=2.0,
+            exceptions=(ValueError,),
         )
         def test_func() -> str:
             return mock_func()
@@ -254,9 +256,7 @@ class TestIntegration:
 
     def test_retry_and_rate_limit_together(self, mocker: MockerFixture) -> None:
         """Test using both retry and rate limit decorators together."""
-        mock_func = mocker.Mock(
-            side_effect=[ValueError("error"), "success"]
-        )
+        mock_func = mocker.Mock(side_effect=[ValueError("error"), "success"])
         sleep_mock = mocker.patch("time.sleep")
 
         @retry_with_backoff(max_retries=3, initial_delay=0.01, exceptions=(ValueError,))

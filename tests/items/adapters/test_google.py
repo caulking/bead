@@ -160,9 +160,7 @@ class TestGoogleAdapterInitialization:
 class TestGoogleNotImplementedMethods:
     """Tests for methods that are not supported by Google API."""
 
-    def test_compute_log_probability_not_implemented(
-        self, google_adapter
-    ) -> None:
+    def test_compute_log_probability_not_implemented(self, google_adapter) -> None:
         """Test that log probability computation raises NotImplementedError."""
         with pytest.raises(
             NotImplementedError,
@@ -170,9 +168,7 @@ class TestGoogleNotImplementedMethods:
         ):
             google_adapter.compute_log_probability("test text")
 
-    def test_compute_perplexity_not_implemented(
-        self, google_adapter
-    ) -> None:
+    def test_compute_perplexity_not_implemented(self, google_adapter) -> None:
         """Test that perplexity computation raises NotImplementedError."""
         with pytest.raises(
             NotImplementedError,
@@ -217,7 +213,7 @@ class TestGoogleGetEmbedding:
             operation="embedding",
             result=cached_embedding,
             model_version="latest",
-            text="cached text"
+            text="cached text",
         )
 
         result = google_adapter.get_embedding("cached text")
@@ -327,7 +323,7 @@ class TestGoogleComputeNLI:
             result=cached_result,
             model_version="latest",
             premise="cached premise",
-            hypothesis="cached hypothesis"
+            hypothesis="cached hypothesis",
         )
 
         result = google_adapter.compute_nli("cached premise", "cached hypothesis")
@@ -351,7 +347,8 @@ class TestGoogleComputeNLI:
         # Verify API was called
         assert mock_model.generate_content.call_count >= 1
 
-        # Just verify the model was called with something (we can't easily inspect genai.types.GenerationConfig)
+        # Just verify the model was called with something
+        # (we can't easily inspect genai.types.GenerationConfig)
         call_args = mock_model.generate_content.call_args
         if call_args and len(call_args[0]) > 0:
             prompt = call_args[0][0]

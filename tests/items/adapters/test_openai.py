@@ -54,9 +54,7 @@ class TestOpenAIAdapterInitialization:
         from sash.items.adapters.openai import OpenAIAdapter
 
         cache = ModelOutputCache(backend="memory")
-        adapter = OpenAIAdapter(
-            model_name="gpt-4", cache=cache, api_key="explicit-key"
-        )
+        adapter = OpenAIAdapter(model_name="gpt-4", cache=cache, api_key="explicit-key")
 
         assert adapter.model_name == "gpt-4"
         assert adapter.cache is cache
@@ -145,7 +143,7 @@ class TestOpenAIComputeLogProbability:
             operation="log_probability",
             result=-2.5,
             model_version="latest",
-            text="cached text"
+            text="cached text",
         )
 
         result = openai_adapter.compute_log_probability("cached text")
@@ -228,7 +226,7 @@ class TestOpenAIGetEmbedding:
             operation="embedding",
             result=cached_embedding,
             model_version="latest",
-            text="cached text"
+            text="cached text",
         )
 
         result = openai_adapter.get_embedding("cached text")
@@ -331,7 +329,7 @@ class TestOpenAIComputeNLI:
             result=cached_result,
             model_version="latest",
             premise="cached premise",
-            hypothesis="cached hypothesis"
+            hypothesis="cached hypothesis",
         )
 
         result = openai_adapter.compute_nli("cached premise", "cached hypothesis")

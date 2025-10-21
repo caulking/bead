@@ -26,46 +26,54 @@ Registry:
 - default_registry: Pre-configured registry with all built-in adapters
 """
 
-from sash.items.adapters.base import ModelAdapter
-from sash.items.adapters.huggingface import (
+# API utilities
+from sash.items.adapters.api_utils import (  # noqa: F401
+    RateLimiter,
+    rate_limit,
+    retry_with_backoff,
+)
+from sash.items.adapters.base import ModelAdapter  # noqa: F401
+from sash.items.adapters.huggingface import (  # noqa: F401
     HuggingFaceLanguageModel,
     HuggingFaceMaskedLanguageModel,
     HuggingFaceNLI,
 )
-from sash.items.adapters.sentence_transformers import HuggingFaceSentenceTransformer
-
-# API utilities
-from sash.items.adapters.api_utils import RateLimiter, rate_limit, retry_with_backoff
 
 # Registry
-from sash.items.adapters.registry import ModelAdapterRegistry, default_registry
+from sash.items.adapters.registry import (  # noqa: F401
+    ModelAdapterRegistry,
+    default_registry,
+)
+from sash.items.adapters.sentence_transformers import (  # noqa: F401
+    HuggingFaceSentenceTransformer,
+)
 
-# API adapters (optional - may not be available if dependencies not installed)
-_api_adapters = []
+# API adapters (optional, may not be available if dependencies not installed)
+_api_adapters: list[str] = []
 
 try:
-    from sash.items.adapters.openai import OpenAIAdapter
+    from sash.items.adapters.openai import OpenAIAdapter  # noqa: F401
 
     _api_adapters.append("OpenAIAdapter")
 except ImportError:
     pass
 
 try:
-    from sash.items.adapters.anthropic import AnthropicAdapter
+    from sash.items.adapters.anthropic import AnthropicAdapter  # noqa: F401
 
     _api_adapters.append("AnthropicAdapter")
 except ImportError:
     pass
 
 try:
-    from sash.items.adapters.google import GoogleAdapter
+    from sash.items.adapters.google import GoogleAdapter  # noqa: F401
 
     _api_adapters.append("GoogleAdapter")
 except ImportError:
     pass
 
 try:
-    from sash.items.adapters.togetherai import TogetherAIAdapter
+    from sash.items.adapters.togetherai import TogetherAIAdapter  # noqa: F401
 
     _api_adapters.append("TogetherAIAdapter")
 except ImportError:
