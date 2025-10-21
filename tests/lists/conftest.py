@@ -8,6 +8,7 @@ import pytest
 
 from sash.lists.constraints import (
     BalanceConstraint,
+    OrderingConstraint,
     QuantileConstraint,
     SizeConstraint,
     UniquenessConstraint,
@@ -189,3 +190,55 @@ def sample_list_collection(
     )
     collection.add_list(experiment_list_with_items)
     return collection
+
+
+@pytest.fixture
+def ordering_constraint_precedence() -> OrderingConstraint:
+    """Create ordering constraint with precedence pairs.
+
+    Returns
+    -------
+    OrderingConstraint
+        Constraint with precedence pairs.
+    """
+    return OrderingConstraint(precedence_pairs=[(uuid4(), uuid4())])
+
+
+@pytest.fixture
+def ordering_constraint_no_adjacent() -> OrderingConstraint:
+    """Create ordering constraint with no-adjacent property.
+
+    Returns
+    -------
+    OrderingConstraint
+        Constraint preventing adjacent items with same condition.
+    """
+    return OrderingConstraint(
+        no_adjacent_property="item_metadata.condition", min_distance=2
+    )
+
+
+@pytest.fixture
+def ordering_constraint_blocking() -> OrderingConstraint:
+    """Create ordering constraint with blocking.
+
+    Returns
+    -------
+    OrderingConstraint
+        Constraint that groups items by block type.
+    """
+    return OrderingConstraint(
+        block_by_property="item_metadata.block_type", randomize_within_blocks=True
+    )
+
+
+@pytest.fixture
+def ordering_constraint_practice() -> OrderingConstraint:
+    """Create ordering constraint for practice items.
+
+    Returns
+    -------
+    OrderingConstraint
+        Constraint ensuring practice items appear first.
+    """
+    return OrderingConstraint(practice_item_property="item_metadata.is_practice")

@@ -14,6 +14,7 @@ implemented in the partitioner module (Phase 18).
 from sash.lists.constraints import (
     BalanceConstraint,
     ListConstraint,
+    OrderingConstraint,
     QuantileConstraint,
     SizeConstraint,
     UniquenessConstraint,
@@ -28,4 +29,5 @@ __all__ = [
     "BalanceConstraint",
     "QuantileConstraint",
     "SizeConstraint",
+    "OrderingConstraint",
 ]

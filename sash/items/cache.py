@@ -338,9 +338,7 @@ class ModelOutputCache:
         else:
             raise ValueError(f"Unknown backend: {backend}")
 
-    def generate_cache_key(
-        self, model_name: str, operation: str, **inputs: Any
-    ) -> str:
+    def generate_cache_key(self, model_name: str, operation: str, **inputs: Any) -> str:
         """Generate deterministic cache key from inputs.
 
         Parameters

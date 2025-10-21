@@ -7,6 +7,7 @@ from pydantic import ValidationError
 
 from sash.lists.constraints import (
     BalanceConstraint,
+    OrderingConstraint,
     QuantileConstraint,
     SizeConstraint,
     UniquenessConstraint,
@@ -384,6 +385,164 @@ class TestSizeConstraint:
         assert restored.max_size == constraint.max_size
 
 
+class TestOrderingConstraint:
+    """Tests for OrderingConstraint model."""
+
+    def test_create_empty(self) -> None:
+        """Test creating empty ordering constraint."""
+        constraint = OrderingConstraint()
+
+        assert constraint.constraint_type == "ordering"
+        assert constraint.precedence_pairs == []
+        assert constraint.no_adjacent_property is None
+        assert constraint.block_by_property is None
+        assert constraint.min_distance is None
+        assert constraint.max_distance is None
+        assert constraint.practice_item_property is None
+        assert constraint.randomize_within_blocks is True
+
+    def test_create_with_precedence(self) -> None:
+        """Test creating with precedence pairs."""
+        from uuid import uuid4
+
+        item_a, item_b = uuid4(), uuid4()
+        constraint = OrderingConstraint(precedence_pairs=[(item_a, item_b)])
+
+        assert len(constraint.precedence_pairs) == 1
+        assert constraint.precedence_pairs[0] == (item_a, item_b)
+
+    def test_create_with_no_adjacent(self) -> None:
+        """Test creating with no_adjacent_property."""
+        constraint = OrderingConstraint(no_adjacent_property="item_metadata.condition")
+
+        assert constraint.no_adjacent_property == "item_metadata.condition"
+
+    def test_create_with_blocking(self) -> None:
+        """Test creating with block_by_property."""
+        constraint = OrderingConstraint(
+            block_by_property="item_metadata.block_type",
+            randomize_within_blocks=False,
+        )
+
+        assert constraint.block_by_property == "item_metadata.block_type"
+        assert constraint.randomize_within_blocks is False
+
+    def test_create_with_min_distance(self) -> None:
+        """Test creating with min_distance."""
+        constraint = OrderingConstraint(
+            no_adjacent_property="item_metadata.condition", min_distance=3
+        )
+
+        assert constraint.min_distance == 3
+
+    def test_create_with_max_distance(self) -> None:
+        """Test creating with max_distance."""
+        constraint = OrderingConstraint(
+            block_by_property="item_metadata.block_type", max_distance=5
+        )
+
+        assert constraint.max_distance == 5
+
+    def test_create_with_practice_items(self) -> None:
+        """Test creating with practice_item_property."""
+        constraint = OrderingConstraint(
+            practice_item_property="item_metadata.is_practice"
+        )
+
+        assert constraint.practice_item_property == "item_metadata.is_practice"
+
+    def test_validation_min_distance_requires_no_adjacent(self) -> None:
+        """Test min_distance without no_adjacent_property raises ValidationError."""
+        with pytest.raises(ValidationError) as exc_info:
+            OrderingConstraint(min_distance=3)
+        assert "min_distance requires no_adjacent_property" in str(exc_info.value)
+
+    def test_validation_max_distance_requires_blocking(self) -> None:
+        """Test max_distance without block_by_property raises ValidationError."""
+        with pytest.raises(ValidationError) as exc_info:
+            OrderingConstraint(max_distance=5)
+        assert "max_distance requires block_by_property" in str(exc_info.value)
+
+    def test_validation_min_greater_than_max_distance(self) -> None:
+        """Test min_distance > max_distance raises ValidationError."""
+        with pytest.raises(ValidationError) as exc_info:
+            OrderingConstraint(
+                no_adjacent_property="item_metadata.condition",
+                block_by_property="item_metadata.block_type",
+                min_distance=10,
+                max_distance=5,
+            )
+        assert "min_distance cannot be greater than max_distance" in str(exc_info.value)
+
+    def test_validation_min_distance_negative(self) -> None:
+        """Test negative min_distance raises ValidationError."""
+        with pytest.raises(ValidationError) as exc_info:
+            OrderingConstraint(
+                no_adjacent_property="item_metadata.condition", min_distance=-1
+            )
+        assert "greater than or equal to 1" in str(exc_info.value)
+
+    def test_validation_max_distance_negative(self) -> None:
+        """Test negative max_distance raises ValidationError."""
+        with pytest.raises(ValidationError) as exc_info:
+            OrderingConstraint(
+                block_by_property="item_metadata.block_type", max_distance=-1
+            )
+        assert "greater than or equal to 1" in str(exc_info.value)
+
+    def test_validation_min_distance_zero(self) -> None:
+        """Test zero min_distance raises ValidationError."""
+        with pytest.raises(ValidationError) as exc_info:
+            OrderingConstraint(
+                no_adjacent_property="item_metadata.condition", min_distance=0
+            )
+        assert "greater than or equal to 1" in str(exc_info.value)
+
+    def test_validation_min_equals_max_distance(self) -> None:
+        """Test min_distance == max_distance is valid."""
+        constraint = OrderingConstraint(
+            no_adjacent_property="item_metadata.condition",
+            block_by_property="item_metadata.block_type",
+            min_distance=5,
+            max_distance=5,
+        )
+
+        assert constraint.min_distance == 5
+        assert constraint.max_distance == 5
+
+    def test_constraint_type_is_ordering(self) -> None:
+        """Test discriminator is correct."""
+        constraint = OrderingConstraint()
+        assert constraint.constraint_type == "ordering"
+
+    def test_serialization_roundtrip(self) -> None:
+        """Test serialization roundtrip works."""
+        from uuid import uuid4
+
+        item_a, item_b = uuid4(), uuid4()
+        constraint = OrderingConstraint(
+            precedence_pairs=[(item_a, item_b)],
+            no_adjacent_property="item_metadata.condition",
+            min_distance=2,
+        )
+
+        data = constraint.model_dump()
+        restored = OrderingConstraint(**data)
+
+        assert len(restored.precedence_pairs) == 1
+        assert restored.precedence_pairs[0] == (item_a, item_b)
+        assert restored.no_adjacent_property == constraint.no_adjacent_property
+        assert restored.min_distance == constraint.min_distance
+
+    def test_inherits_sashbasemodel(self) -> None:
+        """Test has SashBaseModel fields."""
+        constraint = OrderingConstraint()
+
+        assert hasattr(constraint, "id")
+        assert hasattr(constraint, "created_at")
+        assert hasattr(constraint, "modified_at")
+
+
 class TestListConstraintUnion:
     """Tests for ListConstraint discriminated union."""
 
@@ -430,6 +589,16 @@ class TestListConstraintUnion:
         constraint = SizeConstraint(**data)
         assert isinstance(constraint, SizeConstraint)
 
+    def test_deserialize_ordering(self) -> None:
+        """Test deserializing ordering constraint from dict."""
+        data = {
+            "constraint_type": "ordering",
+            "no_adjacent_property": "item_metadata.condition",
+        }
+
+        constraint = OrderingConstraint(**data)
+        assert isinstance(constraint, OrderingConstraint)
+
     def test_all_constraints_have_discriminator(self) -> None:
         """Test all constraint types have constraint_type field."""
         constraints = [
@@ -437,6 +606,7 @@ class TestListConstraintUnion:
             BalanceConstraint(property_path="test"),
             QuantileConstraint(property_path="test"),
             SizeConstraint(exact_size=40),
+            OrderingConstraint(),
         ]
 
         for constraint in constraints:
@@ -446,6 +616,7 @@ class TestListConstraintUnion:
                 "balance",
                 "quantile",
                 "size",
+                "ordering",
             ]
 
     def test_serialization_preserves_type(self) -> None:
@@ -455,6 +626,7 @@ class TestListConstraintUnion:
             BalanceConstraint(property_path="test"),
             QuantileConstraint(property_path="test"),
             SizeConstraint(exact_size=40),
+            OrderingConstraint(),
         ]
 
         for constraint in constraints:

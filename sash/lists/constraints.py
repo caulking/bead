@@ -6,6 +6,7 @@ to ensure balanced, well-distributed item selections. Constraints can specify:
 - Balance: Balanced distribution across categories
 - Quantile: Uniform distribution across quantiles
 - Size: List size requirements
+- Ordering: Item presentation order constraints (runtime enforcement)
 
 All constraints inherit from SashBaseModel and use Pydantic discriminated unions
 for type-safe deserialization.
@@ -14,6 +15,7 @@ for type-safe deserialization.
 from __future__ import annotations
 
 from typing import Annotated, Literal
+from uuid import UUID
 
 from pydantic import Field, field_validator, model_validator
 
@@ -25,6 +27,7 @@ ListConstraintType = Literal[
     "balance",  # Balanced distribution of property
     "quantile",  # Uniform across quantiles
     "size",  # List size constraints
+    "ordering",  # Presentation order constraints (runtime enforcement)
 ]
 
 
@@ -325,8 +328,123 @@ class SizeConstraint(SashBaseModel):
         return self
 
 
+class OrderingConstraint(SashBaseModel):
+    """Constraint on item presentation order.
+
+    **CRITICAL**: This constraint is primarily enforced at **jsPsych runtime**,
+    not during static list construction. The Python data model stores the
+    constraint specification, which is then translated to JavaScript code
+    for runtime enforcement during per-participant randomization.
+
+    Attributes
+    ----------
+    constraint_type : Literal["ordering"]
+        Discriminator for constraint type.
+    precedence_pairs : list[tuple[UUID, UUID]]
+        Pairs of (item_a_id, item_b_id) where item_a must appear before item_b.
+    no_adjacent_property : str | None
+        Property path; items with same value cannot be adjacent.
+        Example: "item_metadata.condition" prevents AA, BB patterns.
+    block_by_property : str | None
+        Property path to group items into contiguous blocks.
+        Example: "item_metadata.block_type" creates blocked design.
+    min_distance : int | None
+        Minimum number of items between items with same no_adjacent_property value.
+    max_distance : int | None
+        Maximum number of items between start and end of items with same
+        block_by_property value (enforces tight blocking).
+    practice_item_property : str | None
+        Property path identifying practice items (should appear first).
+        Example: "item_metadata.is_practice" with value True.
+    randomize_within_blocks : bool
+        Whether to randomize order within blocks (default True).
+        Only applies when block_by_property is set.
+
+    Examples
+    --------
+    >>> # No adjacent items with same condition
+    >>> constraint = OrderingConstraint(
+    ...     no_adjacent_property="item_metadata.condition"
+    ... )
+
+    >>> # Practice items first, then main items
+    >>> constraint = OrderingConstraint(
+    ...     practice_item_property="item_metadata.is_practice"
+    ... )
+
+    >>> # Blocked by condition, randomized within blocks
+    >>> constraint = OrderingConstraint(
+    ...     block_by_property="item_metadata.condition",
+    ...     randomize_within_blocks=True
+    ... )
+
+    >>> # Item A before Item B
+    >>> from uuid import uuid4
+    >>> item_a, item_b = uuid4(), uuid4()
+    >>> constraint = OrderingConstraint(
+    ...     precedence_pairs=[(item_a, item_b)]
+    ... )
+    """
+
+    constraint_type: Literal["ordering"] = "ordering"
+    precedence_pairs: list[tuple[UUID, UUID]] = Field(
+        default_factory=lambda: [], description="Pairs (a,b) where a must precede b"
+    )
+    no_adjacent_property: str | None = Field(
+        default=None,
+        description="Property that cannot have same value in adjacent items",
+    )
+    block_by_property: str | None = Field(
+        default=None, description="Property to group into contiguous blocks"
+    )
+    min_distance: int | None = Field(
+        default=None,
+        ge=1,
+        description="Minimum items between same no_adjacent_property values",
+    )
+    max_distance: int | None = Field(
+        default=None, ge=1, description="Maximum distance for blocked items"
+    )
+    practice_item_property: str | None = Field(
+        default=None, description="Property identifying practice items (shown first)"
+    )
+    randomize_within_blocks: bool = Field(
+        default=True, description="Whether to randomize within blocks"
+    )
+
+    @model_validator(mode="after")
+    def validate_distance_constraints(self) -> OrderingConstraint:
+        """Validate distance constraint combinations.
+
+        Returns
+        -------
+        OrderingConstraint
+            Validated constraint.
+
+        Raises
+        ------
+        ValueError
+            If validation fails.
+        """
+        if self.min_distance is not None and self.no_adjacent_property is None:
+            raise ValueError("min_distance requires no_adjacent_property to be set")
+        if self.max_distance is not None and self.block_by_property is None:
+            raise ValueError("max_distance requires block_by_property to be set")
+        if (
+            self.min_distance
+            and self.max_distance
+            and self.min_distance > self.max_distance
+        ):
+            raise ValueError("min_distance cannot be greater than max_distance")
+        return self
+
+
 # Discriminated union for all list constraints
 ListConstraint = Annotated[
-    UniquenessConstraint | BalanceConstraint | QuantileConstraint | SizeConstraint,
+    UniquenessConstraint
+    | BalanceConstraint
+    | QuantileConstraint
+    | SizeConstraint
+    | OrderingConstraint,
     Field(discriminator="constraint_type"),
 ]
