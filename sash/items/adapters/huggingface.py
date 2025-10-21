@@ -65,19 +65,6 @@ class HuggingFaceLanguageModel(HuggingFaceAdapterMixin, ModelAdapter):
         device: DeviceType = "cpu",
         model_version: str = "unknown",
     ) -> None:
-        """Initialize HuggingFace language model adapter.
-
-        Parameters
-        ----------
-        model_name : str
-            HuggingFace model identifier.
-        cache : ModelOutputCache
-            Cache instance.
-        device : {"cpu", "cuda", "mps"}
-            Device to run model on.
-        model_version : str
-            Version string for cache tracking.
-        """
         super().__init__(model_name, cache, model_version)
         self.device = self._validate_device(device)
         self._model: PreTrainedModel | None = None
@@ -311,19 +298,6 @@ class HuggingFaceMaskedLanguageModel(HuggingFaceAdapterMixin, ModelAdapter):
         device: DeviceType = "cpu",
         model_version: str = "unknown",
     ) -> None:
-        """Initialize HuggingFace masked language model adapter.
-
-        Parameters
-        ----------
-        model_name : str
-            HuggingFace model identifier.
-        cache : ModelOutputCache
-            Cache instance.
-        device : {"cpu", "cuda", "mps"}
-            Device to run model on.
-        model_version : str
-            Version string for cache tracking.
-        """
         super().__init__(model_name, cache, model_version)
         self.device = self._validate_device(device)
         self._model: PreTrainedModel | None = None
@@ -573,19 +547,6 @@ class HuggingFaceNLI(HuggingFaceAdapterMixin, ModelAdapter):
         device: DeviceType = "cpu",
         model_version: str = "unknown",
     ) -> None:
-        """Initialize HuggingFace NLI adapter.
-
-        Parameters
-        ----------
-        model_name : str
-            HuggingFace model identifier.
-        cache : ModelOutputCache
-            Cache instance.
-        device : {"cpu", "cuda", "mps"}
-            Device to run model on.
-        model_version : str
-            Version string for cache tracking.
-        """
         super().__init__(model_name, cache, model_version)
         self.device = self._validate_device(device)
         self._model: PreTrainedModel | None = None

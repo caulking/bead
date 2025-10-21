@@ -32,6 +32,19 @@ class GoogleAdapter(ModelAdapter):
     embeddings. Note that Gemini API does not support log probability
     computation.
 
+    Parameters
+    ----------
+    model_name : str
+        Gemini model identifier (default: "gemini-pro").
+    api_key : str | None
+        Google API key. If None, uses GOOGLE_API_KEY environment variable.
+    cache : ModelOutputCache | None
+        Cache for model outputs. If None, creates in-memory cache.
+    model_version : str
+        Model version for cache tracking (default: "latest").
+    embedding_model : str
+        Model to use for embeddings (default: "models/embedding-001").
+
     Attributes
     ----------
     model_name : str
@@ -40,6 +53,11 @@ class GoogleAdapter(ModelAdapter):
         Google Generative AI model instance.
     embedding_model : str
         Model to use for embeddings (default: "models/embedding-001").
+
+    Raises
+    ------
+    ValueError
+        If no API key is provided and GOOGLE_API_KEY is not set.
     """
 
     def __init__(
@@ -50,26 +68,6 @@ class GoogleAdapter(ModelAdapter):
         model_version: str = "latest",
         embedding_model: str = "models/embedding-001",
     ) -> None:
-        """Initialize Google adapter.
-
-        Parameters
-        ----------
-        model_name : str
-            Gemini model identifier (default: "gemini-pro").
-        api_key : str | None
-            Google API key. If None, uses GOOGLE_API_KEY environment variable.
-        cache : ModelOutputCache | None
-            Cache for model outputs. If None, creates in-memory cache.
-        model_version : str
-            Model version for cache tracking (default: "latest").
-        embedding_model : str
-            Model to use for embeddings (default: "models/embedding-001").
-
-        Raises
-        ------
-        ValueError
-            If no API key is provided and GOOGLE_API_KEY is not set.
-        """
         if cache is None:
             from sash.items.cache import ModelOutputCache
 

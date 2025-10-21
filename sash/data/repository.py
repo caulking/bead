@@ -72,17 +72,6 @@ class Repository[T: BaseModel]:
     def __init__(
         self, model_class: type[T], storage_path: Path, use_cache: bool = True
     ) -> None:
-        """Initialize repository with model class and storage path.
-
-        Parameters
-        ----------
-        model_class : type[T]
-            The Pydantic model class to manage
-        storage_path : Path
-            Path to JSONLines storage file
-        use_cache : bool, optional
-            Whether to enable in-memory caching (default: True)
-        """
         self.model_class = model_class
         self.storage_path = storage_path
         self.use_cache = use_cache

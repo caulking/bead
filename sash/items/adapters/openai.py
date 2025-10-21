@@ -30,6 +30,19 @@ class OpenAIAdapter(ModelAdapter):
     Provides access to OpenAI's GPT models for language model operations,
     embeddings, and prompted natural language inference.
 
+    Parameters
+    ----------
+    model_name : str
+        OpenAI model identifier (default: "gpt-3.5-turbo").
+    api_key : str | None
+        OpenAI API key. If None, uses OPENAI_API_KEY environment variable.
+    cache : ModelOutputCache | None
+        Cache for model outputs. If None, creates in-memory cache.
+    model_version : str
+        Model version for cache tracking (default: "latest").
+    embedding_model : str
+        Model to use for embeddings (default: "text-embedding-ada-002").
+
     Attributes
     ----------
     model_name : str
@@ -38,6 +51,11 @@ class OpenAIAdapter(ModelAdapter):
         OpenAI API client.
     embedding_model : str
         Model to use for embeddings (default: "text-embedding-ada-002").
+
+    Raises
+    ------
+    ValueError
+        If no API key is provided and OPENAI_API_KEY is not set.
     """
 
     def __init__(
@@ -48,26 +66,6 @@ class OpenAIAdapter(ModelAdapter):
         model_version: str = "latest",
         embedding_model: str = "text-embedding-ada-002",
     ) -> None:
-        """Initialize OpenAI adapter.
-
-        Parameters
-        ----------
-        model_name : str
-            OpenAI model identifier (default: "gpt-3.5-turbo").
-        api_key : str | None
-            OpenAI API key. If None, uses OPENAI_API_KEY environment variable.
-        cache : ModelOutputCache | None
-            Cache for model outputs. If None, creates in-memory cache.
-        model_version : str
-            Model version for cache tracking (default: "latest").
-        embedding_model : str
-            Model to use for embeddings (default: "text-embedding-ada-002").
-
-        Raises
-        ------
-        ValueError
-            If no API key is provided and OPENAI_API_KEY is not set.
-        """
         if cache is None:
             from sash.items.cache import ModelOutputCache
 

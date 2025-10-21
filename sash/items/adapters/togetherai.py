@@ -31,12 +31,29 @@ class TogetherAIAdapter(ModelAdapter):
     OpenAI-compatible API. This adapter uses the OpenAI client with a
     custom base URL.
 
+    Parameters
+    ----------
+    model_name : str
+        Together AI model identifier
+        (default: "meta-llama/Llama-3-70b-chat-hf").
+    api_key : str | None
+        Together AI API key. If None, uses TOGETHER_API_KEY environment variable.
+    cache : ModelOutputCache | None
+        Cache for model outputs. If None, creates in-memory cache.
+    model_version : str
+        Model version for cache tracking (default: "latest").
+
     Attributes
     ----------
     model_name : str
         Together AI model identifier (e.g., "meta-llama/Llama-3-70b-chat-hf").
     client : openai.OpenAI
         OpenAI-compatible client configured for Together AI.
+
+    Raises
+    ------
+    ValueError
+        If no API key is provided and TOGETHER_API_KEY is not set.
     """
 
     def __init__(
@@ -46,25 +63,6 @@ class TogetherAIAdapter(ModelAdapter):
         cache: ModelOutputCache | None = None,
         model_version: str = "latest",
     ) -> None:
-        """Initialize Together AI adapter.
-
-        Parameters
-        ----------
-        model_name : str
-            Together AI model identifier
-            (default: "meta-llama/Llama-3-70b-chat-hf").
-        api_key : str | None
-            Together AI API key. If None, uses TOGETHER_API_KEY environment variable.
-        cache : ModelOutputCache | None
-            Cache for model outputs. If None, creates in-memory cache.
-        model_version : str
-            Model version for cache tracking (default: "latest").
-
-        Raises
-        ------
-        ValueError
-            If no API key is provided and TOGETHER_API_KEY is not set.
-        """
         if cache is None:
             from sash.items.cache import ModelOutputCache
 

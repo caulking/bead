@@ -82,17 +82,6 @@ class TemplateFiller:
         strategy: FillingStrategy,
         adapter_registry: AdapterRegistry | None = None,
     ) -> None:
-        """Initialize template filler.
-
-        Parameters
-        ----------
-        lexicon : Lexicon
-            Lexicon containing candidate items.
-        strategy : FillingStrategy
-            Strategy for generating combinations.
-        adapter_registry : AdapterRegistry | None
-            Adapter registry for resource-based constraints.
-        """
         self.lexicon = lexicon
         self.strategy = strategy
         self.adapter_registry = adapter_registry

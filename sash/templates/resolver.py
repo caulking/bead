@@ -71,18 +71,6 @@ class ConstraintResolver:
         adapter_registry: AdapterRegistry | None = None,
         cache_results: bool = True,
     ) -> None:
-        """Initialize constraint resolver.
-
-        Parameters
-        ----------
-        lexicon : Lexicon
-            Lexicon containing lexical items to evaluate.
-        adapter_registry : AdapterRegistry | None
-            Registry of external resource adapters. May be required for
-            some relational constraints.
-        cache_results : bool
-            Whether to cache evaluation results. Default: True.
-        """
         self.lexicon = lexicon
         self.adapter_registry = adapter_registry
         self.cache_results = cache_results

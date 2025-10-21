@@ -24,6 +24,11 @@ class Evaluator:
     - Attribute access
     - Caching for performance
 
+    Parameters
+    ----------
+    use_cache : bool
+        Whether to cache evaluation results.
+
     Examples
     --------
     >>> from sash.dsl.context import EvaluationContext
@@ -37,13 +42,6 @@ class Evaluator:
     """
 
     def __init__(self, use_cache: bool = True) -> None:
-        """Initialize evaluator.
-
-        Parameters
-        ----------
-        use_cache : bool
-            Whether to cache evaluation results.
-        """
         self._use_cache = use_cache
         self._cache: dict[tuple[str, ...], Any] = {}
 

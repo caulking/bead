@@ -20,6 +20,11 @@ class EvaluationContext:
     - Function registry (built-in and custom functions)
     - Parent context chain for scoping
 
+    Parameters
+    ----------
+    parent : EvaluationContext | None
+        Parent context for variable/function lookup chain.
+
     Examples
     --------
     >>> ctx = EvaluationContext()
@@ -32,13 +37,6 @@ class EvaluationContext:
     """
 
     def __init__(self, parent: EvaluationContext | None = None) -> None:
-        """Initialize evaluation context.
-
-        Parameters
-        ----------
-        parent : EvaluationContext | None
-            Parent context for variable/function lookup chain.
-        """
         self._variables: dict[str, Any] = {}
         self._functions: dict[str, Callable[..., Any]] = {}
         self._parent = parent

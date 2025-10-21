@@ -31,12 +31,28 @@ class AnthropicAdapter(ModelAdapter):
     Note that Claude API does not support log probability computation or
     embeddings, so those methods will raise NotImplementedError.
 
+    Parameters
+    ----------
+    model_name : str
+        Claude model identifier (default: "claude-3-5-sonnet-20241022").
+    api_key : str | None
+        Anthropic API key. If None, uses ANTHROPIC_API_KEY environment variable.
+    cache : ModelOutputCache | None
+        Cache for model outputs. If None, creates in-memory cache.
+    model_version : str
+        Model version for cache tracking (default: "latest").
+
     Attributes
     ----------
     model_name : str
         Claude model identifier (e.g., "claude-3-5-sonnet-20241022").
     client : anthropic.Anthropic
         Anthropic API client.
+
+    Raises
+    ------
+    ValueError
+        If no API key is provided and ANTHROPIC_API_KEY is not set.
     """
 
     def __init__(
@@ -46,24 +62,6 @@ class AnthropicAdapter(ModelAdapter):
         cache: ModelOutputCache | None = None,
         model_version: str = "latest",
     ) -> None:
-        """Initialize Anthropic adapter.
-
-        Parameters
-        ----------
-        model_name : str
-            Claude model identifier (default: "claude-3-5-sonnet-20241022").
-        api_key : str | None
-            Anthropic API key. If None, uses ANTHROPIC_API_KEY environment variable.
-        cache : ModelOutputCache | None
-            Cache for model outputs. If None, creates in-memory cache.
-        model_version : str
-            Model version for cache tracking (default: "latest").
-
-        Raises
-        ------
-        ValueError
-            If no API key is provided and ANTHROPIC_API_KEY is not set.
-        """
         if cache is None:
             from sash.items.cache import ModelOutputCache
 

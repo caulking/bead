@@ -10,7 +10,19 @@ class DSLError(Exception):
 
 
 class ParseError(DSLError):
-    """Exception raised when parsing fails."""
+    """Exception raised when parsing fails.
+
+    Parameters
+    ----------
+    message : str
+        Error message.
+    line : int | None
+        Line number where error occurred.
+    column : int | None
+        Column number where error occurred.
+    text : str | None
+        Text that caused the error.
+    """
 
     def __init__(
         self,
@@ -19,19 +31,6 @@ class ParseError(DSLError):
         column: int | None = None,
         text: str | None = None,
     ) -> None:
-        """Initialize parse error.
-
-        Parameters
-        ----------
-        message : str
-            Error message.
-        line : int | None
-            Line number where error occurred.
-        column : int | None
-            Column number where error occurred.
-        text : str | None
-            Text that caused the error.
-        """
         self.line = line
         self.column = column
         self.text = text

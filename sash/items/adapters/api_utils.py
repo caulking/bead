@@ -83,6 +83,11 @@ class RateLimiter:
     Tracks call timestamps and enforces a maximum rate of calls per minute.
     Uses a sliding window algorithm to ensure the rate limit is respected.
 
+    Parameters
+    ----------
+    calls_per_minute : int
+        Maximum number of calls allowed per minute (default: 60).
+
     Attributes
     ----------
     calls_per_minute : int
@@ -92,13 +97,6 @@ class RateLimiter:
     """
 
     def __init__(self, calls_per_minute: int = 60) -> None:
-        """Initialize rate limiter.
-
-        Parameters
-        ----------
-        calls_per_minute : int
-            Maximum number of calls allowed per minute (default: 60).
-        """
         self.calls_per_minute = calls_per_minute
         self.call_times: list[float] = []
 

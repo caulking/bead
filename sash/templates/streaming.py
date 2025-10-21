@@ -45,17 +45,6 @@ class StreamingFiller:
         adapter_registry: AdapterRegistry | None = None,
         max_combinations: int | None = None,
     ) -> None:
-        """Initialize streaming filler.
-
-        Parameters
-        ----------
-        lexicon : Lexicon
-            Lexicon with candidate items.
-        adapter_registry : AdapterRegistry | None
-            Adapter registry.
-        max_combinations : int | None
-            Max combinations to generate.
-        """
         self.lexicon = lexicon
         self.adapter_registry = adapter_registry
         self.max_combinations = max_combinations

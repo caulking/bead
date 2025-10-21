@@ -94,6 +94,11 @@ class FilesystemBackend(CacheBackend):
     Stores each cache entry as a separate JSON file with the cache key as
     the filename.
 
+    Parameters
+    ----------
+    cache_dir : Path
+        Directory for cache storage.
+
     Attributes
     ----------
     cache_dir : Path
@@ -109,13 +114,6 @@ class FilesystemBackend(CacheBackend):
     """
 
     def __init__(self, cache_dir: Path) -> None:
-        """Initialize filesystem backend.
-
-        Parameters
-        ----------
-        cache_dir : Path
-            Directory for cache storage.
-        """
         self.cache_dir = cache_dir
         self.cache_dir.mkdir(parents=True, exist_ok=True)
 
@@ -212,7 +210,6 @@ class InMemoryBackend(CacheBackend):
     """
 
     def __init__(self) -> None:
-        """Initialize in-memory backend."""
         self._cache: dict[str, dict[str, Any]] = {}
 
     def get(self, key: str) -> dict[str, Any] | None:
@@ -278,6 +275,17 @@ class ModelOutputCache:
     name, operation type, and all input parameters, ensuring deterministic
     cache hits for identical inputs.
 
+    Parameters
+    ----------
+    cache_dir : Path | None
+        Directory for cache files (filesystem backend only).
+        Defaults to ~/.cache/sash/models if not specified.
+    backend : {"filesystem", "memory"}
+        Cache backend type. "filesystem" persists across runs,
+        "memory" is ephemeral.
+    enabled : bool
+        Whether caching is enabled.
+
     Attributes
     ----------
     enabled : bool
@@ -319,19 +327,6 @@ class ModelOutputCache:
         backend: Literal["filesystem", "memory"] = "filesystem",
         enabled: bool = True,
     ) -> None:
-        """Initialize model output cache.
-
-        Parameters
-        ----------
-        cache_dir : Path | None
-            Directory for cache files (filesystem backend only).
-            Defaults to ~/.cache/sash/models if not specified.
-        backend : {"filesystem", "memory"}
-            Cache backend type. "filesystem" persists across runs,
-            "memory" is ephemeral.
-        enabled : bool
-            Whether caching is enabled.
-        """
         self.enabled = enabled
 
         if backend == "filesystem":

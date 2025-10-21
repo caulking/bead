@@ -59,21 +59,6 @@ class HuggingFaceSentenceTransformer(ModelAdapter):
         model_version: str = "unknown",
         normalize_embeddings: bool = True,
     ) -> None:
-        """Initialize sentence transformer adapter.
-
-        Parameters
-        ----------
-        model_name : str
-            Sentence transformer model identifier.
-        cache : ModelOutputCache
-            Cache instance.
-        device : str | None
-            Device to run model on. If None, uses default.
-        model_version : str
-            Version string for cache tracking.
-        normalize_embeddings : bool
-            Whether to normalize embeddings to unit length.
-        """
         super().__init__(model_name, cache, model_version)
         self.device = device
         self.normalize_embeddings = normalize_embeddings
