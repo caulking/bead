@@ -48,22 +48,29 @@ class UniquenessConstraint(SashBaseModel):
     allow_null : bool, default=False
         Whether to allow null/None values. If False, None values count
         as duplicates. If True, multiple None values are allowed.
+    priority : int, default=1
+        Constraint priority (higher = more important). When partitioning,
+        violations of higher-priority constraints are penalized more heavily.
 
     Examples
     --------
-    >>> # No two items with same target verb
+    >>> # No two items with same target verb (high priority)
     >>> constraint = UniquenessConstraint(
     ...     property_path="item_metadata.target_verb",
-    ...     allow_null=False
+    ...     allow_null=False,
+    ...     priority=5
     ... )
-    >>> constraint.property_path
-    'item_metadata.target_verb'
+    >>> constraint.priority
+    5
     """
 
     constraint_type: Literal["uniqueness"] = "uniqueness"
     property_path: str = Field(..., description="Property path that must be unique")
     allow_null: bool = Field(
         default=False, description="Whether to allow multiple null values"
+    )
+    priority: int = Field(
+        default=1, ge=1, description="Constraint priority (higher = more important)"
     )
 
     @field_validator("property_path")
@@ -110,6 +117,9 @@ class BalanceConstraint(SashBaseModel):
     tolerance : float, default=0.1
         Allowed deviation from target as a proportion (0.0-1.0).
         For example, 0.1 means up to 10% deviation is acceptable.
+    priority : int, default=1
+        Constraint priority (higher = more important). When partitioning,
+        violations of higher-priority constraints are penalized more heavily.
 
     Examples
     --------
@@ -118,11 +128,12 @@ class BalanceConstraint(SashBaseModel):
     ...     property_path="item_metadata.transitivity",
     ...     tolerance=0.1
     ... )
-    >>> # 2:1 ratio of grammatical to ungrammatical
+    >>> # 2:1 ratio with high priority
     >>> constraint2 = BalanceConstraint(
     ...     property_path="item_metadata.grammatical",
     ...     target_counts={"true": 20, "false": 10},
-    ...     tolerance=0.05
+    ...     tolerance=0.05,
+    ...     priority=3
     ... )
     """
 
@@ -133,6 +144,9 @@ class BalanceConstraint(SashBaseModel):
     )
     tolerance: float = Field(
         default=0.1, ge=0.0, le=1.0, description="Allowed deviation from target"
+    )
+    priority: int = Field(
+        default=1, ge=1, description="Constraint priority (higher = more important)"
     )
 
     @field_validator("property_path")
@@ -206,6 +220,9 @@ class QuantileConstraint(SashBaseModel):
         Number of quantiles to create (must be >= 2).
     items_per_quantile : int, default=2
         Target number of items per quantile (must be >= 1).
+    priority : int, default=1
+        Constraint priority (higher = more important). When partitioning,
+        violations of higher-priority constraints are penalized more heavily.
 
     Examples
     --------
@@ -215,11 +232,12 @@ class QuantileConstraint(SashBaseModel):
     ...     n_quantiles=5,
     ...     items_per_quantile=2
     ... )
-    >>> # 10 deciles of word frequency
+    >>> # 10 deciles of word frequency (high priority)
     >>> constraint2 = QuantileConstraint(
     ...     property_path="item_metadata.frequency",
     ...     n_quantiles=10,
-    ...     items_per_quantile=3
+    ...     items_per_quantile=3,
+    ...     priority=2
     ... )
     """
 
@@ -227,6 +245,9 @@ class QuantileConstraint(SashBaseModel):
     property_path: str = Field(..., description="Property path to numeric property")
     n_quantiles: int = Field(default=5, ge=2, description="Number of quantiles")
     items_per_quantile: int = Field(default=2, ge=1, description="Items per quantile")
+    priority: int = Field(
+        default=1, ge=1, description="Constraint priority (higher = more important)"
+    )
 
     @field_validator("property_path")
     @classmethod
@@ -259,6 +280,8 @@ class SizeConstraint(SashBaseModel):
     Specifies size requirements for a list. Can specify exact size,
     minimum size, maximum size, or a range (min and max).
 
+    Often used with high priority to ensure participants do equal work.
+
     Attributes
     ----------
     constraint_type : Literal["size"]
@@ -270,11 +293,16 @@ class SizeConstraint(SashBaseModel):
     exact_size : int | None, default=None
         Exact required size (must be >= 0 if set).
         Cannot be used with min_size or max_size.
+    priority : int, default=1
+        Constraint priority (higher = more important). When partitioning,
+        violations of higher-priority constraints are penalized more heavily.
+        Size constraints often use high priority (e.g., 10) to ensure
+        participants do exactly equal amounts of work.
 
     Examples
     --------
-    >>> # Exactly 40 items per list
-    >>> constraint = SizeConstraint(exact_size=40)
+    >>> # Exactly 40 items per list (highest priority)
+    >>> constraint = SizeConstraint(exact_size=40, priority=10)
     >>> # Between 30-50 items per list
     >>> constraint2 = SizeConstraint(min_size=30, max_size=50)
     >>> # At least 20 items
@@ -288,6 +316,9 @@ class SizeConstraint(SashBaseModel):
     max_size: int | None = Field(default=None, ge=0, description="Maximum list size")
     exact_size: int | None = Field(
         default=None, ge=0, description="Exact required size"
+    )
+    priority: int = Field(
+        default=1, ge=1, description="Constraint priority (higher = more important)"
     )
 
     @model_validator(mode="after")
@@ -410,6 +441,11 @@ class OrderingConstraint(SashBaseModel):
     )
     randomize_within_blocks: bool = Field(
         default=True, description="Whether to randomize within blocks"
+    )
+    priority: int = Field(
+        default=1,
+        ge=1,
+        description="Constraint priority (not used for static partitioning)",
     )
 
     @model_validator(mode="after")

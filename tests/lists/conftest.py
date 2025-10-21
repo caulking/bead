@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from typing import Any
 from uuid import UUID, uuid4
 
 import pytest
@@ -242,3 +243,78 @@ def ordering_constraint_practice() -> OrderingConstraint:
         Constraint ensuring practice items appear first.
     """
     return OrderingConstraint(practice_item_property="item_metadata.is_practice")
+
+
+@pytest.fixture
+def sample_item_metadata() -> dict[UUID, dict[str, str | float | int]]:
+    """Create sample metadata for 100 items.
+
+    Returns
+    -------
+    dict[UUID, dict[str, str | float | int]]
+        Metadata dict with various properties for testing.
+    """
+    items = [uuid4() for _ in range(100)]
+    metadata: dict[UUID, dict[str, str | float | int]] = {}
+
+    for i, item_id in enumerate(items):
+        metadata[item_id] = {
+            "value": float(i),
+            "category": f"cat_{i % 5}",  # 5 categories
+            "group": i % 10,  # 10 groups
+            "score": i * 0.1,
+        }
+
+    return metadata
+
+
+@pytest.fixture
+def sample_quantile_metadata() -> dict[UUID, dict[str, float]]:
+    """Create metadata with numeric values for quantile testing.
+
+    Returns
+    -------
+    dict[UUID, dict[str, float]]
+        Metadata with lm_prob values.
+    """
+    import numpy as np
+
+    items = [uuid4() for _ in range(100)]
+    metadata: dict[UUID, dict[str, float]] = {}
+
+    # Create values with known distribution
+    for i, item_id in enumerate(items):
+        metadata[item_id] = {
+            "lm_prob": float(np.log(i + 1) / 10),  # Log-scaled values
+            "value": float(i),
+        }
+
+    return metadata
+
+
+@pytest.fixture
+def partitioner_default() -> Any:
+    """Create partitioner with default settings.
+
+    Returns
+    -------
+    ListPartitioner
+        Partitioner with default settings.
+    """
+    from sash.lists.partitioner import ListPartitioner
+
+    return ListPartitioner()
+
+
+@pytest.fixture
+def partitioner_seeded() -> Any:
+    """Create partitioner with fixed seed.
+
+    Returns
+    -------
+    ListPartitioner
+        Partitioner with seed=42.
+    """
+    from sash.lists.partitioner import ListPartitioner
+
+    return ListPartitioner(random_seed=42)
