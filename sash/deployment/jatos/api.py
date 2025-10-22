@@ -170,8 +170,8 @@ class JATOSClient:
         response = self.session.delete(url)
         response.raise_for_status()
 
-    def get_results(self, study_id: int) -> list[dict[str, Any]]:
-        """Get all results for a study.
+    def get_results(self, study_id: int) -> list[int]:
+        """Get all result IDs for a study.
 
         GET /api/v1/studies/{study_id}/results
 
@@ -182,8 +182,8 @@ class JATOSClient:
 
         Returns
         -------
-        list[dict[str, Any]]
-            List of result dictionaries.
+        list[int]
+            List of result IDs.
 
         Raises
         ------
@@ -193,8 +193,8 @@ class JATOSClient:
         Examples
         --------
         >>> client = JATOSClient("https://jatos.example.com", "token")
-        >>> # results = client.get_results(123)
-        >>> # print(len(results))
+        >>> # result_ids = client.get_results(123)
+        >>> # print(len(result_ids))
         """
         url = f"{self.base_url}/api/v1/studies/{study_id}/results"
         response = self.session.get(url)

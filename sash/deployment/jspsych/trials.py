@@ -111,9 +111,7 @@ def _serialize_item_metadata(item: Item, template: ItemTemplate) -> dict[str, An
             "chunking": (
                 {
                     "unit": template.presentation_spec.chunking.unit,
-                    "parse_type": (
-                        template.presentation_spec.chunking.parse_type
-                    ),
+                    "parse_type": (template.presentation_spec.chunking.parse_type),
                     "constituent_labels": (
                         template.presentation_spec.chunking.constituent_labels
                     ),
