@@ -37,6 +37,10 @@ api = [
     "anthropic>=0.8.0",
     "google-generativeai>=0.3.0",
 ]
+training = [
+    "pytorch-lightning>=2.0.0",
+    "tensorboard>=2.13.0",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -9,4 +9,22 @@ This module provides infrastructure for:
 
 from __future__ import annotations
 
-__all__: list[str] = []
+from sash.training.trainers import (
+    BaseTrainer,
+    HuggingFaceTrainer,
+    ModelMetadata,
+    PyTorchLightningTrainer,
+    get_trainer,
+    list_trainers,
+    register_trainer,
+)
+
+__all__ = [
+    "BaseTrainer",
+    "ModelMetadata",
+    "HuggingFaceTrainer",
+    "PyTorchLightningTrainer",
+    "register_trainer",
+    "get_trainer",
+    "list_trainers",
+]
