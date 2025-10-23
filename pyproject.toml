@@ -56,7 +56,7 @@ line-length = 88
 target-version = "py313"
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "N", "D", "UP", "ANN", "B", "A", "C4"]
+select = ["E", "F", "I", "N", "D", "UP", "ANN", "B", "A", "C4", "PLC"]
 ignore = ["ANN401"]
 
 [tool.ruff.lint.pydocstyle]

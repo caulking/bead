@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 import click
+import yaml
 from pydantic import ValidationError
 
 from sash.cli.utils import (

@@ -96,7 +96,18 @@ def format_output(
     if format_type == "yaml":
         return yaml.dump(data, default_flow_style=False, sort_keys=False)
     elif format_type == "json":
-        return json.dumps(data, indent=2)
+        # Convert Path objects to strings for JSON serialization
+        def convert_paths(obj: Any) -> Any:
+            if isinstance(obj, Path):
+                return str(obj)
+            elif isinstance(obj, dict):
+                return {str(k): convert_paths(v) for k, v in obj.items()}  # type: ignore[misc]
+            elif isinstance(obj, list):
+                return [convert_paths(item) for item in obj]  # type: ignore[misc]
+            return obj
+
+        converted_data: Any = convert_paths(data)
+        return json.dumps(converted_data, indent=2)
     elif format_type == "table":
         if not isinstance(data, dict):
             raise ValueError("Table format requires dict data")
@@ -178,10 +189,11 @@ def print_error(message: str, exit_code: int = 1) -> None:
     message : str
         Error message to display.
     exit_code : int
-        Exit code (default: 1).
+        Exit code (default: 1). Pass 0 to not exit.
     """
-    console.print(f"[red]✗ Error:[/red] {message}", stderr=True)  # type: ignore[call-arg]
-    sys.exit(exit_code)
+    console.print(f"[red]✗ Error:[/red] {message}")
+    if exit_code != 0:
+        sys.exit(exit_code)
 
 
 def print_success(message: str) -> None:

@@ -369,7 +369,19 @@ Thumbs.db
 """
 
 
-# Import config commands
+# Import command groups
 from sash.cli.config import config  # noqa: E402
+from sash.cli.deployment import deployment  # noqa: E402
+from sash.cli.items import items  # noqa: E402
+from sash.cli.lists import lists  # noqa: E402
+from sash.cli.resources import resources  # noqa: E402
+from sash.cli.templates import templates  # noqa: E402
+from sash.cli.training import training  # noqa: E402
 
 cli.add_command(config)
+cli.add_command(resources)
+cli.add_command(templates)
+cli.add_command(items)
+cli.add_command(lists)
+cli.add_command(deployment)
+cli.add_command(training)

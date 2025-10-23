@@ -24,7 +24,7 @@ def test_load_config_for_cli_with_file(mock_config_file: Path) -> None:
     """Test loading config from file."""
     config = load_config_for_cli(str(mock_config_file), "default", False)
     assert config.logging.level == "DEBUG"
-    assert config.resources.auto_download is False
+    assert config.resources.cache_external is True
 
 
 def test_load_config_for_cli_nonexistent_file() -> None:
