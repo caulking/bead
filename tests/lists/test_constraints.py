@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from uuid import uuid4
+
 import pytest
 from pydantic import ValidationError
 
@@ -403,8 +405,6 @@ class TestOrderingConstraint:
 
     def test_create_with_precedence(self) -> None:
         """Test creating with precedence pairs."""
-        from uuid import uuid4
-
         item_a, item_b = uuid4(), uuid4()
         constraint = OrderingConstraint(precedence_pairs=[(item_a, item_b)])
 
@@ -517,8 +517,6 @@ class TestOrderingConstraint:
 
     def test_serialization_roundtrip(self) -> None:
         """Test serialization roundtrip works."""
-        from uuid import uuid4
-
         item_a, item_b = uuid4(), uuid4()
         constraint = OrderingConstraint(
             precedence_pairs=[(item_a, item_b)],

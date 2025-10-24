@@ -15,6 +15,7 @@ from sash.lists.constraints import (
     UniquenessConstraint,
 )
 from sash.lists.models import ExperimentList, ListCollection
+from sash.lists.partitioner import ListPartitioner
 
 
 @pytest.fixture
@@ -277,7 +278,7 @@ def sample_quantile_metadata() -> dict[UUID, dict[str, float]]:
     dict[UUID, dict[str, float]]
         Metadata with lm_prob values.
     """
-    import numpy as np
+    import numpy as np  # noqa: PLC0415
 
     items = [uuid4() for _ in range(100)]
     metadata: dict[UUID, dict[str, float]] = {}
@@ -301,8 +302,6 @@ def partitioner_default() -> Any:
     ListPartitioner
         Partitioner with default settings.
     """
-    from sash.lists.partitioner import ListPartitioner
-
     return ListPartitioner()
 
 
@@ -315,6 +314,4 @@ def partitioner_seeded() -> Any:
     ListPartitioner
         Partitioner with seed=42.
     """
-    from sash.lists.partitioner import ListPartitioner
-
     return ListPartitioner(random_seed=42)

@@ -20,6 +20,7 @@ from sash.training.active_learning.selection import (
     RandomSelector,
     UncertaintySampler,
 )
+from sash.training.active_learning.strategies import UncertaintySampling
 
 
 class TestUncertaintySampler:
@@ -241,8 +242,6 @@ class TestUncertaintySampler:
 
         # Get uncertainties for selected items
         probs = [varying_predict_fn(None, item) for item in selected]
-        from sash.training.active_learning.strategies import UncertaintySampling
-
         strategy = UncertaintySampling()
         uncertainties = strategy.compute_scores(np.array(probs))
 

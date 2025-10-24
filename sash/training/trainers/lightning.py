@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import time
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from sash.data.timestamps import format_iso8601, now_iso8601
 from sash.training.trainers.base import BaseTrainer, ModelMetadata
@@ -37,8 +37,8 @@ def create_lightning_module(
     Any
         Lightning module instance.
     """
-    import pytorch_lightning as pl
-    import torch
+    import pytorch_lightning as pl  # noqa: PLC0415
+    import torch  # noqa: PLC0415
 
     class _LightningModule(pl.LightningModule):
         def __init__(self) -> None:
@@ -162,8 +162,8 @@ class PyTorchLightningTrainer(BaseTrainer):
         >>> metadata.framework  # doctest: +SKIP
         'pytorch_lightning'
         """
-        import pytorch_lightning as pl
-        from transformers import AutoModelForSequenceClassification
+        import pytorch_lightning as pl  # noqa: PLC0415
+        from transformers import AutoModelForSequenceClassification  # noqa: PLC0415
 
         start_time = time.time()
 
@@ -270,7 +270,7 @@ class PyTorchLightningTrainer(BaseTrainer):
         >>> trainer = PyTorchLightningTrainer({})  # doctest: +SKIP
         >>> trainer.save_model(Path("output"), metadata)  # doctest: +SKIP
         """
-        import torch
+        import torch  # noqa: PLC0415
 
         output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -304,7 +304,7 @@ class PyTorchLightningTrainer(BaseTrainer):
         >>> trainer = PyTorchLightningTrainer({})  # doctest: +SKIP
         >>> model = trainer.load_model(Path("saved_model"))  # doctest: +SKIP
         """
-        import torch
+        import torch  # noqa: PLC0415
 
         if self.lightning_module is not None:
             self.lightning_module.load_state_dict(

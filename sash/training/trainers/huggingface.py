@@ -138,7 +138,7 @@ class HuggingFaceTrainer(BaseTrainer):
         >>> metadata.framework  # doctest: +SKIP
         'huggingface'
         """
-        from transformers import (
+        from transformers import (  # noqa: PLC0415
             AutoModelForSequenceClassification,
             AutoTokenizer,
             DataCollatorWithPadding,
@@ -290,7 +290,7 @@ class HuggingFaceTrainer(BaseTrainer):
         >>> trainer = HuggingFaceTrainer({})  # doctest: +SKIP
         >>> model = trainer.load_model(Path("saved_model"))  # doctest: +SKIP
         """
-        from transformers import (
+        from transformers import (  # noqa: PLC0415
             AutoModelForSequenceClassification,
             AutoTokenizer,
         )

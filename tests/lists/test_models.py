@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from uuid import UUID, uuid4
 
 import pytest
@@ -251,8 +252,6 @@ class TestExperimentList:
     def test_update_modified_time(self, empty_experiment_list: ExperimentList) -> None:
         """Test manual update_modified_time works."""
         original_modified = empty_experiment_list.modified_at
-
-        import time
 
         time.sleep(0.01)
         empty_experiment_list.update_modified_time()

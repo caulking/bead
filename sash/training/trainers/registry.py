@@ -96,8 +96,8 @@ def list_trainers() -> list[str]:
 
 
 # Register built-in trainers
-from sash.training.trainers.huggingface import HuggingFaceTrainer
-from sash.training.trainers.lightning import PyTorchLightningTrainer
+from sash.training.trainers.huggingface import HuggingFaceTrainer  # noqa: E402
+from sash.training.trainers.lightning import PyTorchLightningTrainer  # noqa: E402
 
 register_trainer("huggingface", HuggingFaceTrainer)
 register_trainer("pytorch_lightning", PyTorchLightningTrainer)

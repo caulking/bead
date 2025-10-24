@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 
 from click.testing import CliRunner
@@ -239,8 +240,6 @@ def test_list_filled(
     cli_runner: CliRunner, tmp_path: Path, mock_filled_templates_file: Path
 ) -> None:
     """Test listing filled templates."""
-    import shutil
-
     dest = tmp_path / "filled.jsonl"
     shutil.copy(mock_filled_templates_file, dest)
 

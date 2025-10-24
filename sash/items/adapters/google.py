@@ -69,8 +69,6 @@ class GoogleAdapter(ModelAdapter):
         embedding_model: str = "models/embedding-001",
     ) -> None:
         if cache is None:
-            from sash.items.cache import ModelOutputCache
-
             cache = ModelOutputCache(backend="memory")
 
         super().__init__(

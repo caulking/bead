@@ -12,6 +12,7 @@ from pathlib import Path
 import click
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
+from rich.table import Table
 
 from sash.cli.utils import print_error, print_info, print_success
 from sash.training.data_collection.jatos import JATOSDataCollector
@@ -131,8 +132,6 @@ def show_data_stats(ctx: click.Context, data_file: Path) -> None:
     $ sash training show-data-stats results.jsonl
     """
     try:
-        from rich.table import Table
-
         print_info(f"Analyzing data: {data_file}")
 
         # Load and analyze data

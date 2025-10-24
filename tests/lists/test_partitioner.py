@@ -12,6 +12,7 @@ from sash.lists.constraints import (
     SizeConstraint,
     UniquenessConstraint,
 )
+from sash.lists.models import ExperimentList
 from sash.lists.partitioner import ListPartitioner
 
 type ItemMetadata = dict[str, str | float | int]
@@ -377,8 +378,6 @@ def test_check_uniqueness_satisfied() -> None:
     items = [uuid4() for _ in range(5)]
     metadata = {uid: {"prop": i} for i, uid in enumerate(items)}
 
-    from sash.lists.models import ExperimentList
-
     exp_list = ExperimentList(name="test", list_number=0)
     for item_id in items:
         exp_list.add_item(item_id)
@@ -393,8 +392,6 @@ def test_check_uniqueness_violated() -> None:
     items = [uuid4() for _ in range(5)]
     metadata = {uid: {"prop": 1} for uid in items}  # All same value
 
-    from sash.lists.models import ExperimentList
-
     exp_list = ExperimentList(name="test", list_number=0)
     for item_id in items:
         exp_list.add_item(item_id)
@@ -407,8 +404,6 @@ def test_check_size_satisfied() -> None:
     """Test size constraint checking."""
     partitioner = ListPartitioner()
 
-    from sash.lists.models import ExperimentList
-
     exp_list = ExperimentList(name="test", list_number=0)
     for _ in range(20):
         exp_list.add_item(uuid4())
@@ -420,8 +415,6 @@ def test_check_size_satisfied() -> None:
 def test_check_size_violated() -> None:
     """Test size constraint violation."""
     partitioner = ListPartitioner()
-
-    from sash.lists.models import ExperimentList
 
     exp_list = ExperimentList(name="test", list_number=0)
     for _ in range(5):
@@ -500,8 +493,6 @@ def test_list_names_and_numbers(sample_item_metadata: MetadataDict) -> None:
 def test_compute_balance_metrics_empty_list() -> None:
     """Test balance metrics computation for empty list."""
     partitioner = ListPartitioner()
-
-    from sash.lists.models import ExperimentList
 
     exp_list = ExperimentList(name="test", list_number=0)
     constraint = QuantileConstraint(property_path="value", n_quantiles=5)

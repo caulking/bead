@@ -1,6 +1,7 @@
 """Tests for JATOS exporter."""
 
 import json
+import uuid
 import zipfile
 from pathlib import Path
 
@@ -88,8 +89,6 @@ def test_study_json_schema(
         assert data["description"] == "Test Description"
 
         # Check UUID format (should be valid UUID)
-        import uuid
-
         uuid.UUID(data["uuid"])  # Will raise if invalid
 
 

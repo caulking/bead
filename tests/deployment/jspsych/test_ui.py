@@ -1,5 +1,7 @@
 """Tests for UI component generation (Material Design CSS and helpers)."""
 
+from uuid import uuid4
+
 from sash.deployment.jspsych.ui.components import (
     create_cloze_fields,
     create_forced_choice_config,
@@ -8,6 +10,11 @@ from sash.deployment.jspsych.ui.components import (
 )
 from sash.deployment.jspsych.ui.styles import MaterialDesignStylesheet
 from sash.items.models import UnfilledSlot
+from sash.resources.constraints import (
+    DSLConstraint,
+    ExtensionalConstraint,
+    IntensionalConstraint,
+)
 
 
 def test_material_design_stylesheet_creation() -> None:
@@ -130,10 +137,6 @@ def test_create_cloze_fields() -> None:
 
 def test_create_cloze_fields_with_extensional_constraint() -> None:
     """Test creating cloze fields with extensional constraints."""
-    from uuid import uuid4
-
-    from sash.resources.constraints import ExtensionalConstraint
-
     constraint_id = uuid4()
     lexical_item_id1 = uuid4()
     lexical_item_id2 = uuid4()
@@ -159,10 +162,6 @@ def test_create_cloze_fields_with_extensional_constraint() -> None:
 
 def test_create_cloze_fields_with_intensional_constraint() -> None:
     """Test creating cloze fields with intensional constraints."""
-    from uuid import uuid4
-
-    from sash.resources.constraints import IntensionalConstraint
-
     constraint_id = uuid4()
     constraint = IntensionalConstraint(property="pos", operator="==", value="VERB")
 
@@ -179,10 +178,6 @@ def test_create_cloze_fields_with_intensional_constraint() -> None:
 
 def test_create_cloze_fields_with_dsl_constraint() -> None:
     """Test creating cloze fields with DSL constraints."""
-    from uuid import uuid4
-
-    from sash.resources.constraints import DSLConstraint
-
     constraint_id = uuid4()
     constraint = DSLConstraint(expression="pos == 'VERB' and len(lemma) > 4")
 
@@ -217,10 +212,6 @@ def test_infer_widget_type_no_constraints() -> None:
 
 def test_infer_widget_type_extensional_allow() -> None:
     """Test inferring widget type with extensional allow constraint."""
-    from uuid import uuid4
-
-    from sash.resources.constraints import ExtensionalConstraint
-
     constraint_id = uuid4()
     constraint = ExtensionalConstraint(mode="allow", items=[uuid4(), uuid4()])
 
@@ -230,10 +221,6 @@ def test_infer_widget_type_extensional_allow() -> None:
 
 def test_infer_widget_type_extensional_deny() -> None:
     """Test inferring widget type with extensional deny constraint."""
-    from uuid import uuid4
-
-    from sash.resources.constraints import ExtensionalConstraint
-
     constraint_id = uuid4()
     constraint = ExtensionalConstraint(mode="deny", items=[uuid4()])
 
@@ -243,10 +230,6 @@ def test_infer_widget_type_extensional_deny() -> None:
 
 def test_infer_widget_type_intensional() -> None:
     """Test inferring widget type with intensional constraint."""
-    from uuid import uuid4
-
-    from sash.resources.constraints import IntensionalConstraint
-
     constraint_id = uuid4()
     constraint = IntensionalConstraint(property="pos", operator="==", value="VERB")
 

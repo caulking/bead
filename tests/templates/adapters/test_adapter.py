@@ -3,12 +3,10 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import pytest
 
-if TYPE_CHECKING:
-    from tests.templates.adapters.adapter_helpers import MockMLMAdapter
+from tests.templates.adapters.adapter_helpers import MockMLMAdapter
 
 
 def test_adapter_init(mock_adapter: MockMLMAdapter) -> None:
@@ -67,8 +65,6 @@ def test_adapter_get_mask_token(loaded_mock_adapter: MockMLMAdapter) -> None:
 
 def test_adapter_with_cache_dir() -> None:
     """Test adapter with cache directory."""
-    from tests.templates.adapters.adapter_helpers import MockMLMAdapter
-
     cache_dir = Path("/tmp/test_cache")
     adapter = MockMLMAdapter(cache_dir=cache_dir)
 
@@ -89,8 +85,6 @@ def test_adapter_predict_calls_tracked(
 
 def test_adapter_custom_predictions() -> None:
     """Test adapter with custom predictions."""
-    from tests.templates.adapters.adapter_helpers import MockMLMAdapter
-
     custom_preds = {
         "The cat [MASK] on the mat": [
             ("sat", -0.3),

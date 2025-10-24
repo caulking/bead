@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 
 from click.testing import CliRunner
@@ -349,8 +350,6 @@ def test_list_lexicons(
 ) -> None:
     """Test listing lexicons."""
     # Copy mock lexicon to test directory
-    import shutil
-
     dest = tmp_path / "verbs.jsonl"
     shutil.copy(mock_lexicon_file, dest)
 
@@ -397,8 +396,6 @@ def test_list_templates(
     cli_runner: CliRunner, tmp_path: Path, mock_template_file: Path
 ) -> None:
     """Test listing templates."""
-    import shutil
-
     dest = tmp_path / "templates.jsonl"
     shutil.copy(mock_template_file, dest)
 

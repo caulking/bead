@@ -120,12 +120,7 @@ class HuggingFaceMLMAdapter(HuggingFaceAdapterMixin, TemplateFillingModelAdapter
 
         # Clear CUDA cache if using GPU
         if self.device == "cuda":
-            try:
-                import torch
-
-                torch.cuda.empty_cache()
-            except ImportError:
-                pass
+            torch.cuda.empty_cache()
 
     def predict_masked_token(
         self,

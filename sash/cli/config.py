@@ -250,8 +250,6 @@ def export(
                 output.write_text(yaml_content)
             else:
                 # Write config dict directly to YAML file
-                import yaml
-
                 with open(output, "w") as f:
                     yaml.dump(config_dict, f, default_flow_style=False, sort_keys=False)
             print_success(f"Configuration exported to: {output}")
@@ -259,8 +257,6 @@ def export(
             if yaml_content:
                 click.echo(yaml_content)
             else:
-                import yaml
-
                 click.echo(
                     yaml.dump(config_dict, default_flow_style=False, sort_keys=False)
                 )
@@ -305,8 +301,6 @@ def _generate_yaml_with_comments(config_dict: dict[str, Any]) -> str:
     str
         YAML content with comments.
     """
-    import yaml
-
     lines = ["# sash Configuration", "# Generated with comments", ""]
 
     # Add commented sections

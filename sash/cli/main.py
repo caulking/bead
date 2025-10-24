@@ -6,6 +6,7 @@ project scaffolding.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import click
@@ -186,8 +187,6 @@ def _is_valid_project_name(name: str) -> bool:
     bool
         True if valid, False otherwise.
     """
-    import re
-
     # Allow letters, numbers, hyphens, underscores
     return bool(re.match(r"^[a-zA-Z0-9_-]+$", name))
 

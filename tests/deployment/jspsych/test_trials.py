@@ -5,6 +5,7 @@ from __future__ import annotations
 from uuid import uuid4
 
 import pytest
+from pydantic import ValidationError
 
 from sash.deployment.jspsych.config import (
     ChoiceConfig,
@@ -178,8 +179,6 @@ class TestCreateTrial:
         )
 
         # Test that Pydantic validation prevents invalid experiment types
-        from pydantic import ValidationError
-
         with pytest.raises(ValidationError):
             ExperimentConfig(
                 experiment_type="invalid_type",  # type: ignore

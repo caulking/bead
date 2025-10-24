@@ -585,7 +585,7 @@ class SashConfig(BaseModel):
         >>> 'profile: default' in yaml_str
         True
         """
-        from sash.config.serialization import to_yaml
+        from sash.config.serialization import to_yaml  # noqa: PLC0415
 
         return to_yaml(self, include_defaults=False)
 

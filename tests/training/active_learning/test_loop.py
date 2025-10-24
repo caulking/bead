@@ -16,7 +16,7 @@ import pytest
 
 from sash.items.models import Item
 from sash.training.active_learning.loop import ActiveLearningLoop
-from sash.training.active_learning.selection import UncertaintySampler
+from sash.training.active_learning.selection import RandomSelector, UncertaintySampler
 
 
 class TestActiveLearningLoop:
@@ -480,8 +480,6 @@ class TestActiveLearningLoop:
         simple_predict_fn: Callable[[Any, Item], np.ndarray],
     ) -> None:
         """Test loop with different item selectors."""
-        from sash.training.active_learning.selection import RandomSelector
-
         # Test with uncertainty sampler
         uncertainty_loop = ActiveLearningLoop(
             item_selector=UncertaintySampler(method="margin"),

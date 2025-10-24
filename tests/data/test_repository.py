@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from uuid import uuid4
 
 from sash.data.base import SashBaseModel
 from sash.data.repository import Repository
@@ -60,8 +61,6 @@ def test_repository_get_object(tmp_path: Path) -> None:
 
 def test_repository_get_nonexistent(tmp_path: Path) -> None:
     """Test getting a nonexistent object returns None."""
-    from uuid import uuid4
-
     storage_path = tmp_path / "repo.jsonl"
     repo = Repository[SimpleModel](SimpleModel, storage_path)
 
@@ -148,8 +147,6 @@ def test_repository_delete_object(tmp_path: Path) -> None:
 
 def test_repository_exists(tmp_path: Path) -> None:
     """Test checking if object exists."""
-    from uuid import uuid4
-
     storage_path = tmp_path / "repo.jsonl"
     repo = Repository[SimpleModel](SimpleModel, storage_path)
 
@@ -311,8 +308,6 @@ def test_repository_persistence(tmp_path: Path) -> None:
 # Edge case tests
 def test_repository_empty_repository(tmp_path: Path) -> None:
     """Test operations on empty repository."""
-    from uuid import uuid4
-
     storage_path = tmp_path / "repo.jsonl"
     repo = Repository[SimpleModel](SimpleModel, storage_path)
 
@@ -344,8 +339,6 @@ def test_repository_add_duplicate_id(tmp_path: Path) -> None:
 
 def test_repository_delete_nonexistent(tmp_path: Path) -> None:
     """Test deleting a nonexistent object doesn't error."""
-    from uuid import uuid4
-
     storage_path = tmp_path / "repo.jsonl"
     repo = Repository[SimpleModel](SimpleModel, storage_path)
 

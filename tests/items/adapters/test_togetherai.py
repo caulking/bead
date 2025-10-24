@@ -32,7 +32,7 @@ def togetherai_adapter(mock_openai, mocker: MockerFixture):
     """Create TogetherAI adapter instance for testing."""
     mocker.patch.dict(os.environ, {"TOGETHER_API_KEY": "test-key"})
 
-    from sash.items.adapters.togetherai import TogetherAIAdapter
+    from sash.items.adapters.togetherai import TogetherAIAdapter  # noqa: PLC0415
 
     cache = ModelOutputCache(backend="memory")
     return TogetherAIAdapter(
@@ -50,7 +50,7 @@ class TestTogetherAIAdapterInitialization:
         mock_openai_module.OpenAI.return_value = mock_client
         mocker.patch.dict("sys.modules", {"openai": mock_openai_module})
 
-        from sash.items.adapters.togetherai import TogetherAIAdapter
+        from sash.items.adapters.togetherai import TogetherAIAdapter  # noqa: PLC0415
 
         cache = ModelOutputCache(backend="memory")
         adapter = TogetherAIAdapter(
@@ -73,7 +73,7 @@ class TestTogetherAIAdapterInitialization:
         mocker.patch.dict("sys.modules", {"openai": mock_openai_module})
         mocker.patch.dict(os.environ, {"TOGETHER_API_KEY": "env-key"})
 
-        from sash.items.adapters.togetherai import TogetherAIAdapter
+        from sash.items.adapters.togetherai import TogetherAIAdapter  # noqa: PLC0415
 
         cache = ModelOutputCache(backend="memory")
         adapter = TogetherAIAdapter(
@@ -91,7 +91,7 @@ class TestTogetherAIAdapterInitialization:
         mocker.patch.dict("sys.modules", {"openai": mock_openai_module})
         mocker.patch.dict(os.environ, {}, clear=True)
 
-        from sash.items.adapters.togetherai import TogetherAIAdapter
+        from sash.items.adapters.togetherai import TogetherAIAdapter  # noqa: PLC0415
 
         cache = ModelOutputCache(backend="memory")
 
@@ -318,7 +318,7 @@ class TestTogetherAIRetryLogic:
         self, togetherai_adapter, mock_openai, mocker: MockerFixture
     ) -> None:
         """Test retry on API errors."""
-        import sys
+        import sys  # noqa: PLC0415
 
         openai_module = sys.modules["openai"]
 

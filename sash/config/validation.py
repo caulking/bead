@@ -4,6 +4,8 @@ This module provides pre-flight validation for configuration objects,
 checking for common issues before the configuration is used.
 """
 
+from __future__ import annotations
+
 from sash.config.models import SashConfig
 
 
@@ -126,38 +128,37 @@ def check_model_configuration(config: SashConfig) -> list[str]:
     list[str]
         List of model configuration errors.
     """
+    try:
+        import torch  # noqa: PLC0415
+    except ImportError:
+        torch = None  # type: ignore[assignment]
+
     errors: list[str] = []
 
     # Check CUDA availability if device is set to cuda
     if config.items.model.device == "cuda":
-        try:
-            import torch  # type: ignore[import-untyped]
-
-            if not torch.cuda.is_available():  # type: ignore[no-untyped-call]
-                errors.append(
-                    "Model device is set to 'cuda' but CUDA is not available. "
-                    "Set device to 'cpu' or install CUDA."
-                )
-        except ImportError:
+        if torch is None:
             errors.append(
                 "Model device is set to 'cuda' but PyTorch is not installed. "
                 "Install PyTorch or set device to 'cpu'."
             )
+        elif not torch.cuda.is_available():  # type: ignore[no-untyped-call]
+            errors.append(
+                "Model device is set to 'cuda' but CUDA is not available. "
+                "Set device to 'cpu' or install CUDA."
+            )
 
     # Check MPS availability if device is set to mps
     if config.items.model.device == "mps":
-        try:
-            import torch  # type: ignore[import-untyped]
-
-            if not torch.backends.mps.is_available():  # type: ignore[no-untyped-call]
-                errors.append(
-                    "Model device is set to 'mps' but MPS is not available. "
-                    "Set device to 'cpu' or use a macOS system with MPS support."
-                )
-        except ImportError:
+        if torch is None:
             errors.append(
                 "Model device is set to 'mps' but PyTorch is not installed. "
                 "Install PyTorch or set device to 'cpu'."
+            )
+        elif not torch.backends.mps.is_available():  # type: ignore[no-untyped-call]
+            errors.append(
+                "Model device is set to 'mps' but MPS is not available. "
+                "Set device to 'cpu' or use a macOS system with MPS support."
             )
 
     return errors

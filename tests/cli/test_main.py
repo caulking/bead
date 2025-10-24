@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from click.testing import CliRunner
@@ -58,8 +59,6 @@ def test_init_command_help(cli_runner: CliRunner) -> None:
 
 def test_init_command_creates_project(cli_runner: CliRunner, tmp_path: Path) -> None:
     """Test init command creates project structure."""
-    import os
-
     old_cwd = os.getcwd()
     try:
         os.chdir(tmp_path)
@@ -106,8 +105,6 @@ def test_init_command_creates_project(cli_runner: CliRunner, tmp_path: Path) -> 
 
 def test_init_command_with_profile(cli_runner: CliRunner, tmp_path: Path) -> None:
     """Test init command with profile option."""
-    import os
-
     old_cwd = os.getcwd()
     try:
         os.chdir(tmp_path)
@@ -126,8 +123,6 @@ def test_init_command_with_profile(cli_runner: CliRunner, tmp_path: Path) -> Non
 
 def test_init_command_current_directory(cli_runner: CliRunner, tmp_path: Path) -> None:
     """Test init command in current directory."""
-    import os
-
     old_cwd = os.getcwd()
     try:
         os.chdir(tmp_path)
@@ -143,8 +138,6 @@ def test_init_command_existing_directory_with_force(
     cli_runner: CliRunner, tmp_path: Path
 ) -> None:
     """Test init command with --force on existing directory."""
-    import os
-
     project_dir = tmp_path / "existing_project"
     project_dir.mkdir()
 
@@ -169,8 +162,6 @@ def test_init_command_invalid_project_name(
     cli_runner: CliRunner, tmp_path: Path
 ) -> None:
     """Test init command with invalid project name."""
-    import os
-
     old_cwd = os.getcwd()
     try:
         os.chdir(tmp_path)
@@ -190,8 +181,6 @@ def test_init_command_existing_nonempty_directory_no_force(
     cli_runner: CliRunner, tmp_path: Path
 ) -> None:
     """Test init command on existing non-empty directory without --force."""
-    import os
-
     project_dir = tmp_path / "nonempty"
     project_dir.mkdir()
     (project_dir / "file.txt").write_text("content")
@@ -214,8 +203,6 @@ def test_init_command_existing_nonempty_directory_no_force(
 
 def test_gitignore_content(cli_runner: CliRunner, tmp_path: Path) -> None:
     """Test .gitignore file content."""
-    import os
-
     old_cwd = os.getcwd()
     try:
         os.chdir(tmp_path)
@@ -240,8 +227,6 @@ def test_gitignore_content(cli_runner: CliRunner, tmp_path: Path) -> None:
 
 def test_config_yaml_structure(cli_runner: CliRunner, tmp_path: Path) -> None:
     """Test generated sash.yaml structure."""
-    import os
-
     old_cwd = os.getcwd()
     try:
         os.chdir(tmp_path)

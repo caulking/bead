@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import csv
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -254,8 +255,6 @@ def create_template(
         slot_dict: dict[str, Slot] = {}
 
         # Extract slot names from template string
-        import re
-
         slot_names = re.findall(r"\{(\w+)\}", template_string)
 
         if not slot_names:

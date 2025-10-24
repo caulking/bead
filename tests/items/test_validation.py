@@ -5,6 +5,7 @@ from __future__ import annotations
 from uuid import uuid4
 
 import pytest
+from pydantic import ValidationError
 
 from sash.items.models import (
     Item,
@@ -136,8 +137,6 @@ class TestValidateModelOutput:
 
     def test_empty_model_name(self) -> None:
         """Test Pydantic validation prevents empty model name."""
-        from pydantic import ValidationError
-
         with pytest.raises(ValidationError):
             ModelOutput(
                 model_name="",  # Pydantic will reject this
@@ -150,8 +149,6 @@ class TestValidateModelOutput:
 
     def test_empty_operation(self) -> None:
         """Test Pydantic validation prevents empty operation."""
-        from pydantic import ValidationError
-
         with pytest.raises(ValidationError):
             ModelOutput(
                 model_name="gpt2",
@@ -164,8 +161,6 @@ class TestValidateModelOutput:
 
     def test_empty_cache_key(self) -> None:
         """Test Pydantic validation prevents empty cache key."""
-        from pydantic import ValidationError
-
         with pytest.raises(ValidationError):
             ModelOutput(
                 model_name="gpt2",

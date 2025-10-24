@@ -7,6 +7,8 @@ from uuid import uuid4
 import numpy as np
 import pytest
 
+from sash.dsl.context import EvaluationContext
+from sash.dsl.parser import parse
 from sash.items.adapters.base import ModelAdapter
 from sash.items.adapters.registry import ModelAdapterRegistry
 from sash.items.cache import ModelOutputCache
@@ -321,8 +323,6 @@ class TestItemConstructor:
 
     def test_extract_model_calls_lm_prob(self, constructor) -> None:
         """Test extracting lm_prob function calls from AST."""
-        from sash.dsl.parser import parse
-
         ast = parse('lm_prob(sentence, "gpt2")')
         calls = constructor._extract_model_calls(ast, {"sentence": "Test text"})
 
@@ -334,8 +334,6 @@ class TestItemConstructor:
 
     def test_extract_model_calls_nli(self, constructor) -> None:
         """Test extracting NLI function calls from AST."""
-        from sash.dsl.parser import parse
-
         ast = parse('nli(premise, hypothesis, "roberta-nli")')
         calls = constructor._extract_model_calls(
             ast, {"premise": "P text", "hypothesis": "H text"}
@@ -350,8 +348,6 @@ class TestItemConstructor:
 
     def test_extract_model_calls_complex_expression(self, constructor) -> None:
         """Test extracting calls from complex DSL expression."""
-        from sash.dsl.parser import parse
-
         # Expression with multiple model calls
         ast = parse('lm_prob(sent, "gpt2") > -50 and len(sent) > 10')
         calls = constructor._extract_model_calls(ast, {"sent": "Test sentence here"})
@@ -507,8 +503,6 @@ class TestModelFunctionRegistration:
 
     def test_register_model_functions(self, constructor) -> None:
         """Test that model functions are registered in context."""
-        from sash.dsl.context import EvaluationContext
-
         context = EvaluationContext()
         constructor._register_model_functions(context, [])
 
@@ -521,8 +515,6 @@ class TestModelFunctionRegistration:
 
     def test_lm_prob_function(self, constructor, cache) -> None:
         """Test lm_prob function uses cache."""
-        from sash.dsl.context import EvaluationContext
-
         # Pre-populate cache
         cache.set("gpt2", "log_probability", -42.0, text="test")
 
@@ -536,8 +528,6 @@ class TestModelFunctionRegistration:
 
     def test_nli_function(self, constructor, cache) -> None:
         """Test nli function uses cache."""
-        from sash.dsl.context import EvaluationContext
-
         # Pre-populate cache
         nli_scores = {"entailment": 0.9, "neutral": 0.08, "contradiction": 0.02}
         cache.set("roberta-nli", "nli", nli_scores, premise="p", hypothesis="h")
@@ -552,8 +542,6 @@ class TestModelFunctionRegistration:
 
     def test_similarity_function(self, constructor, cache) -> None:
         """Test similarity function uses cache."""
-        from sash.dsl.context import EvaluationContext
-
         # Pre-populate cache
         cache.set("model", "similarity", 0.85, text1="a", text2="b")
 
@@ -566,8 +554,6 @@ class TestModelFunctionRegistration:
 
     def test_embedding_function(self, constructor, cache) -> None:
         """Test embedding function uses cache."""
-        from sash.dsl.context import EvaluationContext
-
         # Pre-populate cache with numpy array
         emb = np.array([0.1, 0.2, 0.3])
         cache.set("model", "embedding", emb, text="test")

@@ -35,7 +35,7 @@ def openai_adapter(mock_openai, mocker: MockerFixture):
     mocker.patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
 
     # Import after mocking
-    from sash.items.adapters.openai import OpenAIAdapter
+    from sash.items.adapters.openai import OpenAIAdapter  # noqa: PLC0415
 
     cache = ModelOutputCache(backend="memory")
     return OpenAIAdapter(model_name="gpt-4", cache=cache, api_key="test-key")
@@ -51,7 +51,7 @@ class TestOpenAIAdapterInitialization:
         mock_openai_module.OpenAI.return_value = mock_client
         mocker.patch.dict("sys.modules", {"openai": mock_openai_module})
 
-        from sash.items.adapters.openai import OpenAIAdapter
+        from sash.items.adapters.openai import OpenAIAdapter  # noqa: PLC0415
 
         cache = ModelOutputCache(backend="memory")
         adapter = OpenAIAdapter(model_name="gpt-4", cache=cache, api_key="explicit-key")
@@ -68,7 +68,7 @@ class TestOpenAIAdapterInitialization:
         mocker.patch.dict("sys.modules", {"openai": mock_openai_module})
         mocker.patch.dict(os.environ, {"OPENAI_API_KEY": "env-key"})
 
-        from sash.items.adapters.openai import OpenAIAdapter
+        from sash.items.adapters.openai import OpenAIAdapter  # noqa: PLC0415
 
         cache = ModelOutputCache(backend="memory")
         adapter = OpenAIAdapter(model_name="gpt-4", cache=cache)
@@ -84,7 +84,7 @@ class TestOpenAIAdapterInitialization:
         mocker.patch.dict("sys.modules", {"openai": mock_openai_module})
         mocker.patch.dict(os.environ, {}, clear=True)
 
-        from sash.items.adapters.openai import OpenAIAdapter
+        from sash.items.adapters.openai import OpenAIAdapter  # noqa: PLC0415
 
         cache = ModelOutputCache(backend="memory")
 
@@ -345,7 +345,7 @@ class TestOpenAIRetryLogic:
     ) -> None:
         """Test retry on API errors."""
         # Import after mocking
-        import sys
+        import sys  # noqa: PLC0415
 
         openai_module = sys.modules["openai"]
 

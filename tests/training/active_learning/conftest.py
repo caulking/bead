@@ -7,6 +7,7 @@ mock items, models, predictions, and sampling strategies.
 from __future__ import annotations
 
 from collections.abc import Callable
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from unittest.mock import Mock
 from uuid import uuid4
@@ -16,9 +17,7 @@ import pytest
 from pytest_mock import MockerFixture
 
 from sash.items.models import Item
-
-if TYPE_CHECKING:
-    from sash.training.trainers.base import ModelMetadata
+from sash.training.trainers.base import ModelMetadata
 
 
 @pytest.fixture
@@ -235,10 +234,6 @@ def mock_trainer(mocker: MockerFixture) -> Mock:
     >>> def test_trainer(mock_trainer):  # doctest: +SKIP
     ...     assert mock_trainer.train is not None
     """
-    from pathlib import Path
-
-    from sash.training.trainers.base import ModelMetadata
-
     trainer = mocker.Mock()
 
     # Mock train method to return metadata

@@ -67,8 +67,6 @@ class OpenAIAdapter(ModelAdapter):
         embedding_model: str = "text-embedding-ada-002",
     ) -> None:
         if cache is None:
-            from sash.items.cache import ModelOutputCache
-
             cache = ModelOutputCache(backend="memory")
 
         super().__init__(

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import sys
+from io import StringIO
 from pathlib import Path
 from typing import Any, Literal
 
@@ -147,8 +148,6 @@ def _dict_to_table(data: dict[str, Any], title: str | None = None) -> str:
         table.add_row(key, value_str)
 
     # Capture table output
-    from io import StringIO
-
     string_io = StringIO()
     temp_console = Console(file=string_io, force_terminal=True, width=120)
     temp_console.print(table)

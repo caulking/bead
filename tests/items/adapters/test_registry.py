@@ -7,7 +7,7 @@ import pytest
 from pytest_mock import MockerFixture
 
 from sash.items.adapters.base import ModelAdapter
-from sash.items.adapters.registry import ModelAdapterRegistry
+from sash.items.adapters.registry import ModelAdapterRegistry, default_registry
 from sash.items.cache import ModelOutputCache
 
 
@@ -138,8 +138,6 @@ class TestDefaultRegistry:
 
     def test_default_registry_has_huggingface_adapters(self) -> None:
         """Test that default registry includes HuggingFace adapters."""
-        from sash.items.adapters.registry import default_registry
-
         adapters = default_registry.list_adapters()
 
         # HuggingFace adapters should be registered
@@ -149,8 +147,6 @@ class TestDefaultRegistry:
 
     def test_default_registry_has_sentence_transformer(self) -> None:
         """Test that default registry includes sentence transformer."""
-        from sash.items.adapters.registry import default_registry
-
         adapters = default_registry.list_adapters()
 
         assert "sentence_transformer" in adapters
@@ -162,16 +158,12 @@ class TestDefaultRegistry:
         # This test verifies that registry doesn't fail if API packages aren't installed
         # We can't easily test the actual import failures, but we can verify
         # the registry still works
-        from sash.items.adapters.registry import default_registry
-
         # Registry should still be usable even if some adapters failed to import
         adapters = default_registry.list_adapters()
         assert isinstance(adapters, list)
 
     def test_get_huggingface_adapter_from_default_registry(self) -> None:
         """Test getting a HuggingFace adapter from default registry."""
-        from sash.items.adapters.registry import default_registry
-
         cache = ModelOutputCache(backend="memory")
 
         # This should work without errors
@@ -181,8 +173,6 @@ class TestDefaultRegistry:
 
     def test_default_registry_caching_works(self) -> None:
         """Test that default registry caches instances."""
-        from sash.items.adapters.registry import default_registry
-
         cache = ModelOutputCache(backend="memory")
 
         adapter1 = default_registry.get_adapter("huggingface_lm", "gpt2", cache=cache)
@@ -207,7 +197,7 @@ class TestRegistryWithAPIAdapters:
         mocker.patch.dict("sys.modules", {"openai": mock_openai_module})
 
         # Now import and register
-        from sash.items.adapters.openai import OpenAIAdapter
+        from sash.items.adapters.openai import OpenAIAdapter  # noqa: PLC0415
 
         registry = ModelAdapterRegistry()
         registry.register("openai", OpenAIAdapter)
@@ -231,7 +221,7 @@ class TestRegistryWithAPIAdapters:
         mocker.patch.dict("sys.modules", {"anthropic": mock_anthropic_module})
 
         # Now import and register
-        from sash.items.adapters.anthropic import AnthropicAdapter
+        from sash.items.adapters.anthropic import AnthropicAdapter  # noqa: PLC0415
 
         registry = ModelAdapterRegistry()
         registry.register("anthropic", AnthropicAdapter)

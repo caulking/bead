@@ -63,8 +63,6 @@ class AnthropicAdapter(ModelAdapter):
         model_version: str = "latest",
     ) -> None:
         if cache is None:
-            from sash.items.cache import ModelOutputCache
-
             cache = ModelOutputCache(backend="memory")
 
         super().__init__(

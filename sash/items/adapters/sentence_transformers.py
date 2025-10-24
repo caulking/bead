@@ -67,8 +67,7 @@ class HuggingFaceSentenceTransformer(ModelAdapter):
     def _load_model(self) -> None:
         """Load model lazily on first use."""
         if self._model is None:
-            # Import here to avoid requiring sentence-transformers if not used
-            from sentence_transformers import SentenceTransformer
+            from sentence_transformers import SentenceTransformer  # noqa: PLC0415
 
             logger.info(f"Loading sentence transformer: {self.model_name}")
             self._model = SentenceTransformer(self.model_name, device=self.device)
