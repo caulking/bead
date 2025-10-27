@@ -97,7 +97,7 @@ class TemplateConfig(BaseModel):
     Parameters
     ----------
     filling_strategy : str
-        Strategy name for filling templates.
+        Strategy name for filling templates ("exhaustive", "random", "stratified", "mlm", "mixed").
     batch_size : int
         Batch size for filling operations.
     max_combinations : int | None
@@ -124,6 +124,10 @@ class TemplateConfig(BaseModel):
         Enable content-addressable caching for MLM predictions.
     mlm_cache_dir : Path | None
         Directory for MLM prediction cache.
+    slot_strategies : dict[str, dict[str, Any]] | None
+        Per-slot strategy configuration for mixed filling.
+        Maps slot names to strategy configs with format:
+        {'slot_name': {'strategy': 'exhaustive|random|stratified|mlm', ...strategy_config...}}
 
     Examples
     --------
@@ -138,9 +142,21 @@ class TemplateConfig(BaseModel):
     ... )
     >>> config_mlm.mlm_beam_size
     5
+    >>> # Mixed strategy configuration
+    >>> config_mixed = TemplateConfig(
+    ...     filling_strategy="mixed",
+    ...     mlm_model_name="bert-base-uncased",
+    ...     slot_strategies={
+    ...         "noun": {"strategy": "exhaustive"},
+    ...         "verb": {"strategy": "exhaustive"},
+    ...         "adjective": {"strategy": "mlm"}
+    ...     }
+    ... )
+    >>> config_mixed.slot_strategies
+    {'noun': {'strategy': 'exhaustive'}, 'verb': {'strategy': 'exhaustive'}, 'adjective': {'strategy': 'mlm'}}
     """
 
-    filling_strategy: Literal["exhaustive", "random", "stratified", "mlm"] = Field(
+    filling_strategy: Literal["exhaustive", "random", "stratified", "mlm", "mixed"] = Field(
         default="exhaustive", description="Strategy for filling templates"
     )
     batch_size: int = Field(default=1000, description="Batch size for filling", gt=0)
@@ -183,6 +199,13 @@ class TemplateConfig(BaseModel):
     )
     mlm_cache_dir: Path | None = Field(
         default=None, description="Directory for MLM prediction cache"
+    )
+
+    # Mixed strategy settings
+    slot_strategies: dict[str, dict[str, Any]] | None = Field(
+        default=None,
+        description="Per-slot strategy configuration for mixed filling. "
+        "Format: {'slot_name': {'strategy': 'exhaustive|random|stratified|mlm', ...config...}}",
     )
 
     @field_validator("max_combinations")
@@ -233,6 +256,29 @@ class TemplateConfig(BaseModel):
                 "mlm_custom_order must be specified when mlm_fill_direction is 'custom'"
             )
             raise ValueError(msg)
+
+        # Validate mixed strategy configuration
+        if self.filling_strategy == "mixed" and self.slot_strategies is None:
+            msg = "slot_strategies must be specified when filling_strategy is 'mixed'"
+            raise ValueError(msg)
+
+        if self.slot_strategies is not None:
+            for slot_name, config in self.slot_strategies.items():
+                if "strategy" not in config:
+                    msg = f"'strategy' key required for slot '{slot_name}' in slot_strategies"
+                    raise ValueError(msg)
+
+                strategy_name = config["strategy"]
+                if strategy_name not in ["exhaustive", "random", "stratified", "mlm"]:
+                    msg = f"Invalid strategy '{strategy_name}' for slot '{slot_name}'"
+                    raise ValueError(msg)
+
+                # If MLM, check model config is available
+                if strategy_name == "mlm" and self.mlm_model_name is None:
+                    msg = (
+                        f"mlm_model_name must be specified when slot '{slot_name}' uses MLM"
+                    )
+                    raise ValueError(msg)
 
         return self
 

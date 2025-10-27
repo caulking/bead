@@ -929,3 +929,409 @@ class StrategyFiller(TemplateFiller):
             count *= len(items)
 
         return count
+
+
+class MixedFillingStrategy(FillingStrategy):
+    """Fill different template slots using different strategies.
+
+    Allows per-slot strategy specification, enabling workflows like:
+    - Fill nouns/verbs exhaustively
+    - Fill adjectives via MLM based on noun context
+
+    This strategy operates in phases:
+    1. Phase 1: Fill slots assigned to non-MLM strategies (exhaustive, random, etc.)
+    2. Phase 2: For each Phase 1 combination, fill remaining slots via MLM
+
+    Parameters
+    ----------
+    slot_strategies : dict[str, tuple[FillingStrategy, dict]]
+        Mapping of slot names to (strategy, config) tuples.
+        Config is strategy-specific kwargs.
+    default_strategy : FillingStrategy | None
+        Default strategy for slots not explicitly specified.
+
+    Examples
+    --------
+    >>> exhaustive = ExhaustiveStrategy()
+    >>> mlm_config = {
+    ...     "resolver": resolver,
+    ...     "model_adapter": mlm_adapter,
+    ...     "top_k": 5
+    ... }
+    >>> strategy = MixedFillingStrategy(
+    ...     slot_strategies={
+    ...         "noun": (exhaustive, {}),
+    ...         "verb": (exhaustive, {}),
+    ...         "adjective": ("mlm", mlm_config)
+    ...     }
+    ... )
+    """
+
+    def __init__(
+        self,
+        slot_strategies: dict[str, tuple[str | FillingStrategy, dict]],
+        default_strategy: FillingStrategy | None = None,
+    ) -> None:
+        """Initialize mixed strategy.
+
+        Parameters
+        ----------
+        slot_strategies : dict[str, tuple[str | FillingStrategy, dict]]
+            Mapping slot names to (strategy_name, config) or (strategy_instance, config).
+            strategy_name can be: "exhaustive", "random", "stratified", "mlm"
+        default_strategy : FillingStrategy | None
+            Default strategy for unspecified slots.
+        """
+        self.slot_strategies = slot_strategies
+        self.default_strategy = default_strategy or ExhaustiveStrategy()
+
+        # Separate slots by phase
+        self.phase1_slots: list[str] = []  # Non-MLM slots
+        self.phase2_slots: list[str] = []  # MLM slots
+        self.phase1_strategies: dict[str, FillingStrategy] = {}
+        self.mlm_configs: dict[str, dict] = {}
+
+        for slot_name, (strategy, config) in slot_strategies.items():
+            strategy_name = strategy if isinstance(strategy, str) else strategy.name
+
+            if strategy_name == "mlm":
+                self.phase2_slots.append(slot_name)
+                self.mlm_configs[slot_name] = config
+            else:
+                self.phase1_slots.append(slot_name)
+                # Instantiate strategy if needed
+                if isinstance(strategy, str):
+                    self.phase1_strategies[slot_name] = self._instantiate_strategy(
+                        strategy, config
+                    )
+                else:
+                    self.phase1_strategies[slot_name] = strategy
+
+    def _instantiate_strategy(
+        self, strategy_name: str, config: dict
+    ) -> FillingStrategy:
+        """Instantiate strategy from name and config.
+
+        Parameters
+        ----------
+        strategy_name : str
+            Strategy name: "exhaustive", "random", "stratified"
+        config : dict
+            Strategy-specific configuration
+
+        Returns
+        -------
+        FillingStrategy
+            Instantiated strategy
+
+        Raises
+        ------
+        ValueError
+            If strategy name is unknown
+        """
+        if strategy_name == "exhaustive":
+            return ExhaustiveStrategy()
+        elif strategy_name == "random":
+            return RandomStrategy(**config)
+        elif strategy_name == "stratified":
+            return StratifiedStrategy(**config)
+        else:
+            raise ValueError(f"Unknown strategy: {strategy_name}")
+
+    @property
+    def name(self) -> str:
+        """Get strategy name."""
+        return "mixed"
+
+    def generate_combinations(
+        self,
+        slot_items: dict[str, list[LexicalItem]],
+    ) -> list[dict[str, LexicalItem]]:
+        """Generate combinations using mixed strategies.
+
+        Note: This method signature is required by FillingStrategy,
+        but MixedFillingStrategy with MLM requires template context.
+        Use generate_from_template instead.
+
+        Parameters
+        ----------
+        slot_items : dict[str, list[LexicalItem]]
+            Mapping of slot names to valid items
+
+        Returns
+        -------
+        list[dict[str, LexicalItem]]
+            Generated combinations
+
+        Raises
+        ------
+        NotImplementedError
+            If any slot uses MLM strategy (requires template context)
+        """
+        if self.phase2_slots:
+            raise NotImplementedError(
+                "MixedFillingStrategy with MLM slots requires template context. "
+                "Use StrategyFiller or CSPFiller, which call generate_from_template."
+            )
+
+        # If no MLM slots, just use phase 1 strategies
+        # This is a simplified case: all slots use non-MLM strategies
+
+        # For each slot, generate its combinations independently
+        slot_combinations: dict[str, list[LexicalItem]] = {}
+
+        for slot_name, items in slot_items.items():
+            if slot_name in self.phase1_strategies:
+                strategy = self.phase1_strategies[slot_name]
+                # Generate combinations for just this slot
+                combos = strategy.generate_combinations({slot_name: items})
+                slot_combinations[slot_name] = [c[slot_name] for c in combos]
+            else:
+                # Use default strategy
+                combos = self.default_strategy.generate_combinations({slot_name: items})
+                slot_combinations[slot_name] = [c[slot_name] for c in combos]
+
+        # Generate cartesian product of all slot combinations
+        slot_names = list(slot_items.keys())
+        item_lists = [slot_combinations[name] for name in slot_names]
+
+        combinations: list[dict[str, LexicalItem]] = []
+        for combo_tuple in cartesian_product(*item_lists):
+            combo_dict = dict(zip(slot_names, combo_tuple, strict=True))
+            combinations.append(combo_dict)
+
+        return combinations
+
+    def generate_from_template(
+        self,
+        template: Template,
+        lexicons: list[Lexicon],
+        language_code: LanguageCode | None = None,
+    ) -> Iterator[dict[str, LexicalItem]]:
+        """Generate combinations from template using mixed strategies.
+
+        Phase 1: Fill non-MLM slots using their assigned strategies
+        Phase 2: For each Phase 1 combination, fill MLM slots using beam search
+
+        Parameters
+        ----------
+        template : Template
+            Template to fill
+        lexicons : list[Lexicon]
+            Lexicons for constraint resolution
+        language_code : LanguageCode | None
+            Language filter
+
+        Yields
+        ------
+        dict[str, LexicalItem]
+            Complete slot-to-item mappings
+        """
+        # Phase 1: Fill non-MLM slots
+        if not self.phase1_slots:
+            # No phase 1 slots - just use MLM for all phase 2 slots
+            phase1_combinations = [{}]
+        else:
+            phase1_combinations = self._generate_phase1_combinations(
+                template, lexicons, language_code
+            )
+
+        # Phase 2: Fill MLM slots for each phase 1 combination
+        if not self.phase2_slots:
+            # No phase 2 slots - just yield phase 1 combinations
+            for combo in phase1_combinations:
+                yield combo
+        else:
+            for partial_combo in phase1_combinations:
+                # Fill remaining slots with MLM
+                for complete_combo in self._fill_mlm_slots(
+                    template, partial_combo, lexicons, language_code
+                ):
+                    yield complete_combo
+
+    def _generate_phase1_combinations(
+        self,
+        template: Template,
+        lexicons: list[Lexicon],
+        language_code: LanguageCode | None,
+    ) -> list[dict[str, LexicalItem]]:
+        """Generate combinations for phase 1 (non-MLM) slots.
+
+        Parameters
+        ----------
+        template : Template
+            Template being filled
+        lexicons : list[Lexicon]
+            Lexicons for items
+        language_code : LanguageCode | None
+            Language filter
+
+        Returns
+        -------
+        list[dict[str, LexicalItem]]
+            Partial combinations (only phase 1 slots filled)
+        """
+        # Build constraint resolver
+        resolver = ConstraintResolver()
+
+        # Get valid items for each phase 1 slot
+        slot_items: dict[str, list[LexicalItem]] = {}
+        normalized_lang = validate_iso639_code(language_code) if language_code else None
+
+        for slot_name in self.phase1_slots:
+            if slot_name not in template.slots:
+                continue
+
+            slot = template.slots[slot_name]
+            candidates: list[LexicalItem] = []
+
+            # Collect items from all lexicons
+            for lexicon in lexicons:
+                for item in lexicon.items.values():
+                    # Filter by language
+                    if normalized_lang and item.language_code != normalized_lang:
+                        continue
+                    # Check slot constraints
+                    if slot.constraints:
+                        eval_context: dict[str, ContextValue | LexicalItem] = {
+                            "self": item
+                        }
+                        # Add constraint context
+                        for constraint in slot.constraints:
+                            if constraint.context:
+                                eval_context.update(constraint.context)
+                            # Evaluate
+                            evaluator = DSLEvaluator()
+                            try:
+                                if not evaluator.evaluate(
+                                    constraint.expression, eval_context
+                                ):
+                                    continue
+                            except Exception:
+                                continue
+                    candidates.append(item)
+
+            slot_items[slot_name] = candidates
+
+        # Generate combinations using per-slot strategies
+        # For each slot, we need to apply its strategy independently,
+        # then take cartesian product
+
+        # Collect combinations per slot
+        slot_combos: dict[str, list[LexicalItem]] = {}
+
+        for slot_name in self.phase1_slots:
+            if slot_name not in slot_items:
+                continue
+
+            items = slot_items[slot_name]
+            strategy = self.phase1_strategies.get(slot_name, self.default_strategy)
+
+            # Generate combinations for this slot
+            combos = strategy.generate_combinations({slot_name: items})
+            slot_combos[slot_name] = [c[slot_name] for c in combos]
+
+        # Cartesian product of all phase 1 slots
+        if not slot_combos:
+            return [{}]
+
+        slot_names = list(slot_combos.keys())
+        item_lists = [slot_combos[name] for name in slot_names]
+
+        combinations: list[dict[str, LexicalItem]] = []
+        for combo_tuple in cartesian_product(*item_lists):
+            combo_dict = dict(zip(slot_names, combo_tuple, strict=True))
+            combinations.append(combo_dict)
+
+        return combinations
+
+    def _fill_mlm_slots(
+        self,
+        template: Template,
+        partial_filling: dict[str, LexicalItem],
+        lexicons: list[Lexicon],
+        language_code: LanguageCode | None,
+    ) -> Iterator[dict[str, LexicalItem]]:
+        """Fill MLM slots given a partial filling from phase 1.
+
+        Parameters
+        ----------
+        template : Template
+            Template being filled
+        partial_filling : dict[str, LexicalItem]
+            Already-filled slots from phase 1
+        lexicons : list[Lexicon]
+            Lexicons for items
+        language_code : LanguageCode | None
+            Language filter
+
+        Yields
+        ------
+        dict[str, LexicalItem]
+            Complete fillings with MLM slots added
+        """
+        # Create MLM strategy instance from first MLM config
+        # (Assuming all MLM slots share same model config for now)
+        if not self.phase2_slots or not self.mlm_configs:
+            yield partial_filling
+            return
+
+        # Get config from first MLM slot
+        first_mlm_slot = self.phase2_slots[0]
+        mlm_config = self.mlm_configs[first_mlm_slot]
+
+        # Create MLM strategy
+        mlm_strategy = MLMFillingStrategy(**mlm_config)
+
+        # Create a modified template with only MLM slots
+        mlm_template = self._create_mlm_template(template, partial_filling)
+
+        # Generate completions via MLM
+        for mlm_filling in mlm_strategy.generate_from_template(
+            mlm_template, lexicons, language_code
+        ):
+            # Combine partial + MLM fillings
+            complete = partial_filling.copy()
+            complete.update(mlm_filling)
+            yield complete
+
+    def _create_mlm_template(
+        self, template: Template, partial_filling: dict[str, LexicalItem]
+    ) -> Template:
+        """Create template with phase1 slots already filled.
+
+        Parameters
+        ----------
+        template : Template
+            Original template
+        partial_filling : dict[str, LexicalItem]
+            Items filling phase 1 slots
+
+        Returns
+        -------
+        Template
+            Modified template with phase1 slots replaced by text
+        """
+        # Replace phase 1 slots in template string with their fillings
+        modified_string = template.template_string
+        for slot_name, item in partial_filling.items():
+            placeholder = f"{{{slot_name}}}"
+            modified_string = modified_string.replace(placeholder, item.lemma)
+
+        # Create new template with only phase 2 (MLM) slots
+        mlm_slots = {
+            name: slot
+            for name, slot in template.slots.items()
+            if name in self.phase2_slots
+        }
+
+        # Create modified template
+        modified_template = Template(
+            name=f"{template.name}_mlm",
+            template_string=modified_string,
+            slots=mlm_slots,
+            constraints=template.constraints,
+            language_code=template.language_code,
+        )
+
+        return modified_template
