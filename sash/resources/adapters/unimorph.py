@@ -50,6 +50,7 @@ class UniMorphAdapter(ResourceAdapter):
             Optional cache instance.
         """
         self.cache = cache
+        self._datasets: dict[str, pd.DataFrame] = {}  # Cache datasets by language
 
     def fetch_items(
         self,
@@ -110,8 +111,11 @@ class UniMorphAdapter(ResourceAdapter):
 
         # Fetch from UniMorph
         try:
-            # Load dataset for language
-            dataset: pd.DataFrame = load_dataset(lang_code)
+            # Load dataset for language (cached at instance level)
+            if lang_code not in self._datasets:
+                self._datasets[lang_code] = load_dataset(lang_code)
+
+            dataset = self._datasets[lang_code]
 
             # Filter by lemma if query provided
             if query:
