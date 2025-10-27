@@ -13,6 +13,7 @@ from uuid import UUID
 
 import numpy as np
 
+from sash.dsl.evaluator import DSLEvaluator
 from sash.lists.balancer import QuantileBalancer
 from sash.lists.constraints import (
     BalanceConstraint,
@@ -22,6 +23,7 @@ from sash.lists.constraints import (
     UniquenessConstraint,
 )
 from sash.lists.models import ExperimentList
+from sash.resources.constraints import ContextValue
 
 # Type aliases for clarity
 type ItemMetadata = dict[str, Any]  # Arbitrary item properties
@@ -64,6 +66,7 @@ class ListPartitioner:
     def __init__(self, random_seed: int | None = None) -> None:
         self.random_seed = random_seed
         self._rng = np.random.default_rng(random_seed)
+        self.dsl_evaluator = DSLEvaluator()
 
     def partition(
         self,
@@ -150,7 +153,7 @@ class ListPartitioner:
             for i in range(n_lists)
         ]
 
-        # Shuffle and distribute round-robin
+        # Shuffle and distribute round robin
         items_shuffled = np.array(items)
         self._rng.shuffle(items_shuffled)
 
@@ -267,7 +270,11 @@ class ListPartitioner:
 
         # Create value function
         def value_func(item_id: UUID) -> float:
-            return float(self._get_property_value(item_id, qc.property_path, metadata))
+            return float(
+                self._extract_property_value(
+                    item_id, qc.property_expression, qc.context, metadata
+                )
+            )
 
         # Balance items across lists
         balanced_lists = balancer.balance(
@@ -317,7 +324,7 @@ class ListPartitioner:
         ExperimentList
             Best list for this item.
         """
-        # Compute score for each list (violations + size as tie-breaker)
+        # Compute score for each list (violations + size as tiebreaker)
         scores: list[tuple[int, int]] = []
         for exp_list in lists:
             # Temporarily add item
@@ -408,8 +415,8 @@ class ListPartitioner:
         # Get values for property
         values: list[Any] = []
         for item_id in exp_list.item_refs:
-            value = self._get_property_value(
-                item_id, constraint.property_path, metadata
+            value = self._extract_property_value(
+                item_id, constraint.property_expression, constraint.context, metadata
             )
             values.append(value)
 
@@ -444,8 +451,8 @@ class ListPartitioner:
         # Get values for property
         values: list[Any] = []
         for item_id in exp_list.item_refs:
-            value = self._get_property_value(
-                item_id, constraint.property_path, metadata
+            value = self._extract_property_value(
+                item_id, constraint.property_expression, constraint.context, metadata
             )
             values.append(value)
 
@@ -501,46 +508,55 @@ class ListPartitioner:
 
         return True
 
-    def _get_property_value(
+    def _extract_property_value(
         self,
         item_id: UUID,
-        property_path: str,
+        property_expression: str,
+        context: dict[str, ContextValue] | None,
         metadata: MetadataDict,
     ) -> Any:
-        """Extract property value using dot notation.
+        """Extract property value using DSL expression.
 
         Parameters
         ----------
         item_id : UUID
             Item UUID.
-        property_path : str
-            Dot-notation path (e.g., "item_metadata.lm_prob").
+        property_expression : str
+            DSL expression using dict access syntax (e.g., "item['lm_prob']",
+            "variance([item['val1'], item['val2']])"). The 'item' variable
+            refers to the metadata dict for this item.
+        context : dict[str, ContextValue] | None
+            Additional context variables for evaluation.
         metadata : dict[UUID, dict[str, Any]]
-            Metadata dict.
+            Metadata dict mapping item UUIDs to their metadata.
 
         Returns
         -------
         Any
-            Property value.
+            Evaluated property value.
 
         Raises
         ------
         KeyError
-            If item_id not in metadata or property path not found.
+            If item_id not in metadata.
+
+        Notes
+        -----
+        Since ListPartitioner uses stand-off annotation (UUIDs only, not full
+        Item objects), the 'item' variable in property expressions refers to
+        the item's metadata dict, not a full Item object. Use dict access
+        syntax: item['key'] rather than item.key.
         """
         if item_id not in metadata:
             raise KeyError(f"Item {item_id} not found in metadata")
 
-        parts = property_path.split(".")
-        value: Any = metadata[item_id]
+        # Build evaluation context with item metadata directly
+        # The metadata dict IS the item for property expression purposes
+        eval_context: dict[str, Any] = {"item": metadata[item_id]}
+        if context:
+            eval_context.update(context)
 
-        for part in parts:
-            if isinstance(value, dict):
-                value = value[part]  # type: ignore[assignment]
-            else:
-                value = getattr(value, part)  # type: ignore[assignment]
-
-        return value  # type: ignore[return-value]
+        return self.dsl_evaluator.evaluate(property_expression, eval_context)
 
     def _compute_balance_metrics(
         self,
@@ -569,11 +585,11 @@ class ListPartitioner:
         # Compute metrics for each constraint
         for constraint in constraints:
             if isinstance(constraint, QuantileConstraint):
-                metrics[f"quantile_{constraint.property_path}"] = (
+                metrics[f"quantile_{constraint.property_expression}"] = (
                     self._compute_quantile_distribution(exp_list, constraint, metadata)
                 )
             elif isinstance(constraint, BalanceConstraint):
-                metrics[f"balance_{constraint.property_path}"] = (
+                metrics[f"balance_{constraint.property_expression}"] = (
                     self._compute_category_distribution(exp_list, constraint, metadata)
                 )
 
@@ -614,7 +630,14 @@ class ListPartitioner:
             }
 
         values = [
-            float(self._get_property_value(item_id, constraint.property_path, metadata))
+            float(
+                self._extract_property_value(
+                    item_id,
+                    constraint.property_expression,
+                    constraint.context,
+                    metadata,
+                )
+            )
             for item_id in exp_list.item_refs
         ]
 
@@ -652,7 +675,9 @@ class ListPartitioner:
             return {"counts": {}, "n_categories": 0, "most_common": None}
 
         values = [
-            self._get_property_value(item_id, constraint.property_path, metadata)
+            self._extract_property_value(
+                item_id, constraint.property_expression, constraint.context, metadata
+            )
             for item_id in exp_list.item_refs
         ]
         counts = Counter(values)

@@ -106,6 +106,8 @@ class TemplateConfig(BaseModel):
         Random seed for reproducibility.
     stream_mode : bool
         Use streaming for large templates.
+    use_csp_solver : bool
+        Use CSP solver for templates with multi-slot constraints.
     mlm_model_name : str | None
         HuggingFace model name for MLM filling.
     mlm_beam_size : int
@@ -150,6 +152,10 @@ class TemplateConfig(BaseModel):
     )
     stream_mode: bool = Field(
         default=False, description="Use streaming for large templates"
+    )
+    use_csp_solver: bool = Field(
+        default=False,
+        description="Use CSP solver for templates with multi-slot constraints",
     )
 
     # MLM-specific settings

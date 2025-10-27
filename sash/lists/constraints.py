@@ -20,12 +20,15 @@ from uuid import UUID
 from pydantic import Field, field_validator, model_validator
 
 from sash.data.base import SashBaseModel
+from sash.resources.constraints import ContextValue
 
 # Type alias for list constraint types
 ListConstraintType = Literal[
     "uniqueness",  # No duplicate property values
+    "conditional_uniqueness",  # Conditional uniqueness based on DSL expression
     "balance",  # Balanced distribution of property
     "quantile",  # Uniform across quantiles
+    "grouped_quantile",  # Quantile distribution within groups
     "size",  # List size constraints
     "ordering",  # Presentation order constraints (runtime enforcement)
 ]
@@ -42,9 +45,12 @@ class UniquenessConstraint(SashBaseModel):
     ----------
     constraint_type : Literal["uniqueness"]
         Discriminator field for constraint type (always "uniqueness").
-    property_path : str
-        Dot-notation path to property that must be unique
-        (e.g., "item_metadata.target_verb", "rendered_elements.sentence").
+    property_expression : str
+        DSL expression that extracts the value that must be unique.
+        The item is available as 'item' in the expression.
+        Examples: "item.metadata.target_verb", "item.templates.sentence.text"
+    context : dict[str, ContextValue]
+        Additional context variables for DSL evaluation.
     allow_null : bool, default=False
         Whether to allow null/None values. If False, None values count
         as duplicates. If True, multiple None values are allowed.
@@ -56,7 +62,7 @@ class UniquenessConstraint(SashBaseModel):
     --------
     >>> # No two items with same target verb (high priority)
     >>> constraint = UniquenessConstraint(
-    ...     property_path="item_metadata.target_verb",
+    ...     property_expression="item.metadata.target_verb",
     ...     allow_null=False,
     ...     priority=5
     ... )
@@ -65,7 +71,12 @@ class UniquenessConstraint(SashBaseModel):
     """
 
     constraint_type: Literal["uniqueness"] = "uniqueness"
-    property_path: str = Field(..., description="Property path that must be unique")
+    property_expression: str = Field(
+        ..., description="DSL expression for value to check"
+    )
+    context: dict[str, ContextValue] = Field(
+        default_factory=dict, description="Additional context variables"
+    )
     allow_null: bool = Field(
         default=False, description="Whether to allow multiple null values"
     )
@@ -73,28 +84,28 @@ class UniquenessConstraint(SashBaseModel):
         default=1, ge=1, description="Constraint priority (higher = more important)"
     )
 
-    @field_validator("property_path")
+    @field_validator("property_expression")
     @classmethod
-    def validate_property_path(cls, v: str) -> str:
-        """Validate property path is non-empty.
+    def validate_property_expression(cls, v: str) -> str:
+        """Validate property expression is non-empty.
 
         Parameters
         ----------
         v : str
-            Property path to validate.
+            Property expression to validate.
 
         Returns
         -------
         str
-            Validated property path.
+            Validated property expression.
 
         Raises
         ------
         ValueError
-            If property path is empty or contains only whitespace.
+            If property expression is empty or contains only whitespace.
         """
         if not v or not v.strip():
-            raise ValueError("property_path must be non-empty")
+            raise ValueError("property_expression must be non-empty")
         return v.strip()
 
 
@@ -109,8 +120,12 @@ class BalanceConstraint(SashBaseModel):
     ----------
     constraint_type : Literal["balance"]
         Discriminator field for constraint type (always "balance").
-    property_path : str
-        Dot-notation path to property to balance.
+    property_expression : str
+        DSL expression that extracts the category value to balance.
+        The item is available as 'item' in the expression.
+        Example: "item.metadata.transitivity"
+    context : dict[str, ContextValue]
+        Additional context variables for DSL evaluation.
     target_counts : dict[str, int] | None, default=None
         Target counts for each category value. If None, equal distribution
         is assumed. Keys are category values, values are target counts.
@@ -125,12 +140,12 @@ class BalanceConstraint(SashBaseModel):
     --------
     >>> # Equal number of transitive and intransitive verbs
     >>> constraint = BalanceConstraint(
-    ...     property_path="item_metadata.transitivity",
+    ...     property_expression="item.metadata.transitivity",
     ...     tolerance=0.1
     ... )
     >>> # 2:1 ratio with high priority
     >>> constraint2 = BalanceConstraint(
-    ...     property_path="item_metadata.grammatical",
+    ...     property_expression="item.metadata.grammatical",
     ...     target_counts={"true": 20, "false": 10},
     ...     tolerance=0.05,
     ...     priority=3
@@ -138,7 +153,12 @@ class BalanceConstraint(SashBaseModel):
     """
 
     constraint_type: Literal["balance"] = "balance"
-    property_path: str = Field(..., description="Property path to balance")
+    property_expression: str = Field(
+        ..., description="DSL expression for category value"
+    )
+    context: dict[str, ContextValue] = Field(
+        default_factory=dict, description="Additional context variables"
+    )
     target_counts: dict[str, int] | None = Field(
         default=None, description="Target counts per category (None = equal)"
     )
@@ -149,28 +169,28 @@ class BalanceConstraint(SashBaseModel):
         default=1, ge=1, description="Constraint priority (higher = more important)"
     )
 
-    @field_validator("property_path")
+    @field_validator("property_expression")
     @classmethod
-    def validate_property_path(cls, v: str) -> str:
-        """Validate property path is non-empty.
+    def validate_property_expression(cls, v: str) -> str:
+        """Validate property expression is non-empty.
 
         Parameters
         ----------
         v : str
-            Property path to validate.
+            Property expression to validate.
 
         Returns
         -------
         str
-            Validated property path.
+            Validated property expression.
 
         Raises
         ------
         ValueError
-            If property path is empty or contains only whitespace.
+            If property expression is empty or contains only whitespace.
         """
         if not v or not v.strip():
-            raise ValueError("property_path must be non-empty")
+            raise ValueError("property_expression must be non-empty")
         return v.strip()
 
     @field_validator("target_counts")
@@ -208,14 +228,21 @@ class QuantileConstraint(SashBaseModel):
 
     Ensures uniform distribution of items across quantiles of a numeric
     property. Useful for balancing language model probabilities, word
-    frequencies, or other continuous variables.
+    frequencies, or other continuous variables. Supports complex DSL
+    expressions for computing derived metrics.
 
     Attributes
     ----------
     constraint_type : Literal["quantile"]
         Discriminator field for constraint type (always "quantile").
-    property_path : str
-        Dot-notation path to numeric property.
+    property_expression : str
+        DSL expression that computes the numeric value to quantile.
+        The item is available as 'item' in the expression.
+        Can be simple (e.g., "item.metadata.lm_prob") or complex
+        (e.g., "variance([item['val1'], item['val2'], item['val3']])")
+    context : dict[str, ContextValue]
+        Additional context variables for DSL evaluation.
+        Example: {"hyp_keys": ["hyp1", "hyp2", "hyp3"]}
     n_quantiles : int, default=5
         Number of quantiles to create (must be >= 2).
     items_per_quantile : int, default=2
@@ -228,49 +255,230 @@ class QuantileConstraint(SashBaseModel):
     --------
     >>> # Uniform distribution of LM probabilities across 5 quantiles
     >>> constraint = QuantileConstraint(
-    ...     property_path="item_metadata.lm_prob",
+    ...     property_expression="item.metadata.lm_prob",
     ...     n_quantiles=5,
     ...     items_per_quantile=2
     ... )
-    >>> # 10 deciles of word frequency (high priority)
+    >>> # Variance of precomputed NLI scores
     >>> constraint2 = QuantileConstraint(
-    ...     property_path="item_metadata.frequency",
-    ...     n_quantiles=10,
-    ...     items_per_quantile=3,
-    ...     priority=2
+    ...     property_expression="item['nli_variance']",
+    ...     n_quantiles=5,
+    ...     items_per_quantile=2
     ... )
     """
 
     constraint_type: Literal["quantile"] = "quantile"
-    property_path: str = Field(..., description="Property path to numeric property")
+    property_expression: str = Field(
+        ..., description="DSL expression for numeric value"
+    )
+    context: dict[str, ContextValue] = Field(
+        default_factory=dict, description="Additional context variables"
+    )
     n_quantiles: int = Field(default=5, ge=2, description="Number of quantiles")
     items_per_quantile: int = Field(default=2, ge=1, description="Items per quantile")
     priority: int = Field(
         default=1, ge=1, description="Constraint priority (higher = more important)"
     )
 
-    @field_validator("property_path")
+    @field_validator("property_expression")
     @classmethod
-    def validate_property_path(cls, v: str) -> str:
-        """Validate property path is non-empty.
+    def validate_property_expression(cls, v: str) -> str:
+        """Validate property expression is non-empty.
 
         Parameters
         ----------
         v : str
-            Property path to validate.
+            Property expression to validate.
 
         Returns
         -------
         str
-            Validated property path.
+            Validated property expression.
 
         Raises
         ------
         ValueError
-            If property path is empty or contains only whitespace.
+            If property expression is empty or contains only whitespace.
         """
         if not v or not v.strip():
-            raise ValueError("property_path must be non-empty")
+            raise ValueError("property_expression must be non-empty")
+        return v.strip()
+
+
+class GroupedQuantileConstraint(SashBaseModel):
+    """Constraint requiring uniform quantile distribution within groups.
+
+    Ensures uniform distribution across quantiles of a numeric property
+    within each group defined by a grouping property. Useful for balancing
+    a continuous variable independently within categorical groups.
+
+    Attributes
+    ----------
+    constraint_type : Literal["grouped_quantile"]
+        Discriminator field for constraint type (always "grouped_quantile").
+    property_expression : str
+        DSL expression that computes the numeric value to quantile.
+        The item is available as 'item' in the expression.
+        Example: "item.metadata.lm_prob"
+    group_by_expression : str
+        DSL expression that computes the grouping key.
+        The item is available as 'item' in the expression.
+        Example: "item.metadata.condition"
+    context : dict[str, ContextValue]
+        Additional context variables for DSL evaluation.
+    n_quantiles : int, default=5
+        Number of quantiles to create per group (must be >= 2).
+    items_per_quantile : int, default=2
+        Target number of items per quantile per group (must be >= 1).
+    priority : int, default=1
+        Constraint priority (higher = more important). When partitioning,
+        violations of higher-priority constraints are penalized more heavily.
+
+    Examples
+    --------
+    >>> # Balance LM probability quantiles within each condition
+    >>> constraint = GroupedQuantileConstraint(
+    ...     property_expression="item.metadata.lm_prob",
+    ...     group_by_expression="item.metadata.condition",
+    ...     n_quantiles=5,
+    ...     items_per_quantile=2
+    ... )
+    >>> # Balance embedding similarity IQR within semantic categories
+    >>> constraint2 = GroupedQuantileConstraint(
+    ...     property_expression="item['embedding_iqr']",
+    ...     group_by_expression="item['semantic_category']",
+    ...     n_quantiles=4,
+    ...     items_per_quantile=3
+    ... )
+    """
+
+    constraint_type: Literal["grouped_quantile"] = "grouped_quantile"
+    property_expression: str = Field(
+        ..., description="DSL expression for numeric value"
+    )
+    group_by_expression: str = Field(..., description="DSL expression for grouping key")
+    context: dict[str, ContextValue] = Field(
+        default_factory=dict, description="Additional context variables"
+    )
+    n_quantiles: int = Field(
+        default=5, ge=2, description="Number of quantiles per group"
+    )
+    items_per_quantile: int = Field(
+        default=2, ge=1, description="Items per quantile per group"
+    )
+    priority: int = Field(
+        default=1, ge=1, description="Constraint priority (higher = more important)"
+    )
+
+    @field_validator("property_expression", "group_by_expression")
+    @classmethod
+    def validate_expression(cls, v: str) -> str:
+        """Validate expression is non-empty.
+
+        Parameters
+        ----------
+        v : str
+            Expression to validate.
+
+        Returns
+        -------
+        str
+            Validated expression.
+
+        Raises
+        ------
+        ValueError
+            If expression is empty or contains only whitespace.
+        """
+        if not v or not v.strip():
+            raise ValueError("expression must be non-empty")
+        return v.strip()
+
+
+class ConditionalUniquenessConstraint(SashBaseModel):
+    """Constraint requiring uniqueness when a condition is met.
+
+    Ensures that values are unique only when a boolean condition is satisfied.
+    Useful for enforcing uniqueness on a subset of items while allowing
+    duplicates in others.
+
+    Attributes
+    ----------
+    constraint_type : Literal["conditional_uniqueness"]
+        Discriminator field for constraint type (always "conditional_uniqueness").
+    property_expression : str
+        DSL expression that computes the value that must be unique.
+        The item is available as 'item' in the expression.
+        Example: "item.metadata.target_word"
+    condition_expression : str
+        DSL boolean expression that determines if constraint applies.
+        The item is available as 'item' in the expression.
+        Example: "item.metadata.is_critical == True"
+    context : dict[str, ContextValue]
+        Additional context variables for DSL evaluation.
+    allow_null : bool, default=False
+        Whether to allow multiple null values when condition is true.
+    priority : int, default=1
+        Constraint priority (higher = more important). When partitioning,
+        violations of higher-priority constraints are penalized more heavily.
+
+    Examples
+    --------
+    >>> # Unique target words only for critical items
+    >>> constraint = ConditionalUniquenessConstraint(
+    ...     property_expression="item.metadata.target_word",
+    ...     condition_expression="item.metadata.is_critical == True",
+    ...     allow_null=False,
+    ...     priority=3
+    ... )
+    >>> # Unique sentences only when grammaticality is tested
+    >>> constraint2 = ConditionalUniquenessConstraint(
+    ...     property_expression="item.templates.sentence.text",
+    ...     condition_expression="item.metadata.test_type in test_grammaticality",
+    ...     context={"test_grammaticality": {"gram", "acceptability"}},
+    ...     allow_null=True
+    ... )
+    """
+
+    constraint_type: Literal["conditional_uniqueness"] = "conditional_uniqueness"
+    property_expression: str = Field(
+        ..., description="DSL expression for value to check"
+    )
+    condition_expression: str = Field(
+        ..., description="DSL boolean expression for when to apply constraint"
+    )
+    context: dict[str, ContextValue] = Field(
+        default_factory=dict, description="Additional context variables"
+    )
+    allow_null: bool = Field(
+        default=False, description="Whether to allow multiple null values"
+    )
+    priority: int = Field(
+        default=1, ge=1, description="Constraint priority (higher = more important)"
+    )
+
+    @field_validator("property_expression", "condition_expression")
+    @classmethod
+    def validate_expression(cls, v: str) -> str:
+        """Validate expression is non-empty.
+
+        Parameters
+        ----------
+        v : str
+            Expression to validate.
+
+        Returns
+        -------
+        str
+            Validated expression.
+
+        Raises
+        ------
+        ValueError
+            If expression is empty or contains only whitespace.
+        """
+        if not v or not v.strip():
+            raise ValueError("expression must be non-empty")
         return v.strip()
 
 
@@ -478,8 +686,10 @@ class OrderingConstraint(SashBaseModel):
 # Discriminated union for all list constraints
 ListConstraint = Annotated[
     UniquenessConstraint
+    | ConditionalUniquenessConstraint
     | BalanceConstraint
     | QuantileConstraint
+    | GroupedQuantileConstraint
     | SizeConstraint
     | OrderingConstraint,
     Field(discriminator="constraint_type"),

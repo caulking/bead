@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
 from sash.training.trainers.base import ModelMetadata
 from sash.training.trainers.lightning import PyTorchLightningTrainer
 
@@ -80,7 +78,7 @@ class TestPyTorchLightningTrainer:
         training_config["logging_dir"] = tmp_path / "logs"
 
         trainer = PyTorchLightningTrainer(training_config)
-        metadata = trainer.train(mock_dataset, mock_dataset)
+        _metadata = trainer.train(mock_dataset, mock_dataset)
 
         # Should create trainer with logger
         trainer_call_kwargs = mock_lightning["trainer_cls"].call_args[1]
@@ -96,7 +94,7 @@ class TestPyTorchLightningTrainer:
         training_config["logging_dir"] = None
 
         trainer = PyTorchLightningTrainer(training_config)
-        metadata = trainer.train(mock_dataset, mock_dataset)
+        _metadata = trainer.train(mock_dataset, mock_dataset)
 
         # Should create trainer without logger
         trainer_call_kwargs = mock_lightning["trainer_cls"].call_args[1]

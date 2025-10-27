@@ -71,13 +71,9 @@ def _load_item_templates(template_file: Path) -> list[ItemTemplate]:
                 template = ItemTemplate(**template_data)
                 templates.append(template)
             except json.JSONDecodeError as e:
-                raise ValueError(
-                    f"Line {line_num}: Invalid JSON - {e}"
-                ) from e
+                raise ValueError(f"Line {line_num}: Invalid JSON - {e}") from e
             except ValidationError as e:
-                raise ValueError(
-                    f"Line {line_num}: Invalid ItemTemplate - {e}"
-                ) from e
+                raise ValueError(f"Line {line_num}: Invalid ItemTemplate - {e}") from e
 
     return templates
 
@@ -115,9 +111,7 @@ def _load_filled_templates(filled_file: Path) -> dict[UUID, FilledTemplate]:
                 filled = FilledTemplate(**filled_data)
                 filled_templates[filled.id] = filled
             except json.JSONDecodeError as e:
-                raise ValueError(
-                    f"Line {line_num}: Invalid JSON - {e}"
-                ) from e
+                raise ValueError(f"Line {line_num}: Invalid JSON - {e}") from e
             except ValidationError as e:
                 raise ValueError(
                     f"Line {line_num}: Invalid FilledTemplate - {e}"
@@ -159,13 +153,9 @@ def _load_constraints(constraints_file: Path) -> dict[UUID, Constraint]:
                 constraint = Constraint(**constraint_data)  # type: ignore[misc]
                 constraints[constraint.id] = constraint  # type: ignore[misc]
             except json.JSONDecodeError as e:
-                raise ValueError(
-                    f"Line {line_num}: Invalid JSON - {e}"
-                ) from e
+                raise ValueError(f"Line {line_num}: Invalid JSON - {e}") from e
             except ValidationError as e:
-                raise ValueError(
-                    f"Line {line_num}: Invalid Constraint - {e}"
-                ) from e
+                raise ValueError(f"Line {line_num}: Invalid Constraint - {e}") from e
 
     return constraints
 
@@ -235,13 +225,12 @@ def _display_construction_stats(
     # Constraint satisfaction
     if items and items[0].constraint_satisfaction:
         satisfied_count = sum(
-            1 for item in items
+            1
+            for item in items
             for satisfied in item.constraint_satisfaction.values()
             if satisfied
         )
-        total_constraints = sum(
-            len(item.constraint_satisfaction) for item in items
-        )
+        total_constraints = sum(len(item.constraint_satisfaction) for item in items)
         if total_constraints > 0:
             table.add_row("", "")  # Separator
             table.add_row("Constraints Satisfied", str(satisfied_count))
@@ -444,8 +433,7 @@ def construct(
                     progress.advance(task)
                 except Exception as e:
                     print_error(
-                        f"Failed to construct items for template "
-                        f"'{template.name}': {e}"
+                        f"Failed to construct items for template '{template.name}': {e}"
                     )
                     continue
 

@@ -96,29 +96,15 @@ def adapter_registry() -> AdapterRegistry:
 
 
 @pytest.fixture
-def resolver(
-    sample_lexicon: Lexicon,
-    adapter_registry: AdapterRegistry,
-) -> ConstraintResolver:
-    """Create constraint resolver with sample lexicon and adapters.
-
-    Parameters
-    ----------
-    sample_lexicon : Lexicon
-        Sample lexicon fixture.
-    adapter_registry : AdapterRegistry
-        Adapter registry fixture.
+def resolver() -> ConstraintResolver:
+    """Create constraint resolver.
 
     Returns
     -------
     ConstraintResolver
-        Resolver configured with caching enabled.
+        Resolver with DSL evaluator.
     """
-    return ConstraintResolver(
-        lexicon=sample_lexicon,
-        adapter_registry=adapter_registry,
-        cache_results=True,
-    )
+    return ConstraintResolver()
 
 
 @pytest.fixture

@@ -7,12 +7,9 @@ from uuid import UUID
 import pytest
 
 from sash.resources import (
-    DSLConstraint,
-    ExtensionalConstraint,
-    IntensionalConstraint,
+    Constraint,
     LexicalItem,
     Lexicon,
-    RelationalConstraint,
     Slot,
     Template,
     TemplateCollection,
@@ -46,45 +43,39 @@ def sample_noun() -> LexicalItem:
 @pytest.fixture
 def sample_extensional_constraint(
     sample_lexical_item: LexicalItem,
-) -> ExtensionalConstraint:
+) -> Constraint:
     """Provide a sample extensional constraint."""
-    return ExtensionalConstraint(
-        mode="allow",
-        items=[sample_lexical_item.id],
+    return Constraint(
+        expression=f"self.id in [{sample_lexical_item.id}]",
     )
 
 
 @pytest.fixture
-def sample_intensional_constraint() -> IntensionalConstraint:
+def sample_intensional_constraint() -> Constraint:
     """Provide a sample intensional constraint."""
-    return IntensionalConstraint(
-        property="pos",
-        operator="==",
-        value="VERB",
+    return Constraint(
+        expression="self.pos == 'VERB'",
     )
 
 
 @pytest.fixture
-def sample_relational_constraint() -> RelationalConstraint:
+def sample_relational_constraint() -> Constraint:
     """Provide a sample relational constraint."""
-    return RelationalConstraint(
-        slot_a="subject",
-        slot_b="object",
-        relation="different",
-        property="lemma",
+    return Constraint(
+        expression="slots.subject.lemma != slots.object.lemma",
     )
 
 
 @pytest.fixture
-def sample_dsl_constraint() -> DSLConstraint:
+def sample_dsl_constraint() -> Constraint:
     """Provide a sample DSL constraint."""
-    return DSLConstraint(
-        expression="pos == 'VERB' and len(lemma) > 3",
+    return Constraint(
+        expression="self.pos == 'VERB' and len(self.lemma) > 3",
     )
 
 
 @pytest.fixture
-def sample_slot(sample_intensional_constraint: IntensionalConstraint) -> Slot:
+def sample_slot(sample_intensional_constraint: Constraint) -> Slot:
     """Provide a sample slot."""
     return Slot(
         name="subject",

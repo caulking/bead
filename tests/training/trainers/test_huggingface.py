@@ -191,9 +191,9 @@ class TestHuggingFaceTrainer:
     ) -> None:
         """Test training with best checkpoint saved."""
         # Set best checkpoint
-        mock_transformers["trainer_instance"].state.best_model_checkpoint = (
-            "/tmp/checkpoint-123"
-        )
+        mock_transformers[
+            "trainer_instance"
+        ].state.best_model_checkpoint = "/tmp/checkpoint-123"
 
         trainer = HuggingFaceTrainer(training_config)
         metadata = trainer.train(mock_dataset, mock_dataset)

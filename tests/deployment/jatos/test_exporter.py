@@ -34,9 +34,7 @@ def test_jatos_exporter_export(
     assert jzip_output_path.suffix == ".jzip"
 
 
-def test_jzip_structure(
-    sample_experiment_dir: Path, jzip_output_path: Path
-) -> None:
+def test_jzip_structure(sample_experiment_dir: Path, jzip_output_path: Path) -> None:
     """Test .jzip has correct structure."""
     exporter = JATOSExporter(
         study_title="Test Study", study_description="Test Description"
@@ -57,9 +55,7 @@ def test_jzip_structure(
         assert "experiment/data/timeline.json" in namelist
 
 
-def test_study_json_schema(
-    sample_experiment_dir: Path, jzip_output_path: Path
-) -> None:
+def test_study_json_schema(sample_experiment_dir: Path, jzip_output_path: Path) -> None:
     """Test study.json follows JATOS v3 schema."""
     exporter = JATOSExporter(
         study_title="Test Study", study_description="Test Description"
@@ -124,9 +120,7 @@ def test_study_json_component(
         assert component["active"] is True
 
 
-def test_sanitize_dirname(
-    sample_experiment_dir: Path, jzip_output_path: Path
-) -> None:
+def test_sanitize_dirname(sample_experiment_dir: Path, jzip_output_path: Path) -> None:
     """Test directory name sanitization."""
     exporter = JATOSExporter(
         study_title="My Study (2024)",
@@ -167,9 +161,7 @@ def test_export_file_instead_of_directory(
         exporter.export(file_path, jzip_output_path)
 
 
-def test_export_missing_index_html(
-    tmp_path: Path, jzip_output_path: Path
-) -> None:
+def test_export_missing_index_html(tmp_path: Path, jzip_output_path: Path) -> None:
     """Test export raises error when index.html is missing."""
     exporter = JATOSExporter(study_title="Test", study_description="")
 

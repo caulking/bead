@@ -6,7 +6,7 @@ import pytest
 from pydantic import ValidationError
 
 from sash.resources import (
-    IntensionalConstraint,
+    Constraint,
     Slot,
     Template,
     TemplateSequence,
@@ -19,7 +19,7 @@ class TestSlot:
 
     def test_create_with_all_fields(self) -> None:
         """Test creating a slot with all fields."""
-        constraint = IntensionalConstraint(property="pos", operator="==", value="VERB")
+        constraint = Constraint(expression="self.pos == 'VERB'")
         slot = Slot(
             name="subject",
             description="The subject of the sentence",
@@ -44,10 +44,8 @@ class TestSlot:
 
     def test_create_with_multiple_constraints(self) -> None:
         """Test creating a slot with multiple constraints."""
-        constraint1 = IntensionalConstraint(property="pos", operator="==", value="VERB")
-        constraint2 = IntensionalConstraint(
-            property="tense", operator="==", value="present"
-        )
+        constraint1 = Constraint(expression="self.pos == 'VERB'")
+        constraint2 = Constraint(expression="self.tense == 'present'")
         slot = Slot(name="verb", constraints=[constraint1, constraint2])
         assert len(slot.constraints) == 2
 
@@ -257,7 +255,7 @@ class TestTemplate:
 
     def test_template_with_nested_constraints(self) -> None:
         """Test template with nested constraints in slots."""
-        constraint = IntensionalConstraint(property="pos", operator="==", value="VERB")
+        constraint = Constraint(expression="self.pos == 'VERB'")
         slot = Slot(name="verb", constraints=[constraint])
         template = Template(
             name="test",
@@ -265,7 +263,7 @@ class TestTemplate:
             slots={"verb": slot},
         )
         assert len(template.slots["verb"].constraints) == 1
-        assert isinstance(template.slots["verb"].constraints[0], IntensionalConstraint)
+        assert isinstance(template.slots["verb"].constraints[0], Constraint)
 
     def test_empty_name_fails(self) -> None:
         """Test that empty template name validation fails."""
@@ -403,13 +401,13 @@ class TestTemplateSequence:
             template_string="{word}",
             slots={"word": slot},
         )
-        constraint = IntensionalConstraint(property="pos", operator="==", value="VERB")
+        constraint = Constraint(expression="self.pos == 'VERB'")
         sequence = TemplateSequence(
             name="sequence",
             templates=[template],
-            cross_template_constraints=[constraint],
+            constraints=[constraint],
         )
-        assert len(sequence.cross_template_constraints) == 1
+        assert len(sequence.constraints) == 1
 
     def test_serialization_deserialization(self) -> None:
         """Test sequence serialization/deserialization."""

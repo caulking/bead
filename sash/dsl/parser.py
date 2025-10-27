@@ -103,12 +103,20 @@ class ASTBuilder(Transformer):  # type: ignore[type-arg]
         attribute = str(items[-1].value)
         return ast.AttributeAccess(object=obj, attribute=attribute)
 
+    def subscript(self, items: list[Any]) -> ast.Subscript:
+        """Transform subscript access."""
+        # Items: [object, lbracket_token, index_expr, rbracket_token]
+        obj = items[0]
+        # The index expression is items[1] (non-Token items)
+        index_expr = [item for item in items[1:] if not isinstance(item, Token)][0]
+        return ast.Subscript(object=obj, index=index_expr)
+
     def function_call(self, items: list[Any]) -> ast.FunctionCall:
         """Transform function call."""
-        # Items: [name_token, lparen, arguments_list/None, rparen]
-        name_token = items[0]
-        name = str(name_token.value)
-        function = ast.Variable(name=name)
+        # Items: [atom, lparen, arguments_list/None, rparen]
+        # The first item is the function expression (can be Variable or AttributeAccess)
+        function = items[0]
+
         # Arguments are in the list returned by the arguments rule (if present)
         # Filter for non-Token, non-None items and flatten lists
         arguments = []

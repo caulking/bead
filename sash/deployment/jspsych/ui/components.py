@@ -9,13 +9,10 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
+from sash.dsl import ast
+from sash.dsl.parser import parse
 from sash.items.models import UnfilledSlot
-from sash.resources.constraints import (
-    Constraint,
-    DSLConstraint,
-    ExtensionalConstraint,
-    IntensionalConstraint,
-)
+from sash.resources.constraints import Constraint
 
 
 def create_rating_scale(
@@ -59,15 +56,14 @@ def create_rating_scale(
 def create_cloze_fields(
     unfilled_slots: list[UnfilledSlot],
     constraints: dict[UUID, Constraint],
+    lexicon: dict[UUID, str] | None = None,
 ) -> list[dict[str, Any]]:
     """Generate cloze field configurations from slots and constraints.
 
     Infers widget type from slot constraints:
-    - ExtensionalConstraint with allow mode → dropdown with specific items
-    - IntensionalConstraint with categorical property → text input with validation
-    - DSLConstraint → text input
+    - Constraint with "self.id in [...]" pattern → dropdown with specific items
+    - Other DSL constraints → text input with validation expression
     - No constraints → free text input
-    - RelationalConstraint → text input (requires dynamic validation)
 
     Parameters
     ----------
@@ -75,6 +71,8 @@ def create_cloze_fields(
         List of unfilled slots in the cloze task.
     constraints : dict[UUID, Constraint]
         Dictionary of constraints keyed by UUID (from slot.constraint_ids).
+    lexicon : dict[UUID, str] | None
+        Optional mapping from item UUIDs to surface forms for dropdown options.
 
     Returns
     -------
@@ -85,13 +83,13 @@ def create_cloze_fields(
         - type: Widget type ("dropdown" or "text")
         - options: List of allowed values (for dropdown)
         - placeholder: Placeholder text
-        - validation_pattern: Regex pattern for text validation (optional)
-        - validation_message: Message to show on validation failure (optional)
+        - dsl_expression: Constraint expression for validation (optional)
+        - dsl_context: Constraint context variables (optional)
 
     Examples
     --------
     >>> from sash.items.models import UnfilledSlot
-    >>> from sash.resources.constraints import ExtensionalConstraint
+    >>> from sash.resources.constraints import Constraint
     >>> from uuid import uuid4
     >>> constraint_id = uuid4()
     >>> slot = UnfilledSlot(
@@ -99,76 +97,65 @@ def create_cloze_fields(
     ...     position=0,
     ...     constraint_ids=[constraint_id]
     ... )
-    >>> constraint = ExtensionalConstraint(
-    ...     mode="allow",
-    ...     items=[uuid4(), uuid4()]
+    >>> id1, id2 = uuid4(), uuid4()
+    >>> constraint = Constraint(
+    ...     expression=f"self.id in [UUID('{id1}'), UUID('{id2}')]"
     ... )
-    >>> # Note: In real usage, constraint.items would be lexical item UUIDs
-    >>> # and we'd need to look up their surface forms
-    >>> fields = create_cloze_fields([slot], {constraint_id: constraint})
+    >>> lexicon = {id1: "the", id2: "a"}
+    >>> fields = create_cloze_fields([slot], {constraint_id: constraint}, lexicon)
     >>> len(fields)
     1
+    >>> fields[0]["type"]
+    'dropdown'
+    >>> len(fields[0]["options"])
+    2
     """
     fields: list[dict[str, Any]] = []
 
     for slot in unfilled_slots:
+        # Infer widget type
+        widget_type = infer_widget_type(slot.constraint_ids, constraints)
+
         field_config: dict[str, Any] = {
             "slot_name": slot.slot_name,
             "position": slot.position,
-            "type": "text",  # Default to text input
+            "type": widget_type,
             "options": [],
             "placeholder": slot.slot_name,
         }
 
-        # Analyze constraints to determine widget type and options
+        # Analyze constraints to extract options and validation info
         for constraint_id in slot.constraint_ids:
             if constraint_id not in constraints:
                 continue
 
             constraint = constraints[constraint_id]
 
-            if isinstance(constraint, ExtensionalConstraint):
-                # Extensional constraint: explicit allow/deny list
-                # For "allow" mode, render as dropdown with lexical items
-                # For "deny" mode, render as text with validation
-                if constraint.mode == "allow" and len(constraint.items) > 0:
-                    field_config["type"] = "dropdown"
-                    # Note: In a real implementation, we'd need to:
-                    # 1. Look up the lexical items by UUID from constraint.items
-                    # 2. Extract their surface forms (lemmas or inflected forms)
-                    # 3. Add them to field_config["options"]
-                    # For now, we mark it as dropdown type but leave options empty
-                    # The JavaScript plugin will need to populate this from metadata
-                    field_config["extensional_item_ids"] = [
-                        str(item_id) for item_id in constraint.items
+            # Include constraint expression for client-side validation
+            field_config["dsl_expression"] = constraint.expression
+            if constraint.context:
+                field_config["dsl_context"] = constraint.context
+
+            # If dropdown, extract allowed item UUIDs and map to surface forms
+            if widget_type == "dropdown":
+                allowed_items = _extract_allowed_items_from_expression(
+                    constraint.expression, constraint.context
+                )
+                if allowed_items:
+                    # Map UUIDs to surface forms if lexicon provided
+                    if lexicon:
+                        options = [
+                            lexicon.get(item_id, str(item_id))
+                            for item_id in allowed_items
+                        ]
+                    else:
+                        # No lexicon - use UUID strings
+                        options = [str(item_id) for item_id in allowed_items]
+
+                    field_config["options"] = sorted(options)
+                    field_config["item_ids"] = [
+                        str(item_id) for item_id in allowed_items
                     ]
-
-            elif isinstance(constraint, IntensionalConstraint):
-                # Intensional constraint: property-based filtering
-                # We render as text input with optional pattern validation
-                if constraint.operator == "==" and isinstance(constraint.value, str):
-                    # Exact match constraint - could use autocomplete or validation
-                    field_config["validation_pattern"] = f"^{constraint.value}$"
-                    field_config["validation_message"] = (
-                        f"Must be exactly '{constraint.value}'"
-                    )
-                # For other operators, we just use text input
-
-            elif isinstance(constraint, DSLConstraint):
-                # DSL constraint: complex expression
-                # We can't easily infer UI from this, so use text input
-                field_config["dsl_expression"] = constraint.expression
-
-            else:
-                # Must be RelationalConstraint (the only remaining type)
-                # Relational constraint: requires relationship with another slot
-                # Can't validate this in isolation, needs dynamic checking
-                field_config["relational_constraint"] = {
-                    "slot_a": constraint.slot_a,
-                    "slot_b": constraint.slot_b,
-                    "relation": constraint.relation,
-                    "property": constraint.property,
-                }
 
         fields.append(field_config)
 
@@ -211,21 +198,134 @@ def create_forced_choice_config(
     }
 
 
+def _extract_allowed_items_from_expression(
+    expression: str, context: dict[str, Any] | None = None
+) -> set[UUID] | None:
+    """Extract allowed item UUIDs from a DSL constraint expression.
+
+    Detects patterns like:
+    - self.id in [uuid1, uuid2, ...] (inline list)
+    - self.id in allowed_items (context variable)
+    - str(self.id) in ['uuid-str1', 'uuid-str2', ...]
+
+    Parameters
+    ----------
+    expression : str
+        DSL constraint expression.
+    context : dict[str, Any] | None
+        Constraint context variables.
+
+    Returns
+    -------
+    set[UUID] | None
+        Set of allowed UUIDs if pattern detected, None otherwise.
+
+    Examples
+    --------
+    >>> from uuid import UUID
+    >>> expr = "self.id in [UUID('...'), UUID('...')]"
+    >>> # Would return set of UUIDs if parseable
+    """
+    try:
+        node = parse(expression)
+    except Exception:
+        return None
+
+    # Look for pattern: self.id in [...]
+    if isinstance(node, ast.BinaryOp) and node.operator == "in":
+        # Check if left side is self.id or str(self.id)
+        left = node.left
+        is_self_id = False
+
+        if isinstance(left, ast.AttributeAccess):
+            # self.id
+            if (
+                isinstance(left.object, ast.Variable)
+                and left.object.name == "self"
+                and left.attribute == "id"
+            ):
+                is_self_id = True
+        elif isinstance(left, ast.FunctionCall):
+            # str(self.id)
+            if (
+                isinstance(left.function, ast.Variable)
+                and left.function.name == "str"
+                and len(left.arguments) == 1
+            ):
+                arg = left.arguments[0]
+                if isinstance(arg, ast.AttributeAccess):
+                    if (
+                        isinstance(arg.object, ast.Variable)
+                        and arg.object.name == "self"
+                        and arg.attribute == "id"
+                    ):
+                        is_self_id = True
+
+        if not is_self_id:
+            return None
+
+        # Check right side - could be inline list or context variable
+        if isinstance(node.right, ast.ListLiteral):
+            # Inline list: self.id in [UUID(...), ...]
+            uuids: set[UUID] = set()
+            for elem in node.right.elements:
+                # Handle UUID(...) function calls
+                if isinstance(elem, ast.FunctionCall):
+                    if (
+                        isinstance(elem.function, ast.Variable)
+                        and elem.function.name == "UUID"
+                        and len(elem.arguments) == 1
+                    ):
+                        arg = elem.arguments[0]
+                        if isinstance(arg, ast.Literal) and isinstance(arg.value, str):
+                            try:
+                                uuids.add(UUID(arg.value))
+                            except (ValueError, AttributeError):
+                                pass
+                # Handle string literals (for str(self.id) pattern)
+                elif isinstance(elem, ast.Literal) and isinstance(elem.value, str):
+                    try:
+                        uuids.add(UUID(elem.value))
+                    except (ValueError, AttributeError):
+                        pass
+
+            if uuids:
+                return uuids
+
+        elif isinstance(node.right, ast.Variable) and context:
+            # Context variable: self.id in allowed_items
+            var_name = node.right.name
+            if var_name in context:
+                value = context[var_name]
+                # Check if it's a set or list of UUIDs
+                if isinstance(value, (set, list)):
+                    uuids = set()
+                    for item in value:
+                        if isinstance(item, UUID):
+                            uuids.add(item)
+                        elif isinstance(item, str):
+                            try:
+                                uuids.add(UUID(item))
+                            except (ValueError, AttributeError):
+                                pass
+                    if uuids:
+                        return uuids
+
+    return None
+
+
 def infer_widget_type(
     constraint_ids: list[UUID],
     constraints: dict[UUID, Constraint],
 ) -> str:
     """Infer UI widget type from slot constraints.
 
-    Analyzes the constraint types to determine the most appropriate
+    Analyzes the constraint DSL expressions to determine the most appropriate
     UI widget for collecting user input.
 
     Widget type inference logic:
-    - ExtensionalConstraint with allow mode → "dropdown"
-    - ExtensionalConstraint with deny mode → "text"
-    - IntensionalConstraint → "text"
-    - DSLConstraint → "text"
-    - RelationalConstraint → "text"
+    - Constraint with pattern "self.id in [uuid1, uuid2, ...]" → "dropdown"
+    - Other DSL expressions → "text"
     - No constraints → "text"
 
     Parameters
@@ -242,10 +342,11 @@ def infer_widget_type(
 
     Examples
     --------
-    >>> from sash.resources.constraints import ExtensionalConstraint
+    >>> from sash.resources.constraints import Constraint
     >>> from uuid import uuid4
     >>> constraint_id = uuid4()
-    >>> constraint = ExtensionalConstraint(mode="allow", items=[uuid4()])
+    >>> id1, id2 = uuid4(), uuid4()
+    >>> constraint = Constraint(expression=f"self.id in [UUID('{id1}'), UUID('{id2}')]")
     >>> widget = infer_widget_type([constraint_id], {constraint_id: constraint})
     >>> widget
     'dropdown'
@@ -256,17 +357,20 @@ def infer_widget_type(
     if not constraint_ids:
         return "text"
 
-    # Check each constraint
+    # Check each constraint for extensional pattern
     for constraint_id in constraint_ids:
         if constraint_id not in constraints:
             continue
 
         constraint = constraints[constraint_id]
 
-        # Extensional constraint with allow mode → dropdown
-        if isinstance(constraint, ExtensionalConstraint):
-            if constraint.mode == "allow" and len(constraint.items) > 0:
-                return "dropdown"
+        # Try to extract allowed items from expression (with context)
+        allowed_items = _extract_allowed_items_from_expression(
+            constraint.expression, constraint.context
+        )
+        if allowed_items:
+            # Found a fixed set of allowed items - use dropdown
+            return "dropdown"
 
     # Default to text input
     return "text"

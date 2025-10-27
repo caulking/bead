@@ -19,7 +19,7 @@ from sash.items.models import (
     PresentationSpec,
     TaskSpec,
 )
-from sash.resources.constraints import DSLConstraint
+from sash.resources.constraints import Constraint
 from sash.resources.models import LexicalItem
 from sash.templates.filler import FilledTemplate
 
@@ -227,7 +227,7 @@ class TestItemConstructor:
     def test_construct_items_with_dsl_constraint(self, constructor) -> None:
         """Test constructing items with DSL constraint."""
         constraint_id = uuid4()
-        constraint = DSLConstraint(
+        constraint = Constraint(
             expression="len(sentence) > 5",
         )
 
@@ -259,7 +259,7 @@ class TestItemConstructor:
     def test_construct_items_constraint_not_satisfied(self, constructor) -> None:
         """Test that items failing constraints are not yielded."""
         constraint_id = uuid4()
-        constraint = DSLConstraint(
+        constraint = Constraint(
             expression="len(sentence) > 100",  # Will fail for short text
         )
 
@@ -288,7 +288,7 @@ class TestItemConstructor:
         """Test constructing items with model-based DSL constraint."""
         constraint_id = uuid4()
         # Constraint using lm_prob function
-        constraint = DSLConstraint(
+        constraint = Constraint(
             expression='lm_prob(sentence, "gpt2") > -100',
         )
 
@@ -573,7 +573,7 @@ class TestIntegration:
         """Test complete item construction with model-based constraints."""
         # Create template with model constraint
         constraint_id = uuid4()
-        constraint = DSLConstraint(
+        constraint = Constraint(
             expression='lm_prob(sentence, "gpt2") > -100',
         )
 
@@ -608,8 +608,8 @@ class TestIntegration:
     def test_multiple_constraints(self, constructor) -> None:
         """Test item construction with multiple constraints."""
         c1_id, c2_id = uuid4(), uuid4()
-        c1 = DSLConstraint(expression="len(sentence) > 5")
-        c2 = DSLConstraint(expression="len(sentence) < 100")
+        c1 = Constraint(expression="len(sentence) > 5")
+        c2 = Constraint(expression="len(sentence) < 100")
 
         template = ItemTemplate(
             name="test",

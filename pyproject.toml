@@ -59,6 +59,9 @@ target-version = "py313"
 select = ["E", "F", "I", "N", "D", "UP", "ANN", "B", "A", "C4", "PLC"]
 ignore = ["ANN401"]
 
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["ANN"]
+
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"
 

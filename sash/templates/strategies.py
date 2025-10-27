@@ -7,12 +7,16 @@ from abc import ABC, abstractmethod
 from collections.abc import Iterator
 from typing import Literal
 
-from sash.data.language_codes import LanguageCode
+from sash.data.language_codes import LanguageCode, validate_iso639_code
+from sash.dsl.evaluator import DSLEvaluator
+from sash.items.models import Item
+from sash.resources.constraints import ContextValue
 from sash.resources.lexicon import Lexicon
 from sash.resources.models import LexicalItem
 from sash.resources.structures import Slot, Template
 from sash.templates.adapters import HuggingFaceMLMAdapter, ModelOutputCache
 from sash.templates.combinatorics import cartesian_product
+from sash.templates.filler import FilledTemplate, TemplateFiller
 from sash.templates.resolver import ConstraintResolver
 
 
@@ -640,6 +644,10 @@ class MLMFillingStrategy(FillingStrategy):
         list[tuple[LexicalItem, float]]
             (item, log_prob) pairs
         """
+        # Normalize language code to ISO 639-3
+        if language_code is not None:
+            language_code = validate_iso639_code(language_code)
+
         # Create masked text
         masked_text = self._create_masked_text(
             template, slot_names, filled_slots, slot_idx
@@ -682,16 +690,10 @@ class MLMFillingStrategy(FillingStrategy):
                         if language_code is None or item.language_code == language_code:
                             # Check slot constraints
                             if isinstance(slot, Slot) and slot.constraints:
-                                # Check all constraints
-                                satisfies_all = True
-                                for constraint in slot.constraints:
-                                    matches = self.resolver.resolve(
-                                        constraint, language_code
-                                    )
-                                    if not matches:
-                                        satisfies_all = False
-                                        break
-                                if satisfies_all:
+                                # Evaluate constraints using resolver
+                                if self.resolver.evaluate_slot_constraints(
+                                    item, slot.constraints
+                                ):
                                     candidates.append((item, log_prob))
                             else:
                                 candidates.append((item, log_prob))
@@ -743,3 +745,187 @@ class MLMFillingStrategy(FillingStrategy):
                 text = text.replace(placeholder, mask_token)
 
         return text
+
+
+class StrategyFiller(TemplateFiller):
+    """Strategy-based template filling for simple templates.
+
+    Fast filling using enumeration strategies (exhaustive, random, stratified).
+    Does NOT handle template-level multi-slot constraints (Template.constraints).
+
+    For templates with multi-slot constraints requiring agreement or
+    relational checks, use CSPFiller instead.
+
+    Parameters
+    ----------
+    lexicon : Lexicon
+        Lexicon containing candidate items.
+    strategy : FillingStrategy
+        Strategy for generating combinations.
+
+    Examples
+    --------
+    >>> from sash.templates.strategies import StrategyFiller, ExhaustiveStrategy
+    >>> filler = StrategyFiller(lexicon, ExhaustiveStrategy())
+    >>> filled = filler.fill(template)
+    >>> len(filled)
+    12
+    """
+
+    def __init__(self, lexicon: Lexicon, strategy: FillingStrategy) -> None:
+        self.lexicon = lexicon
+        self.strategy = strategy
+        self.resolver = ConstraintResolver()
+
+    def fill(
+        self,
+        template: Template,
+        language_code: LanguageCode | None = None,
+    ) -> list[FilledTemplate]:
+        """Fill template with lexical items using strategy.
+
+        Parameters
+        ----------
+        template : Template
+            Template to fill.
+        language_code : LanguageCode | None
+            Optional language code to filter items.
+
+        Returns
+        -------
+        list[FilledTemplate]
+            List of all filled template instances.
+
+        Raises
+        ------
+        ValueError
+            If any slot has no valid items.
+        """
+        # 1. Resolve slot constraints
+        slot_items = self._resolve_slot_constraints(template, language_code)
+
+        # 2. Check for empty slots
+        empty_slots = [name for name, items in slot_items.items() if not items]
+        if empty_slots:
+            raise ValueError(f"No valid items for slots: {empty_slots}")
+
+        # 3. Generate combinations using strategy
+        combinations = self.strategy.generate_combinations(slot_items)
+
+        # 4. Create FilledTemplate instances
+        filled_templates: list[FilledTemplate] = []
+        for combo in combinations:
+            rendered = self._render_template(template, combo)
+            filled = FilledTemplate(
+                template_id=str(template.id),
+                template_name=template.name,
+                slot_fillers=combo,
+                rendered_text=rendered,
+                strategy_name=self.strategy.name,
+            )
+            filled_templates.append(filled)
+
+        return filled_templates
+
+    def _resolve_slot_constraints(
+        self,
+        template: Template,
+        language_code: LanguageCode | None,
+    ) -> dict[str, list[LexicalItem]]:
+        """Resolve constraints for each slot.
+
+        Parameters
+        ----------
+        template : Template
+            Template with slots and constraints.
+        language_code : LanguageCode | None
+            Optional language filter.
+
+        Returns
+        -------
+        dict[str, list[LexicalItem]]
+            Mapping of slot names to valid items.
+        """
+        slot_items: dict[str, list[LexicalItem]] = {}
+
+        # Normalize language code if provided
+        normalized_lang = validate_iso639_code(language_code) if language_code else None
+
+        for slot_name, slot in template.slots.items():
+            candidates = list(self.lexicon.items.values())
+
+            # Filter by language code
+            if normalized_lang:
+                candidates = [
+                    item for item in candidates if item.language_code == normalized_lang
+                ]
+
+            # Apply slot constraints
+            if slot.constraints:
+                for constraint in slot.constraints:
+                    filtered: list[LexicalItem] = []
+                    for item in candidates:
+                        eval_context: dict[
+                            str, ContextValue | LexicalItem | FilledTemplate | Item
+                        ] = {"self": item}
+                        if constraint.context:
+                            eval_context.update(constraint.context)
+
+                        evaluator = DSLEvaluator()
+                        try:
+                            if evaluator.evaluate(constraint.expression, eval_context):
+                                filtered.append(item)
+                        except Exception:
+                            continue
+                    candidates = filtered
+
+            slot_items[slot_name] = candidates
+
+        return slot_items
+
+    def _render_template(
+        self, template: Template, slot_fillers: dict[str, LexicalItem]
+    ) -> str:
+        """Render template string with slot fillers.
+
+        Parameters
+        ----------
+        template : Template
+            Template with template_string.
+        slot_fillers : dict[str, LexicalItem]
+            Items filling each slot.
+
+        Returns
+        -------
+        str
+            Rendered template string.
+        """
+        rendered = template.template_string
+        for slot_name, item in slot_fillers.items():
+            placeholder = f"{{{slot_name}}}"
+            rendered = rendered.replace(placeholder, item.lemma)
+        return rendered
+
+    def count_combinations(self, template: Template) -> int:
+        """Count total possible combinations for template.
+
+        Parameters
+        ----------
+        template : Template
+            Template to count combinations for.
+
+        Returns
+        -------
+        int
+            Total number of possible combinations.
+        """
+        slot_items = self._resolve_slot_constraints(template, None)
+
+        if not slot_items:
+            return 0
+
+        count = 1
+        for items in slot_items.values():
+            count *= len(items)
+
+        return count

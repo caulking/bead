@@ -1,22 +1,18 @@
-"""Test template filler."""
+"""Test strategy-based template filler."""
 
 from __future__ import annotations
 
-from uuid import UUID
-
 import pytest
 
-from sash.resources.constraints import (
-    ExtensionalConstraint,
-    IntensionalConstraint,
-)
+from sash.resources.constraints import Constraint
 from sash.resources.lexicon import Lexicon
 from sash.resources.models import LexicalItem
 from sash.resources.structures import Slot, Template
-from sash.templates.filler import FilledTemplate, TemplateFiller
+from sash.templates.filler import FilledTemplate
 from sash.templates.strategies import (
     ExhaustiveStrategy,
     RandomStrategy,
+    StrategyFiller,
     StratifiedStrategy,
 )
 
@@ -50,15 +46,11 @@ def simple_template() -> Template:
         slots={
             "subject": Slot(
                 name="subject",
-                constraints=[
-                    IntensionalConstraint(property="pos", operator="==", value="NOUN")
-                ],
+                constraints=[Constraint(expression="self.pos == 'NOUN'")],
             ),
             "verb": Slot(
                 name="verb",
-                constraints=[
-                    IntensionalConstraint(property="pos", operator="==", value="VERB")
-                ],
+                constraints=[Constraint(expression="self.pos == 'VERB'")],
             ),
         },
     )
@@ -89,7 +81,7 @@ def test_filler_exhaustive_strategy(
     sample_lexicon: Lexicon, simple_template: Template
 ) -> None:
     """Test filling with exhaustive strategy."""
-    filler = TemplateFiller(sample_lexicon, strategy=ExhaustiveStrategy())
+    filler = StrategyFiller(sample_lexicon, strategy=ExhaustiveStrategy())
     filled = filler.fill(simple_template)
 
     # 2 nouns * 2 verbs = 4 combinations
@@ -115,7 +107,7 @@ def test_filler_random_strategy(
 ) -> None:
     """Test filling with random strategy."""
     strategy = RandomStrategy(n_samples=2, seed=42)
-    filler = TemplateFiller(sample_lexicon, strategy=strategy)
+    filler = StrategyFiller(sample_lexicon, strategy=strategy)
     filled = filler.fill(simple_template)
 
     # Should generate 2 samples
@@ -128,11 +120,11 @@ def test_filler_random_strategy_deterministic(
 ) -> None:
     """Test random strategy is deterministic with seed."""
     strategy1 = RandomStrategy(n_samples=5, seed=42)
-    filler1 = TemplateFiller(sample_lexicon, strategy=strategy1)
+    filler1 = StrategyFiller(sample_lexicon, strategy=strategy1)
     filled1 = filler1.fill(simple_template)
 
     strategy2 = RandomStrategy(n_samples=5, seed=42)
-    filler2 = TemplateFiller(sample_lexicon, strategy=strategy2)
+    filler2 = StrategyFiller(sample_lexicon, strategy=strategy2)
     filled2 = filler2.fill(simple_template)
 
     # Same results with same seed
@@ -150,17 +142,13 @@ def test_filler_stratified_strategy(sample_lexicon: Lexicon) -> None:
         slots={
             "word": Slot(
                 name="word",
-                constraints=[
-                    IntensionalConstraint(
-                        property="pos", operator="in", value=["NOUN", "ADJ"]
-                    )
-                ],
+                constraints=[Constraint(expression="self.pos in ['NOUN', 'ADJ']")],
             ),
         },
     )
 
     strategy = StratifiedStrategy(n_samples=10, grouping_property="pos", seed=42)
-    filler = TemplateFiller(sample_lexicon, strategy=strategy)
+    filler = StrategyFiller(sample_lexicon, strategy=strategy)
     filled = filler.fill(template)
 
     assert len(filled) == 10
@@ -179,14 +167,12 @@ def test_filler_language_filtering(sample_lexicon: Lexicon) -> None:
         slots={
             "noun": Slot(
                 name="noun",
-                constraints=[
-                    IntensionalConstraint(property="pos", operator="==", value="NOUN")
-                ],
+                constraints=[Constraint(expression="self.pos == 'NOUN'")],
             ),
         },
     )
 
-    filler = TemplateFiller(sample_lexicon, strategy=ExhaustiveStrategy())
+    filler = StrategyFiller(sample_lexicon, strategy=ExhaustiveStrategy())
 
     # Fill with English only
     filled_en = filler.fill(template, language_code="en")
@@ -207,14 +193,12 @@ def test_filler_empty_slot_error(sample_lexicon: Lexicon) -> None:
         slots={
             "adverb": Slot(
                 name="adverb",
-                constraints=[
-                    IntensionalConstraint(property="pos", operator="==", value="ADV")
-                ],
+                constraints=[Constraint(expression="self.pos == 'ADV'")],
             ),
         },
     )
 
-    filler = TemplateFiller(sample_lexicon, strategy=ExhaustiveStrategy())
+    filler = StrategyFiller(sample_lexicon, strategy=ExhaustiveStrategy())
 
     with pytest.raises(ValueError, match="No valid items for slots"):
         filler.fill(template)
@@ -228,7 +212,7 @@ def test_filler_no_constraint_slot(sample_lexicon: Lexicon) -> None:
         slots={"word": Slot(name="word", constraints=[])},
     )
 
-    filler = TemplateFiller(sample_lexicon, strategy=ExhaustiveStrategy())
+    filler = StrategyFiller(sample_lexicon, strategy=ExhaustiveStrategy())
     filled = filler.fill(template)
 
     # Should include all items in lexicon (6 items)
@@ -256,15 +240,13 @@ def test_filler_extensional_constraint(sample_lexicon: Lexicon) -> None:
             "animal": Slot(
                 name="animal",
                 constraints=[
-                    ExtensionalConstraint(
-                        mode="allow", items=[UUID(cat_id), UUID(dog_id)]
-                    )
+                    Constraint(expression=f"str(self.id) in ['{cat_id}', '{dog_id}']")
                 ],
             ),
         },
     )
 
-    filler = TemplateFiller(sample_lexicon, strategy=ExhaustiveStrategy())
+    filler = StrategyFiller(sample_lexicon, strategy=ExhaustiveStrategy())
     filled = filler.fill(template)
 
     assert len(filled) == 2
@@ -276,7 +258,7 @@ def test_filler_count_combinations(
     sample_lexicon: Lexicon, simple_template: Template
 ) -> None:
     """Test counting combinations."""
-    filler = TemplateFiller(sample_lexicon, strategy=ExhaustiveStrategy())
+    filler = StrategyFiller(sample_lexicon, strategy=ExhaustiveStrategy())
     count = filler.count_combinations(simple_template)
 
     # 2 nouns * 2 verbs = 4
@@ -291,26 +273,20 @@ def test_filler_count_combinations_three_slots(sample_lexicon: Lexicon) -> None:
         slots={
             "adj": Slot(
                 name="adj",
-                constraints=[
-                    IntensionalConstraint(property="pos", operator="==", value="ADJ")
-                ],
+                constraints=[Constraint(expression="self.pos == 'ADJ'")],
             ),
             "noun": Slot(
                 name="noun",
-                constraints=[
-                    IntensionalConstraint(property="pos", operator="==", value="NOUN")
-                ],
+                constraints=[Constraint(expression="self.pos == 'NOUN'")],
             ),
             "verb": Slot(
                 name="verb",
-                constraints=[
-                    IntensionalConstraint(property="pos", operator="==", value="VERB")
-                ],
+                constraints=[Constraint(expression="self.pos == 'VERB'")],
             ),
         },
     )
 
-    filler = TemplateFiller(sample_lexicon, strategy=ExhaustiveStrategy())
+    filler = StrategyFiller(sample_lexicon, strategy=ExhaustiveStrategy())
     count = filler.count_combinations(template)
 
     # 2 adjectives * 2 nouns * 2 verbs = 8
@@ -321,7 +297,7 @@ def test_filler_render_template(
     sample_lexicon: Lexicon, simple_template: Template
 ) -> None:
     """Test template rendering."""
-    filler = TemplateFiller(sample_lexicon, strategy=ExhaustiveStrategy())
+    filler = StrategyFiller(sample_lexicon, strategy=ExhaustiveStrategy())
     filled = filler.fill(simple_template)
 
     # All rendered texts should have slots replaced
@@ -335,7 +311,7 @@ def test_filler_metadata_preservation(
     sample_lexicon: Lexicon, simple_template: Template
 ) -> None:
     """Test that metadata is preserved in filled templates."""
-    filler = TemplateFiller(sample_lexicon, strategy=ExhaustiveStrategy())
+    filler = StrategyFiller(sample_lexicon, strategy=ExhaustiveStrategy())
     filled = filler.fill(simple_template)
 
     for f in filled:
@@ -358,14 +334,12 @@ def test_filler_single_slot_template(sample_lexicon: Lexicon) -> None:
         slots={
             "noun": Slot(
                 name="noun",
-                constraints=[
-                    IntensionalConstraint(property="pos", operator="==", value="NOUN")
-                ],
+                constraints=[Constraint(expression="self.pos == 'NOUN'")],
             ),
         },
     )
 
-    filler = TemplateFiller(sample_lexicon, strategy=ExhaustiveStrategy())
+    filler = StrategyFiller(sample_lexicon, strategy=ExhaustiveStrategy())
     filled = filler.fill(template)
 
     assert len(filled) == 2
@@ -381,32 +355,24 @@ def test_filler_complex_template(sample_lexicon: Lexicon) -> None:
         slots={
             "adj1": Slot(
                 name="adj1",
-                constraints=[
-                    IntensionalConstraint(property="pos", operator="==", value="ADJ")
-                ],
+                constraints=[Constraint(expression="self.pos == 'ADJ'")],
             ),
             "noun1": Slot(
                 name="noun1",
-                constraints=[
-                    IntensionalConstraint(property="pos", operator="==", value="NOUN")
-                ],
+                constraints=[Constraint(expression="self.pos == 'NOUN'")],
             ),
             "adj2": Slot(
                 name="adj2",
-                constraints=[
-                    IntensionalConstraint(property="pos", operator="==", value="ADJ")
-                ],
+                constraints=[Constraint(expression="self.pos == 'ADJ'")],
             ),
             "noun2": Slot(
                 name="noun2",
-                constraints=[
-                    IntensionalConstraint(property="pos", operator="==", value="NOUN")
-                ],
+                constraints=[Constraint(expression="self.pos == 'NOUN'")],
             ),
         },
     )
 
-    filler = TemplateFiller(sample_lexicon, strategy=ExhaustiveStrategy())
+    filler = StrategyFiller(sample_lexicon, strategy=ExhaustiveStrategy())
     count = filler.count_combinations(template)
 
     # 2 adj * 2 noun * 2 adj * 2 noun = 16
@@ -425,14 +391,12 @@ def test_filler_empty_lexicon() -> None:
         slots={
             "word": Slot(
                 name="word",
-                constraints=[
-                    IntensionalConstraint(property="pos", operator="==", value="NOUN")
-                ],
+                constraints=[Constraint(expression="self.pos == 'NOUN'")],
             ),
         },
     )
 
-    filler = TemplateFiller(lexicon, strategy=ExhaustiveStrategy())
+    filler = StrategyFiller(lexicon, strategy=ExhaustiveStrategy())
 
     with pytest.raises(ValueError, match="No valid items for slots"):
         filler.fill(template)

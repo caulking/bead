@@ -29,7 +29,7 @@ from sash.dsl.stdlib import register_stdlib
 from sash.items.adapters.registry import ModelAdapterRegistry
 from sash.items.cache import ModelOutputCache
 from sash.items.models import Item, ItemTemplate, MetadataValue, ModelOutput
-from sash.resources.constraints import Constraint, DSLConstraint
+from sash.resources.constraints import Constraint
 from sash.templates.filler import FilledTemplate
 from sash.templates.resolver import ConstraintResolver
 
@@ -246,10 +246,6 @@ class ItemConstructor:
                 raise ValueError(f"Constraint {constraint_id} not found")
 
             constraint = constraints[constraint_id]
-
-            # Only process DSL constraints
-            if not isinstance(constraint, DSLConstraint):
-                continue
 
             # Parse constraint expression to AST
             try:
@@ -505,36 +501,29 @@ class ItemConstructor:
             )
 
         # Get adapter and execute
-        try:
-            adapter = self.model_registry.get_adapter(
-                adapter_type=adapter_type,
-                model_name=model_name,
-                cache=self.cache,
-            )
-        except Exception:
-            # Model not available, return None
-            return None
+        adapter = self.model_registry.get_adapter(
+            adapter_type=adapter_type,
+            model_name=model_name,
+            cache=self.cache,
+        )
 
         # Execute the operation
-        result: Any = None
-        try:
-            if operation == "log_probability":
-                result = adapter.compute_log_probability(str(call_spec["text"]))
-            elif operation == "perplexity":
-                result = adapter.compute_perplexity(str(call_spec["text"]))
-            elif operation == "nli":
-                result = adapter.compute_nli(
-                    str(call_spec["premise"]), str(call_spec["hypothesis"])
-                )
-            elif operation == "similarity":
-                result = adapter.compute_similarity(
-                    str(call_spec["text1"]), str(call_spec["text2"])
-                )
-            elif operation == "embedding":
-                result = adapter.get_embedding(str(call_spec["text"]))
-        except NotImplementedError:
-            # Operation not supported by this adapter
-            return None
+        if operation == "log_probability":
+            result = adapter.compute_log_probability(str(call_spec["text"]))
+        elif operation == "perplexity":
+            result = adapter.compute_perplexity(str(call_spec["text"]))
+        elif operation == "nli":
+            result = adapter.compute_nli(
+                str(call_spec["premise"]), str(call_spec["hypothesis"])
+            )
+        elif operation == "similarity":
+            result = adapter.compute_similarity(
+                str(call_spec["text1"]), str(call_spec["text2"])
+            )
+        elif operation == "embedding":
+            result = adapter.get_embedding(str(call_spec["text"]))
+        else:
+            raise ValueError(f"Unknown operation: {operation}")
 
         # Generate cache key
         cache_key = self.cache.generate_cache_key(
@@ -606,27 +595,17 @@ class ItemConstructor:
 
             constraint = constraints[constraint_id]
 
-            # Evaluate based on constraint type
-            if isinstance(constraint, DSLConstraint):
-                satisfied = self._evaluate_dsl_constraint(
-                    constraint, rendered_elements, model_outputs
-                )
-                constraint_satisfaction[constraint_id] = satisfied
-            else:
-                # For non-DSL constraints, use constraint resolver if available
-                if self.constraint_resolver:
-                    # Note: ConstraintResolver is for lexical items, not for items
-                    # We can't use it directly here. For now, default to True.
-                    constraint_satisfaction[constraint_id] = True
-                else:
-                    # No way to evaluate, default to True
-                    constraint_satisfaction[constraint_id] = True
+            # Evaluate constraint
+            satisfied = self._evaluate_dsl_constraint(
+                constraint, rendered_elements, model_outputs
+            )
+            constraint_satisfaction[constraint_id] = satisfied
 
         return constraint_satisfaction
 
     def _evaluate_dsl_constraint(
         self,
-        constraint: DSLConstraint,
+        constraint: Constraint,
         rendered_elements: dict[str, str],
         model_outputs: list[ModelOutput],
     ) -> bool:
@@ -637,8 +616,8 @@ class ItemConstructor:
 
         Parameters
         ----------
-        constraint : DSLConstraint
-            DSL constraint to evaluate.
+        constraint : Constraint
+            Constraint to evaluate.
         rendered_elements : dict[str, str]
             Rendered element text for variable substitution.
         model_outputs : list[ModelOutput]
@@ -711,17 +690,13 @@ class ItemConstructor:
                 return float(cached)
 
             # Compute if not cached
-            try:
-                adapter = self.model_registry.get_adapter(
-                    adapter_type="huggingface_lm",
-                    model_name=model,
-                    cache=self.cache,
-                )
-                result = adapter.compute_log_probability(text)
-                return result
-            except Exception:
-                # Return default if model unavailable
-                return -999.0
+            adapter = self.model_registry.get_adapter(
+                adapter_type="huggingface_lm",
+                model_name=model,
+                cache=self.cache,
+            )
+            result = adapter.compute_log_probability(text)
+            return result
 
         def lm_perplexity(text: str, model: str = "gpt2") -> float:
             """Get perplexity from cache or compute."""
@@ -729,16 +704,13 @@ class ItemConstructor:
             if cached is not None:
                 return float(cached)
 
-            try:
-                adapter = self.model_registry.get_adapter(
-                    adapter_type="huggingface_lm",
-                    model_name=model,
-                    cache=self.cache,
-                )
-                result = adapter.compute_perplexity(text)
-                return result
-            except Exception:
-                return 999.0
+            adapter = self.model_registry.get_adapter(
+                adapter_type="huggingface_lm",
+                model_name=model,
+                cache=self.cache,
+            )
+            result = adapter.compute_perplexity(text)
+            return result
 
         def nli(
             premise: str, hypothesis: str, model: str = "roberta-large-mnli"
@@ -750,16 +722,13 @@ class ItemConstructor:
             if cached is not None:
                 return dict(cached)  # type: ignore[arg-type]
 
-            try:
-                adapter = self.model_registry.get_adapter(
-                    adapter_type="huggingface_nli",
-                    model_name=model,
-                    cache=self.cache,
-                )
-                result = adapter.compute_nli(premise, hypothesis)
-                return result
-            except Exception:
-                return {"entailment": 0.33, "neutral": 0.33, "contradiction": 0.34}
+            adapter = self.model_registry.get_adapter(
+                adapter_type="huggingface_nli",
+                model_name=model,
+                cache=self.cache,
+            )
+            result = adapter.compute_nli(premise, hypothesis)
+            return result
 
         def similarity(
             text1: str, text2: str, model: str = "all-MiniLM-L6-v2"
@@ -769,16 +738,13 @@ class ItemConstructor:
             if cached is not None:
                 return float(cached)
 
-            try:
-                adapter = self.model_registry.get_adapter(
-                    adapter_type="sentence_transformer",
-                    model_name=model,
-                    cache=self.cache,
-                )
-                result = adapter.compute_similarity(text1, text2)
-                return result
-            except Exception:
-                return 0.0
+            adapter = self.model_registry.get_adapter(
+                adapter_type="sentence_transformer",
+                model_name=model,
+                cache=self.cache,
+            )
+            result = adapter.compute_similarity(text1, text2)
+            return result
 
         def embedding(text: str, model: str = "all-MiniLM-L6-v2") -> list[float]:
             """Get embedding from cache or compute."""
@@ -789,16 +755,13 @@ class ItemConstructor:
                     return cached.tolist()  # type: ignore[return-value]
                 return list(cached)  # type: ignore[arg-type]
 
-            try:
-                adapter = self.model_registry.get_adapter(
-                    adapter_type="sentence_transformer",
-                    model_name=model,
-                    cache=self.cache,
-                )
-                result = adapter.get_embedding(text)
-                return result.tolist()  # type: ignore[return-value]
-            except Exception:
-                return [0.0] * 384  # Default embedding size
+            adapter = self.model_registry.get_adapter(
+                adapter_type="sentence_transformer",
+                model_name=model,
+                cache=self.cache,
+            )
+            result = adapter.get_embedding(text)
+            return result.tolist()  # type: ignore[return-value]
 
         # Register functions in context
         context.set_function("lm_prob", lm_prob)

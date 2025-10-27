@@ -67,7 +67,8 @@ def get_trainer(name: str) -> type[BaseTrainer]:
     >>> get_trainer("unknown")  # doctest: +SKIP
     Traceback (most recent call last):
         ...
-    ValueError: Unknown trainer: unknown. Available trainers: huggingface, pytorch_lightning
+    ValueError: Unknown trainer: unknown. Available trainers: huggingface,
+    pytorch_lightning
     """
     if name not in _TRAINERS:
         available = ", ".join(list_trainers())

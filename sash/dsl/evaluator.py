@@ -1,16 +1,26 @@
 """Constraint evaluator for DSL.
 
 This module provides the Evaluator class that executes AST nodes
-against an evaluation context to produce boolean results.
+against an evaluation context to produce boolean results, and the
+DSLEvaluator class that provides a high-level interface for evaluating
+constraint expressions.
 """
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from sash.dsl import ast
 from sash.dsl.context import EvaluationContext
 from sash.dsl.errors import EvaluationError
+from sash.dsl.parser import parse
+from sash.dsl.stdlib import register_stdlib
+
+if TYPE_CHECKING:
+    from sash.items.models import Item
+    from sash.resources.constraints import ContextValue
+    from sash.resources.models import LexicalItem
+    from sash.templates.filler import FilledTemplate
 
 
 class Evaluator:
@@ -78,6 +88,8 @@ class Evaluator:
             return self._evaluate_function_call(node, context)
         elif isinstance(node, ast.AttributeAccess):
             return self._evaluate_attribute_access(node, context)
+        elif isinstance(node, ast.Subscript):
+            return self._evaluate_subscript(node, context)
         elif isinstance(node, ast.ListLiteral):
             return self._evaluate_list_literal(node, context)
         else:
@@ -146,7 +158,7 @@ class Evaluator:
         EvaluationError
             If operator is unknown or operation fails.
         """
-        # Short-circuit evaluation for logical operators
+        # Short circuit evaluation for logical operators
         if node.operator == "and":
             left = self.evaluate(node.left, context)
             if not left:
@@ -265,16 +277,34 @@ class Evaluator:
         EvaluationError
             If function is not defined or call fails.
         """
-        # Get function name
-        if not isinstance(node.function, ast.Variable):  # type: ignore[reportUnnecessaryIsInstance]
-            raise EvaluationError("Function must be a variable")
-        func_name = node.function.name
-
         # Evaluate arguments
         args = [self.evaluate(arg, context) for arg in node.arguments]
 
-        # Call function
-        return context.call_function(func_name, args)
+        # Handle method calls (e.g., subject.features.get(...))
+        if isinstance(node.function, ast.AttributeAccess):
+            # Evaluate the object
+            obj = self.evaluate(node.function.object, context)
+            # Get the method
+            method_name = node.function.attribute
+            try:
+                method = getattr(obj, method_name)
+                return method(*args)
+            except AttributeError as e:
+                raise EvaluationError(
+                    f"Object of type {type(obj).__name__} has no method: {method_name}"
+                ) from e
+            except TypeError as e:
+                raise EvaluationError(f"Error calling method {method_name}: {e}") from e
+
+        # Handle regular function calls (e.g., len(...))
+        if isinstance(node.function, ast.Variable):
+            func_name = node.function.name
+            return context.call_function(func_name, args)
+
+        func_type = type(node.function).__name__
+        raise EvaluationError(
+            f"Function must be a variable or attribute access, got {func_type}"
+        )
 
     def _evaluate_attribute_access(
         self, node: ast.AttributeAccess, context: EvaluationContext
@@ -300,7 +330,7 @@ class Evaluator:
         """
         obj = self.evaluate(node.object, context)
 
-        # Try dictionary-style access first
+        # Try dictionary style access first
         if isinstance(obj, dict):
             if node.attribute not in obj:
                 raise EvaluationError(f"Dictionary does not have key: {node.attribute}")
@@ -313,6 +343,39 @@ class Evaluator:
             raise EvaluationError(
                 f"Object of type {type(obj).__name__} has no attribute: "
                 f"{node.attribute}"
+            ) from e
+
+    def _evaluate_subscript(
+        self, node: ast.Subscript, context: EvaluationContext
+    ) -> Any:
+        """Evaluate subscript access node.
+
+        Parameters
+        ----------
+        node : ast.Subscript
+            Subscript access node.
+        context : EvaluationContext
+            Evaluation context.
+
+        Returns
+        -------
+        Any
+            Subscripted value.
+
+        Raises
+        ------
+        EvaluationError
+            If subscript access fails.
+        """
+        obj = self.evaluate(node.object, context)
+        index = self.evaluate(node.index, context)
+
+        try:
+            return obj[index]  # type: ignore[reportUnknownVariableType]
+        except (KeyError, IndexError, TypeError) as e:
+            obj_type = type(obj).__name__
+            raise EvaluationError(
+                f"Subscript access failed on {obj_type} with index {index}: {e}"
             ) from e
 
     def _evaluate_list_literal(
@@ -343,3 +406,158 @@ class Evaluator:
         >>> evaluator.clear_cache()
         """
         self._cache.clear()
+
+
+class DSLEvaluator:
+    """High-level evaluator for DSL constraint expressions.
+
+    This class provides a simplified interface for evaluating constraint
+    expressions. It handles:
+    - Parsing expression strings to AST
+    - Building evaluation contexts from dictionaries
+    - Caching compiled ASTs
+    - Registering standard library functions
+    - Property extraction for list partitioning
+
+    The DSLEvaluator is the primary interface for constraint evaluation
+    in the sash package. It wraps the lower-level Evaluator class.
+
+    Examples
+    --------
+    >>> from sash.resources.items import LexicalItem
+    >>> evaluator = DSLEvaluator()
+    >>> item = LexicalItem(lemma="walk", pos="VERB")
+    >>> evaluator.evaluate(
+    ...     "self.pos == 'VERB'",
+    ...     {"self": item}
+    ... )
+    True
+    >>> evaluator.evaluate(
+    ...     "self.lemma in motion_verbs",
+    ...     {"self": item, "motion_verbs": {"walk", "run", "jump"}}
+    ... )
+    True
+    """
+
+    def __init__(self) -> None:
+        """Initialize DSL evaluator with empty compiled cache."""
+        self.evaluator = Evaluator(use_cache=True)
+        self.compiled_cache: dict[str, ast.ASTNode] = {}
+
+    def evaluate(
+        self,
+        expression: str,
+        context: dict[str, ContextValue | LexicalItem | FilledTemplate | Item],
+    ) -> bool | str | int | float | list[Any]:
+        """Evaluate DSL expression with given context.
+
+        Parameters
+        ----------
+        expression : str
+            DSL expression to evaluate.
+        context : dict[str, ContextValue | LexicalItem | FilledTemplate | Item]
+            Variables available during evaluation. Can include:
+            - ContextValue: primitive values, lists, sets
+            - LexicalItem: lexical items for single-slot constraints
+            - FilledTemplate: filled templates for multi-slot constraints
+            - Item: items for list partitioning
+
+        Returns
+        -------
+        bool | str | int | float | list[Any]
+            Result of evaluation.
+
+        Raises
+        ------
+        EvaluationError
+            If evaluation fails (parse error, undefined variable, etc.).
+
+        Examples
+        --------
+        >>> evaluator = DSLEvaluator()
+        >>> evaluator.evaluate("x > 5", {"x": 10})
+        True
+        >>> evaluator.evaluate(
+        ...     "subject.lemma == verb.lemma",
+        ...     {"subject": item1, "verb": item2}
+        ... )
+        False
+        """
+        # Get or compile AST
+        if expression in self.compiled_cache:
+            ast_node = self.compiled_cache[expression]
+        else:
+            ast_node = parse(expression)
+            self.compiled_cache[expression] = ast_node
+
+        # Build evaluation context
+        eval_context = EvaluationContext()
+        register_stdlib(eval_context)
+
+        # Add context variables
+        for name, value in context.items():
+            eval_context.set_variable(name, value)
+
+        # Evaluate
+        return self.evaluator.evaluate(ast_node, eval_context)
+
+    def extract_property_value(
+        self,
+        obj: Any,
+        property_expression: str,
+        context: dict[str, ContextValue] | None = None,
+    ) -> Any:
+        """Extract property value using DSL expression.
+
+        This method is used by ListPartitioner to extract property values
+        from items using DSL expressions. The property_expression is evaluated
+        with the object available as 'item' in the context.
+
+        Parameters
+        ----------
+        obj : Any
+            Object to extract property from (typically a LexicalItem or Item).
+        property_expression : str
+            DSL expression that accesses object properties (e.g., "item.lemma",
+            "item.features.number", "len(item.lemma)").
+        context : dict[str, ContextValue] | None
+            Additional context variables (e.g., constants, helper data).
+
+        Returns
+        -------
+        Any
+            Extracted property value.
+
+        Raises
+        ------
+        EvaluationError
+            If property extraction fails.
+
+        Examples
+        --------
+        >>> evaluator = DSLEvaluator()
+        >>> item = LexicalItem(lemma="walk", pos="VERB")
+        >>> evaluator.extract_property_value(item, "item.lemma")
+        'walk'
+        >>> evaluator.extract_property_value(item, "len(item.lemma)")
+        4
+        """
+        eval_context_dict: dict[str, Any] = {"item": obj}
+        if context:
+            eval_context_dict.update(context)
+
+        return self.evaluate(property_expression, eval_context_dict)
+
+    def clear_cache(self) -> None:
+        """Clear compiled AST cache.
+
+        This should be called if you want to free memory or if expression
+        strings might have changed meaning.
+
+        Examples
+        --------
+        >>> evaluator = DSLEvaluator()
+        >>> evaluator.clear_cache()
+        """
+        self.compiled_cache.clear()
+        self.evaluator.clear_cache()

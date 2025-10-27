@@ -106,6 +106,8 @@ class Template(SashBaseModel):
         Template with {slot_name} placeholders.
     slots : dict[str, Slot]
         Slot definitions keyed by slot name.
+    constraints : list[Constraint]
+        Multi-slot constraints (slot names as variables in DSL expressions).
     description : str | None
         Human-readable description.
     language_code : LanguageCode | None
@@ -134,6 +136,7 @@ class Template(SashBaseModel):
     name: str
     template_string: str
     slots: dict[str, Slot] = Field(default_factory=dict)
+    constraints: list[Constraint] = Field(default_factory=_empty_constraint_list)
     description: str | None = None
     language_code: LanguageCode | None = None
     tags: list[str] = Field(default_factory=_empty_str_list)
@@ -254,23 +257,21 @@ class TemplateSequence(SashBaseModel):
         Unique name for the sequence.
     templates : list[Template]
         Ordered list of templates.
-    cross_template_constraints : list[Constraint]
-        Constraints that span multiple templates.
+    constraints : list[Constraint]
+        Cross-template constraints (span multiple templates).
 
     Examples
     --------
     >>> sequence = TemplateSequence(
     ...     name="question_answer",
     ...     templates=[question_template, answer_template],
-    ...     cross_template_constraints=[...]
+    ...     constraints=[...]
     ... )
     """
 
     name: str
     templates: list[Template] = Field(default_factory=_empty_template_list)
-    cross_template_constraints: list[Constraint] = Field(
-        default_factory=_empty_constraint_list
-    )
+    constraints: list[Constraint] = Field(default_factory=_empty_constraint_list)
 
     @field_validator("name")
     @classmethod

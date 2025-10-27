@@ -10,11 +10,7 @@ from sash.deployment.jspsych.ui.components import (
 )
 from sash.deployment.jspsych.ui.styles import MaterialDesignStylesheet
 from sash.items.models import UnfilledSlot
-from sash.resources.constraints import (
-    DSLConstraint,
-    ExtensionalConstraint,
-    IntensionalConstraint,
-)
+from sash.resources.constraints import Constraint
 
 
 def test_material_design_stylesheet_creation() -> None:
@@ -135,35 +131,10 @@ def test_create_cloze_fields() -> None:
     assert fields[1]["position"] == 2
 
 
-def test_create_cloze_fields_with_extensional_constraint() -> None:
-    """Test creating cloze fields with extensional constraints."""
+def test_create_cloze_fields_with_constraint() -> None:
+    """Test creating cloze fields with constraints."""
     constraint_id = uuid4()
-    lexical_item_id1 = uuid4()
-    lexical_item_id2 = uuid4()
-
-    constraint = ExtensionalConstraint(
-        mode="allow", items=[lexical_item_id1, lexical_item_id2]
-    )
-
-    slots = [
-        UnfilledSlot(
-            slot_name="determiner", position=0, constraint_ids=[constraint_id]
-        ),
-    ]
-
-    fields = create_cloze_fields(slots, {constraint_id: constraint})
-
-    assert len(fields) == 1
-    assert fields[0]["slot_name"] == "determiner"
-    assert fields[0]["type"] == "dropdown"
-    assert "extensional_item_ids" in fields[0]
-    assert len(fields[0]["extensional_item_ids"]) == 2
-
-
-def test_create_cloze_fields_with_intensional_constraint() -> None:
-    """Test creating cloze fields with intensional constraints."""
-    constraint_id = uuid4()
-    constraint = IntensionalConstraint(property="pos", operator="==", value="VERB")
+    constraint = Constraint(expression="self.pos == 'VERB'")
 
     slots = [
         UnfilledSlot(slot_name="verb", position=0, constraint_ids=[constraint_id]),
@@ -174,23 +145,7 @@ def test_create_cloze_fields_with_intensional_constraint() -> None:
     assert len(fields) == 1
     assert fields[0]["slot_name"] == "verb"
     assert fields[0]["type"] == "text"
-
-
-def test_create_cloze_fields_with_dsl_constraint() -> None:
-    """Test creating cloze fields with DSL constraints."""
-    constraint_id = uuid4()
-    constraint = DSLConstraint(expression="pos == 'VERB' and len(lemma) > 4")
-
-    slots = [
-        UnfilledSlot(slot_name="verb", position=0, constraint_ids=[constraint_id]),
-    ]
-
-    fields = create_cloze_fields(slots, {constraint_id: constraint})
-
-    assert len(fields) == 1
-    assert fields[0]["slot_name"] == "verb"
-    assert fields[0]["type"] == "text"
-    assert fields[0]["dsl_expression"] == "pos == 'VERB' and len(lemma) > 4"
+    assert fields[0]["dsl_expression"] == "self.pos == 'VERB'"
 
 
 def test_create_forced_choice_config() -> None:
@@ -210,28 +165,10 @@ def test_infer_widget_type_no_constraints() -> None:
     assert widget_type == "text"
 
 
-def test_infer_widget_type_extensional_allow() -> None:
-    """Test inferring widget type with extensional allow constraint."""
+def test_infer_widget_type_with_constraint() -> None:
+    """Test inferring widget type with constraint."""
     constraint_id = uuid4()
-    constraint = ExtensionalConstraint(mode="allow", items=[uuid4(), uuid4()])
-
-    widget_type = infer_widget_type([constraint_id], {constraint_id: constraint})
-    assert widget_type == "dropdown"
-
-
-def test_infer_widget_type_extensional_deny() -> None:
-    """Test inferring widget type with extensional deny constraint."""
-    constraint_id = uuid4()
-    constraint = ExtensionalConstraint(mode="deny", items=[uuid4()])
-
-    widget_type = infer_widget_type([constraint_id], {constraint_id: constraint})
-    assert widget_type == "text"  # Deny mode uses text input
-
-
-def test_infer_widget_type_intensional() -> None:
-    """Test inferring widget type with intensional constraint."""
-    constraint_id = uuid4()
-    constraint = IntensionalConstraint(property="pos", operator="==", value="VERB")
+    constraint = Constraint(expression="self.pos == 'VERB'")
 
     widget_type = infer_widget_type([constraint_id], {constraint_id: constraint})
     assert widget_type == "text"

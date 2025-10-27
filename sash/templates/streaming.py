@@ -49,10 +49,7 @@ class StreamingFiller:
         self.adapter_registry = adapter_registry
         self.max_combinations = max_combinations
 
-        self.resolver = ConstraintResolver(
-            lexicon=lexicon,
-            adapter_registry=adapter_registry,
-        )
+        self.resolver = ConstraintResolver()
 
     def stream(
         self,
@@ -146,35 +143,30 @@ class StreamingFiller:
         dict[str, list[LexicalItem]]
             Mapping of slot names to valid items.
         """
+        # Normalize language code if provided
+        normalized_lang = validate_iso639_code(language_code) if language_code else None
+
         slot_items: dict[str, list[LexicalItem]] = {}
         for slot_name, slot in template.slots.items():
-            if slot.constraints:
-                # Resolve each constraint and find intersection
-                # (items must satisfy ALL constraints)
-                valid_items_list: list[LexicalItem] | None = None
-                for constraint in slot.constraints:
-                    items = self.resolver.resolve(constraint, language_code)
-                    if valid_items_list is None:
-                        valid_items_list = items
-                    else:
-                        # Find intersection using item IDs
-                        item_ids = {item.id for item in items}
-                        valid_items_list = [
-                            item for item in valid_items_list if item.id in item_ids
-                        ]
+            candidates: list[LexicalItem] = []
+            for item in self.lexicon.items.values():
+                # Filter by language code if specified
+                if normalized_lang:
+                    # Normalize item language code for comparison
+                    item_lang = (
+                        validate_iso639_code(item.language_code)
+                        if item.language_code
+                        else None
+                    )
+                    if item_lang != normalized_lang:
+                        continue
 
-                slot_items[slot_name] = valid_items_list if valid_items_list else []
-            else:
-                # No constraints means all items are valid
-                if language_code:
-                    items = [
-                        item
-                        for item in self.lexicon.items.values()
-                        if item.language_code == language_code
-                    ]
-                else:
-                    items = list(self.lexicon.items.values())
-                slot_items[slot_name] = items
+                # Check if item satisfies slot constraints
+                if self.resolver.evaluate_slot_constraints(item, slot.constraints):
+                    candidates.append(item)
+
+            slot_items[slot_name] = candidates
+
         return slot_items
 
     def _render_template(

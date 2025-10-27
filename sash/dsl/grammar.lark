@@ -41,6 +41,7 @@
 ?atom: literal
      | variable
      | attribute_access
+     | subscript
      | function_call
      | list_literal
      | "(" expr ")"
@@ -56,7 +57,9 @@ variable: NAME
 
 attribute_access: atom "." NAME
 
-function_call: NAME "(" [arguments] ")"
+subscript: atom "[" expr "]"
+
+function_call: atom "(" [arguments] ")"
 
 arguments: expr ("," expr)*
 

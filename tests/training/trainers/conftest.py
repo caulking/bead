@@ -81,7 +81,9 @@ def mock_transformers(mocker):
     mock_transformers_module.AutoModelForSequenceClassification = mock_auto_model
     mock_transformers_module.AutoTokenizer = mock_auto_tokenizer
     mock_transformers_module.Trainer = mock_trainer_cls
-    mock_transformers_module.TrainingArguments = mocker.Mock(return_value=mock_training_args)
+    mock_transformers_module.TrainingArguments = mocker.Mock(
+        return_value=mock_training_args
+    )
     mock_transformers_module.DataCollatorWithPadding = mock_data_collator_cls
 
     # Patch sys.modules so imports inside functions work

@@ -100,7 +100,9 @@ class UnaryOp(ASTNode):
 class FunctionCall(ASTNode):
     """Function call node.
 
-    Represents function calls like: len(x), startswith("pre")
+    Represents function calls and method calls like:
+    - len(x), startswith("pre")
+    - obj.method(arg)
 
     Examples
     --------
@@ -111,7 +113,7 @@ class FunctionCall(ASTNode):
     'len'
     """
 
-    function: Variable
+    function: ASTNode  # Variable for functions, AttributeAccess for methods
     arguments: list[ASTNode]
 
 
@@ -146,3 +148,21 @@ class AttributeAccess(ASTNode):
 
     object: ASTNode
     attribute: str
+
+
+class Subscript(ASTNode):
+    """Subscript access node.
+
+    Represents subscript access like: item['key'], obj[0]
+
+    Examples
+    --------
+    >>> obj = Variable(name="item")
+    >>> key = Literal(value="key")
+    >>> node = Subscript(object=obj, index=key)
+    >>> node.index.value
+    'key'
+    """
+
+    object: ASTNode
+    index: ASTNode

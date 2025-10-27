@@ -456,6 +456,30 @@ def is_list(value: Any) -> bool:
     return isinstance(value, list)
 
 
+# Conversion functions
+def str_(value: Any) -> str:
+    """Convert value to string.
+
+    Parameters
+    ----------
+    value : Any
+        Value to convert.
+
+    Returns
+    -------
+    str
+        String representation of value.
+
+    Examples
+    --------
+    >>> str_(42)
+    '42'
+    >>> str_(True)
+    'True'
+    """
+    return str(value)
+
+
 # Math functions
 def abs_(value: int | float) -> int | float:
     """Return absolute value.
@@ -599,6 +623,8 @@ STDLIB_FUNCTIONS: dict[str, Any] = {
     "is_float": is_float,
     "is_bool": is_bool,
     "is_list": is_list,
+    # Conversion functions
+    "str": str_,
     # Math functions
     "abs": abs_,
     "round": round_,

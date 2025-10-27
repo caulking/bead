@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from sash.resources.constraints import IntensionalConstraint
+from sash.resources.constraints import Constraint
 from sash.resources.lexicon import Lexicon
 from sash.resources.models import LexicalItem
 from sash.resources.structures import Slot, Template
@@ -39,15 +39,11 @@ def simple_template() -> Template:
         slots={
             "subject": Slot(
                 name="subject",
-                constraints=[
-                    IntensionalConstraint(property="pos", operator="==", value="NOUN")
-                ],
+                constraints=[Constraint(expression="self.pos == 'NOUN'")],
             ),
             "verb": Slot(
                 name="verb",
-                constraints=[
-                    IntensionalConstraint(property="pos", operator="==", value="VERB")
-                ],
+                constraints=[Constraint(expression="self.pos == 'VERB'")],
             ),
         },
     )
@@ -119,9 +115,7 @@ def test_streaming_language_filtering(sample_lexicon: Lexicon) -> None:
         slots={
             "noun": Slot(
                 name="noun",
-                constraints=[
-                    IntensionalConstraint(property="pos", operator="==", value="NOUN")
-                ],
+                constraints=[Constraint(expression="self.pos == 'NOUN'")],
             ),
         },
     )
@@ -147,9 +141,7 @@ def test_streaming_empty_slot_error(sample_lexicon: Lexicon) -> None:
         slots={
             "adverb": Slot(
                 name="adverb",
-                constraints=[
-                    IntensionalConstraint(property="pos", operator="==", value="ADV")
-                ],
+                constraints=[Constraint(expression="self.pos == 'ADV'")],
             ),
         },
     )
@@ -168,9 +160,7 @@ def test_streaming_single_slot(sample_lexicon: Lexicon) -> None:
         slots={
             "noun": Slot(
                 name="noun",
-                constraints=[
-                    IntensionalConstraint(property="pos", operator="==", value="NOUN")
-                ],
+                constraints=[Constraint(expression="self.pos == 'NOUN'")],
             ),
         },
     )
@@ -223,21 +213,15 @@ def test_streaming_complex_template(sample_lexicon: Lexicon) -> None:
         slots={
             "adj": Slot(
                 name="adj",
-                constraints=[
-                    IntensionalConstraint(property="pos", operator="==", value="ADJ")
-                ],
+                constraints=[Constraint(expression="self.pos == 'ADJ'")],
             ),
             "noun": Slot(
                 name="noun",
-                constraints=[
-                    IntensionalConstraint(property="pos", operator="==", value="NOUN")
-                ],
+                constraints=[Constraint(expression="self.pos == 'NOUN'")],
             ),
             "verb": Slot(
                 name="verb",
-                constraints=[
-                    IntensionalConstraint(property="pos", operator="==", value="VERB")
-                ],
+                constraints=[Constraint(expression="self.pos == 'VERB'")],
             ),
         },
     )
@@ -295,9 +279,7 @@ def test_streaming_empty_lexicon() -> None:
         slots={
             "word": Slot(
                 name="word",
-                constraints=[
-                    IntensionalConstraint(property="pos", operator="==", value="NOUN")
-                ],
+                constraints=[Constraint(expression="self.pos == 'NOUN'")],
             ),
         },
     )

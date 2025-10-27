@@ -18,10 +18,11 @@ from rich.table import Table
 from sash.cli.utils import print_error, print_info, print_success
 from sash.resources.lexicon import Lexicon
 from sash.resources.template_collection import TemplateCollection
-from sash.templates.filler import FilledTemplate, TemplateFiller
+from sash.templates.filler import FilledTemplate
 from sash.templates.strategies import (
     ExhaustiveStrategy,
     RandomStrategy,
+    StrategyFiller,
     StratifiedStrategy,
 )
 
@@ -168,7 +169,7 @@ def fill(
             ctx.exit(1)
 
         # Create filler
-        filler = TemplateFiller(lexicon=lexicon, strategy=filling_strategy)
+        filler = StrategyFiller(lexicon=lexicon, strategy=filling_strategy)
 
         # Fill templates with progress
         all_filled: list[FilledTemplate] = []

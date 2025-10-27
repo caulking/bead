@@ -84,7 +84,7 @@ def uniqueness_constraint() -> UniquenessConstraint:
         Constraint requiring unique target verbs.
     """
     return UniquenessConstraint(
-        property_path="item_metadata.target_verb", allow_null=False
+        property_expression="item['target_verb']", allow_null=False
     )
 
 
@@ -97,7 +97,7 @@ def balance_constraint() -> BalanceConstraint:
     BalanceConstraint
         Constraint for balanced transitivity.
     """
-    return BalanceConstraint(property_path="item_metadata.transitivity", tolerance=0.1)
+    return BalanceConstraint(property_expression="item['transitivity']", tolerance=0.1)
 
 
 @pytest.fixture
@@ -110,7 +110,7 @@ def quantile_constraint() -> QuantileConstraint:
         Constraint for LM probability quantiles.
     """
     return QuantileConstraint(
-        property_path="item_metadata.lm_prob",
+        property_expression="item['lm_prob']",
         n_quantiles=5,
         items_per_quantile=2,
     )
