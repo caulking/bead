@@ -1,0 +1,408 @@
+# ============================================================================
+# Argument Structure Active Learning Pipeline - Makefile
+# ============================================================================
+#
+# This Makefile provides convenient targets for running all components of the
+# argument structure active learning pipeline.
+#
+# Quick Start:
+#   make help           - Show available targets
+#   make all            - Run full pipeline (generate data + run pipeline)
+#   make test           - Run all tests
+#   make clean          - Clean generated files
+#
+# ============================================================================
+
+# Python interpreter
+PYTHON := ../../../.venv/bin/python
+
+# Directories
+ITEMS_DIR := items
+TEMPLATES_DIR := templates
+LEXICONS_DIR := lexicons
+RESULTS_DIR := results
+CACHE_DIR := .cache
+
+# Default limits for testing
+DEFAULT_CROSS_PRODUCT_LIMIT := 100
+DEFAULT_2AFC_LIMIT := 50
+DEFAULT_INITIAL_SIZE := 50
+DEFAULT_UNLABELED_SIZE := 100
+
+# Colors for output
+BLUE := \033[0;34m
+GREEN := \033[0;32m
+YELLOW := \033[0;33m
+RED := \033[0;31m
+NC := \033[0m # No Color
+
+# ============================================================================
+# Main Targets
+# ============================================================================
+
+.PHONY: help
+help: ## Show this help message
+	@echo "$(BLUE)============================================================================$(NC)"
+	@echo "$(BLUE)Argument Structure Active Learning Pipeline - Available Targets$(NC)"
+	@echo "$(BLUE)============================================================================$(NC)"
+	@echo ""
+	@echo "$(GREEN)Main Targets:$(NC)"
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
+		awk 'BEGIN {FS = ":.*?## "}; {printf "  $(YELLOW)%-25s$(NC) %s\n", $$1, $$2}' | \
+		grep -E "(all|test|clean|help|pipeline|data)"
+	@echo ""
+	@echo "$(GREEN)Data Generation:$(NC)"
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
+		awk 'BEGIN {FS = ":.*?## "}; {printf "  $(YELLOW)%-25s$(NC) %s\n", $$1, $$2}' | \
+		grep -E "(lexicons|templates|cross-product|2afc)"
+	@echo ""
+	@echo "$(GREEN)Pipeline Execution:$(NC)"
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
+		awk 'BEGIN {FS = ":.*?## "}; {printf "  $(YELLOW)%-25s$(NC) %s\n", $$1, $$2}' | \
+		grep -E "(run|dry-run)"
+	@echo ""
+	@echo "$(GREEN)Testing & Quality:$(NC)"
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
+		awk 'BEGIN {FS = ":.*?## "}; {printf "  $(YELLOW)%-25s$(NC) %s\n", $$1, $$2}' | \
+		grep -E "(test|lint|check)"
+	@echo ""
+	@echo "$(GREEN)Cleaning:$(NC)"
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
+		awk 'BEGIN {FS = ":.*?## "}; {printf "  $(YELLOW)%-25s$(NC) %s\n", $$1, $$2}' | \
+		grep -E "clean"
+	@echo ""
+	@echo "$(BLUE)Examples:$(NC)"
+	@echo "  make all                    # Run complete pipeline with test data"
+	@echo "  make data                   # Generate all data files"
+	@echo "  make pipeline-dry-run       # Test pipeline without training"
+	@echo "  make test                   # Run all tests"
+	@echo ""
+
+.PHONY: all
+all: data pipeline-dry-run ## Run complete pipeline with test data
+	@echo "$(GREEN)✓ Complete pipeline executed successfully$(NC)"
+
+.PHONY: data
+data: lexicons templates cross-product 2afc-pairs ## Generate all data files
+	@echo "$(GREEN)✓ All data files generated$(NC)"
+
+# ============================================================================
+# Data Generation Targets
+# ============================================================================
+
+.PHONY: lexicons
+lexicons: ## Generate lexicons from VerbNet and bleached resources
+	@echo "$(BLUE)[1/4] Generating lexicons...$(NC)"
+	$(PYTHON) generate_lexicons.py
+	@echo "$(GREEN)✓ Lexicons generated$(NC)"
+
+.PHONY: templates
+templates: ## Extract generic frame templates
+	@echo "$(BLUE)[2/4] Extracting generic templates...$(NC)"
+	$(PYTHON) extract_generic_templates.py
+	@echo "$(GREEN)✓ Generic templates extracted$(NC)"
+
+.PHONY: cross-product
+cross-product: ## Generate cross-product items (verb × template)
+	@echo "$(BLUE)[3/4] Generating cross-product items (limit=$(DEFAULT_CROSS_PRODUCT_LIMIT))...$(NC)"
+	$(PYTHON) generate_cross_product.py --limit $(DEFAULT_CROSS_PRODUCT_LIMIT)
+	@echo "$(GREEN)✓ Cross-product items generated$(NC)"
+
+.PHONY: cross-product-full
+cross-product-full: ## Generate full cross-product (all 74,880 combinations)
+	@echo "$(BLUE)[3/4] Generating FULL cross-product items (this may take a while)...$(NC)"
+	$(PYTHON) generate_cross_product.py
+	@echo "$(GREEN)✓ Full cross-product items generated$(NC)"
+
+.PHONY: 2afc-pairs
+2afc-pairs: ## Generate 2AFC pairs from cross-product items
+	@echo "$(BLUE)[4/4] Generating 2AFC pairs (limit=$(DEFAULT_2AFC_LIMIT))...$(NC)"
+	$(PYTHON) create_2afc_pairs.py --limit $(DEFAULT_2AFC_LIMIT)
+	@echo "$(GREEN)✓ 2AFC pairs generated$(NC)"
+
+.PHONY: 2afc-pairs-full
+2afc-pairs-full: ## Generate 2AFC pairs from all cross-product items
+	@echo "$(BLUE)[4/4] Generating 2AFC pairs (no limit)...$(NC)"
+	$(PYTHON) create_2afc_pairs.py
+	@echo "$(GREEN)✓ All 2AFC pairs generated$(NC)"
+
+# ============================================================================
+# Pipeline Execution Targets
+# ============================================================================
+
+.PHONY: pipeline-dry-run
+pipeline-dry-run: ## Run pipeline in dry-run mode (test configuration)
+	@echo "$(BLUE)Running pipeline in dry-run mode...$(NC)"
+	$(PYTHON) run_pipeline.py \
+		--dry-run \
+		--initial-size $(DEFAULT_INITIAL_SIZE) \
+		--unlabeled-size $(DEFAULT_UNLABELED_SIZE)
+	@echo "$(GREEN)✓ Dry run completed$(NC)"
+
+.PHONY: pipeline
+pipeline: ## Run full active learning pipeline
+	@echo "$(BLUE)Running active learning pipeline...$(NC)"
+	@echo "$(YELLOW)⚠ Warning: This will run the full training loop$(NC)"
+	$(PYTHON) run_pipeline.py \
+		--initial-size $(DEFAULT_INITIAL_SIZE) \
+		--unlabeled-size $(DEFAULT_UNLABELED_SIZE)
+	@echo "$(GREEN)✓ Pipeline completed$(NC)"
+
+.PHONY: pipeline-full
+pipeline-full: ## Run pipeline with production settings
+	@echo "$(BLUE)Running pipeline with production settings...$(NC)"
+	@echo "$(YELLOW)⚠ Warning: This will use large datasets and may take a long time$(NC)"
+	$(PYTHON) run_pipeline.py \
+		--initial-size 1000 \
+		--unlabeled-size 5000
+	@echo "$(GREEN)✓ Pipeline completed$(NC)"
+
+# ============================================================================
+# Testing & Quality Assurance Targets
+# ============================================================================
+
+.PHONY: test
+test: test-unit test-lint ## Run all tests (unit + linting)
+	@echo "$(GREEN)✓ All tests passed$(NC)"
+
+.PHONY: test-unit
+test-unit: ## Run unit tests for evaluation module
+	@echo "$(BLUE)Running unit tests...$(NC)"
+	cd ../../.. && $(PYTHON) -m pytest tests/evaluation/ -v
+	@echo "$(GREEN)✓ Unit tests passed$(NC)"
+
+.PHONY: test-lint
+test-lint: ## Run linting checks on pipeline scripts
+	@echo "$(BLUE)Running linting checks...$(NC)"
+	$(PYTHON) -m ruff check \
+		create_2afc_pairs.py \
+		run_pipeline.py \
+		generate_cross_product.py \
+		extract_generic_templates.py
+	@echo "$(GREEN)✓ Linting checks passed$(NC)"
+
+.PHONY: test-types
+test-types: ## Run type checking with pyright
+	@echo "$(BLUE)Running type checks...$(NC)"
+	cd ../../.. && $(PYTHON) -m pyright \
+		gallery/eng/argument_structure/create_2afc_pairs.py \
+		gallery/eng/argument_structure/run_pipeline.py
+	@echo "$(GREEN)✓ Type checks passed$(NC)"
+
+.PHONY: check
+check: test-lint test-types ## Run static analysis (lint + types)
+	@echo "$(GREEN)✓ Static analysis passed$(NC)"
+
+# ============================================================================
+# Data Inspection Targets
+# ============================================================================
+
+.PHONY: show-stats
+show-stats: ## Show statistics about generated data
+	@echo "$(BLUE)============================================================================$(NC)"
+	@echo "$(BLUE)Data Statistics$(NC)"
+	@echo "$(BLUE)============================================================================$(NC)"
+	@echo ""
+	@echo "$(GREEN)Lexicons:$(NC)"
+	@if [ -d "$(LEXICONS_DIR)" ]; then \
+		for file in $(LEXICONS_DIR)/*.jsonl; do \
+			if [ -f "$$file" ]; then \
+				count=$$(wc -l < "$$file"); \
+				size=$$(ls -lh "$$file" | awk '{print $$5}'); \
+				echo "  $$(basename $$file): $$count entries ($$size)"; \
+			fi \
+		done \
+	else \
+		echo "  $(RED)No lexicons found. Run 'make lexicons' first.$(NC)"; \
+	fi
+	@echo ""
+	@echo "$(GREEN)Templates:$(NC)"
+	@if [ -f "$(TEMPLATES_DIR)/generic_frames.jsonl" ]; then \
+		count=$$(wc -l < "$(TEMPLATES_DIR)/generic_frames.jsonl"); \
+		size=$$(ls -lh "$(TEMPLATES_DIR)/generic_frames.jsonl" | awk '{print $$5}'); \
+		echo "  generic_frames.jsonl: $$count templates ($$size)"; \
+	else \
+		echo "  $(RED)No templates found. Run 'make templates' first.$(NC)"; \
+	fi
+	@echo ""
+	@echo "$(GREEN)Cross-Product Items:$(NC)"
+	@if [ -f "$(ITEMS_DIR)/cross_product_items.jsonl" ]; then \
+		count=$$(wc -l < "$(ITEMS_DIR)/cross_product_items.jsonl"); \
+		size=$$(ls -lh "$(ITEMS_DIR)/cross_product_items.jsonl" | awk '{print $$5}'); \
+		echo "  cross_product_items.jsonl: $$count items ($$size)"; \
+	else \
+		echo "  $(RED)No cross-product items found. Run 'make cross-product' first.$(NC)"; \
+	fi
+	@echo ""
+	@echo "$(GREEN)2AFC Pairs:$(NC)"
+	@if [ -f "$(ITEMS_DIR)/2afc_pairs.jsonl" ]; then \
+		count=$$(wc -l < "$(ITEMS_DIR)/2afc_pairs.jsonl"); \
+		size=$$(ls -lh "$(ITEMS_DIR)/2afc_pairs.jsonl" | awk '{print $$5}'); \
+		echo "  2afc_pairs.jsonl: $$count pairs ($$size)"; \
+	else \
+		echo "  $(RED)No 2AFC pairs found. Run 'make 2afc-pairs' first.$(NC)"; \
+	fi
+	@echo ""
+
+.PHONY: show-config
+show-config: ## Show pipeline configuration
+	@echo "$(BLUE)============================================================================$(NC)"
+	@echo "$(BLUE)Pipeline Configuration$(NC)"
+	@echo "$(BLUE)============================================================================$(NC)"
+	@echo ""
+	@$(PYTHON) -c "import yaml; config = yaml.safe_load(open('config.yaml')); \
+		print('Project:', config['project']['name']); \
+		print('Language:', config['project']['language_code']); \
+		print(''); \
+		print('Active Learning:'); \
+		print('  Strategy:', config['active_learning']['strategy']); \
+		print('  Method:', config['active_learning']['method']); \
+		print('  Max iterations:', config['active_learning']['max_iterations']); \
+		print('  Budget per iteration:', config['active_learning']['budget_per_iteration']); \
+		print(''); \
+		print('Convergence:'); \
+		print('  Metric:', config['training']['convergence']['metric']); \
+		print('  Threshold:', config['training']['convergence']['threshold']); \
+		print('  Min iterations:', config['training']['convergence']['min_iterations']); \
+		print(''); \
+		print('Data:'); \
+		print('  Lists:', config['lists']['n_lists']); \
+		print('  Items per list:', config['lists']['items_per_list']); \
+		print('  Quantile bins:', config['lists']['quantile_bins'])"
+	@echo ""
+
+# ============================================================================
+# Cleaning Targets
+# ============================================================================
+
+.PHONY: clean
+clean: clean-items clean-cache ## Clean generated items and cache
+	@echo "$(GREEN)✓ Cleaned generated files$(NC)"
+
+.PHONY: clean-items
+clean-items: ## Clean generated items (cross-product and 2AFC pairs)
+	@echo "$(BLUE)Cleaning generated items...$(NC)"
+	@rm -f $(ITEMS_DIR)/cross_product_items.jsonl
+	@rm -f $(ITEMS_DIR)/2afc_pairs.jsonl
+	@echo "$(GREEN)✓ Items cleaned$(NC)"
+
+.PHONY: clean-cache
+clean-cache: ## Clean model cache
+	@echo "$(BLUE)Cleaning model cache...$(NC)"
+	@rm -rf $(CACHE_DIR)
+	@echo "$(GREEN)✓ Cache cleaned$(NC)"
+
+.PHONY: clean-results
+clean-results: ## Clean pipeline results
+	@echo "$(BLUE)Cleaning results...$(NC)"
+	@rm -rf $(RESULTS_DIR)
+	@echo "$(GREEN)✓ Results cleaned$(NC)"
+
+.PHONY: clean-all
+clean-all: clean-items clean-cache clean-results clean-lexicons clean-templates ## Clean everything (including lexicons and templates)
+	@echo "$(RED)⚠ Warning: All generated data has been removed$(NC)"
+	@echo "$(GREEN)✓ Complete clean finished$(NC)"
+
+.PHONY: clean-lexicons
+clean-lexicons: ## Clean generated lexicons
+	@echo "$(BLUE)Cleaning lexicons...$(NC)"
+	@rm -f $(LEXICONS_DIR)/*.jsonl
+	@echo "$(GREEN)✓ Lexicons cleaned$(NC)"
+
+.PHONY: clean-templates
+clean-templates: ## Clean extracted templates
+	@echo "$(BLUE)Cleaning templates...$(NC)"
+	@rm -f $(TEMPLATES_DIR)/generic_frames.jsonl
+	@echo "$(GREEN)✓ Templates cleaned$(NC)"
+
+# ============================================================================
+# Development Targets
+# ============================================================================
+
+.PHONY: dev-setup
+dev-setup: ## Set up development environment
+	@echo "$(BLUE)Setting up development environment...$(NC)"
+	@echo "Checking Python version..."
+	@$(PYTHON) --version
+	@echo "Installing dependencies..."
+	@cd ../../.. && $(PYTHON) -m pip install -e ".[dev,api,training]"
+	@echo "$(GREEN)✓ Development environment ready$(NC)"
+
+.PHONY: dev-test-small
+dev-test-small: ## Quick development test (small data)
+	@echo "$(BLUE)Running quick development test...$(NC)"
+	@$(MAKE) clean-items
+	@$(PYTHON) generate_cross_product.py --limit 20
+	@$(PYTHON) create_2afc_pairs.py --limit 20
+	@$(PYTHON) run_pipeline.py --dry-run --initial-size 10 --unlabeled-size 5
+	@echo "$(GREEN)✓ Development test passed$(NC)"
+
+.PHONY: dev-test-medium
+dev-test-medium: ## Medium development test
+	@echo "$(BLUE)Running medium development test...$(NC)"
+	@$(MAKE) clean-items
+	@$(PYTHON) generate_cross_product.py --limit 200
+	@$(PYTHON) create_2afc_pairs.py --limit 100
+	@$(PYTHON) run_pipeline.py --dry-run --initial-size 50 --unlabeled-size 50
+	@echo "$(GREEN)✓ Medium development test passed$(NC)"
+
+# ============================================================================
+# Production Targets
+# ============================================================================
+
+.PHONY: prod-data
+prod-data: clean-items lexicons templates cross-product-full 2afc-pairs-full ## Generate production data (full cross-product)
+	@echo "$(GREEN)✓ Production data generated$(NC)"
+	@$(MAKE) show-stats
+
+.PHONY: prod-pipeline
+prod-pipeline: ## Run production pipeline
+	@echo "$(RED)⚠ Warning: This will run the full production pipeline$(NC)"
+	@echo "$(YELLOW)This may take several hours and requires human data collection.$(NC)"
+	@read -p "Continue? [y/N] " -n 1 -r; \
+	echo; \
+	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
+		$(PYTHON) run_pipeline.py --config config.yaml; \
+	else \
+		echo "$(YELLOW)Production pipeline cancelled$(NC)"; \
+	fi
+
+# ============================================================================
+# Documentation Targets
+# ============================================================================
+
+.PHONY: docs
+docs: ## Generate documentation
+	@echo "$(BLUE)Documentation:$(NC)"
+	@echo "  - README.md: Main documentation"
+	@echo "  - PROGRESS.md: Development progress log"
+	@echo "  - config.yaml: Pipeline configuration"
+	@echo "  - Makefile: This file (run 'make help')"
+	@echo ""
+	@echo "To view configuration: make show-config"
+	@echo "To view data stats: make show-stats"
+
+# ============================================================================
+# Utility Targets
+# ============================================================================
+
+.PHONY: dirs
+dirs: ## Create necessary directories
+	@mkdir -p $(ITEMS_DIR)
+	@mkdir -p $(TEMPLATES_DIR)
+	@mkdir -p $(LEXICONS_DIR)
+	@mkdir -p $(RESULTS_DIR)
+	@mkdir -p $(CACHE_DIR)
+	@echo "$(GREEN)✓ Directories created$(NC)"
+
+# ============================================================================
+# Special Targets
+# ============================================================================
+
+.DEFAULT_GOAL := help
+
+# Prevent make from deleting intermediate files
+.SECONDARY:
+
+# Declare phony targets (targets that don't create files)
+.PHONY: all data help clean test

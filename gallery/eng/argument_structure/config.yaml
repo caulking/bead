@@ -1,0 +1,399 @@
+# ============================================================================
+# Argument Structure Active Learning Pipeline Configuration
+# ============================================================================
+#
+# This configuration defines the complete pipeline for collecting acceptability
+# judgments on verb argument structure alternations using active learning with
+# human-in-the-loop until model performance converges to human inter-annotator
+# agreement.
+#
+# Design Principle: Test ALL verbs in ALL frame structures (full cross-product)
+# to enable both grammatical (verb licensed for frame) and ungrammatical (verb
+# not licensed) judgments.
+# ============================================================================
+
+# Project Metadata
+# ============================================================================
+project:
+  name: "argument_structure"
+  language_code: "eng"
+  description: "VerbNet argument structure alternations with active learning"
+  version: "1.0.0"
+  authors:
+    - "Aaron Steven White"
+  citation: "White, A. S. (2025). Argument Structure Acceptability Judgments."
+
+# Paths Configuration
+# ============================================================================
+paths:
+  # Base directories
+  data_dir: "."
+  output_dir: "."
+  cache_dir: ".cache"
+
+  # Specific paths
+  lexicons_dir: "lexicons"
+  templates_dir: "templates"
+  items_dir: "items"
+  lists_dir: "lists"
+  filled_templates_dir: "filled_templates"
+
+  # Output files
+  cross_product_items: "items/cross_product_items.jsonl"
+  2afc_pairs: "items/2afc_pairs.jsonl"
+  experiment_lists: "lists/experiment_lists.jsonl"
+
+# Resource Configuration
+# ============================================================================
+resources:
+  # Lexicons
+  lexicons:
+    - path: "lexicons/verbnet_verbs.jsonl"
+      name: "verbnet_verbs"
+      description: "VerbNet verbs with frame information"
+
+    - path: "lexicons/bleached_nouns.jsonl"
+      name: "bleached_nouns"
+      description: "Semantically light nouns for filling argument slots"
+
+    - path: "lexicons/bleached_verbs.jsonl"
+      name: "bleached_verbs"
+      description: "Semantically light verbs for complex predicates"
+
+    - path: "lexicons/bleached_adjectives.jsonl"
+      name: "bleached_adjectives"
+      description: "Semantically light adjectives for result/state slots"
+
+    - path: "lexicons/prepositions.jsonl"
+      name: "prepositions"
+      description: "Prepositions for PP arguments"
+
+    - path: "lexicons/determiners.jsonl"
+      name: "determiners"
+      description: "Determiners for NP arguments"
+
+  # Templates
+  templates:
+    - path: "templates/generic_frames.jsonl"
+      name: "generic_frames"
+      description: "Generic frame structures extracted from VerbNet"
+
+# Template Filling Strategy
+# ============================================================================
+template:
+  # Strategy type: "exhaustive", "mlm", or "mixed"
+  filling_strategy: "mixed"
+
+  # MLM (Masked Language Model) settings for smart filling
+  mlm:
+    model_name: "bert-base-uncased"
+    beam_size: 5
+    top_k: 10
+    device: "cpu"
+    cache_enabled: true
+
+  # Slot-specific strategies
+  # - exhaustive: Use all entries from lexicon (for cross-product design)
+  # - mlm: Use MLM to select contextually appropriate fillers
+  slot_strategies:
+    verb:
+      strategy: "exhaustive"
+      description: "Test all verbs in all frames"
+
+    noun:
+      strategy: "exhaustive"
+      description: "Use all bleached nouns for generality"
+
+    det:
+      strategy: "exhaustive"
+      description: "Test all determiners"
+
+    prep:
+      strategy: "exhaustive"
+      description: "Test all prepositions"
+
+    comp:
+      strategy: "exhaustive"
+      description: "Test all complementizers"
+
+    adjective:
+      strategy: "mlm"
+      description: "Use MLM for contextually appropriate adjectives"
+      beam_size: 3
+
+# Items Configuration
+# ============================================================================
+items:
+  # Judgment type: "forced_choice", "acceptability_rating", "inference"
+  judgment_type: "forced_choice"
+
+  # Number of alternatives in forced choice
+  n_alternatives: 2  # 2AFC
+
+  # Language models for scoring items
+  models:
+    - name: "gpt2"
+      provider: "huggingface"
+      device: "cpu"
+      use_for_scoring: true
+
+    # Optional: Additional models for comparison
+    # - name: "gpt2-medium"
+    #   provider: "huggingface"
+    #   device: "cpu"
+
+  # Item construction settings
+  construction:
+    # Create minimal pairs
+    create_minimal_pairs: true
+    pair_types:
+      - "same_verb"       # Same verb, different frames
+      - "different_verb"  # Different verbs, same frame
+
+    # Score-based filtering
+    score_filtering:
+      enabled: true
+      min_score_diff: 0.5  # Minimum LM score difference for interesting pairs
+
+  # Item metadata to preserve
+  preserve_metadata:
+    - "verb_lemma"
+    - "template_id"
+    - "template_name"
+    - "template_structure"
+    - "pair_type"
+    - "lm_score_diff"
+    - "quantile"
+
+# List Partitioning Configuration
+# ============================================================================
+lists:
+  # Partitioning strategy
+  strategy: "quantile_balanced_minimal_pairs"
+
+  # Number of experimental lists to create
+  n_lists: 8
+
+  # Items per list
+  items_per_list: 100
+
+  # Quantile settings for difficulty stratification
+  quantile_bins: 10
+  items_per_quantile: 10
+
+  # Constraints for list balancing
+  constraints:
+    # Balance pair types
+    - type: "balance"
+      property_expression: "item.metadata.pair_type"
+      target_counts:
+        same_verb: 50
+        different_verb: 50
+      description: "Equal numbers of same-verb and different-verb pairs"
+
+    # Ensure verb uniqueness within lists
+    - type: "uniqueness"
+      property_expression: "item.metadata.verb_lemma"
+      description: "No verb appears multiple times in same list"
+
+    # Stratify by LM score difference (grouped by pair type)
+    - type: "grouped_quantile"
+      property_expression: "item.metadata.lm_score_diff"
+      group_by_expression: "item.metadata.pair_type"
+      n_quantiles: 10
+      items_per_quantile: 5
+      description: "Stratified sampling of LM score differences by pair type"
+
+    # Template diversity
+    - type: "diversity"
+      property_expression: "item.metadata.template_id"
+      min_unique_values: 15
+      description: "Ensure diverse set of templates in each list"
+
+# Training Configuration
+# ============================================================================
+training:
+  # Convergence detection settings
+  convergence:
+    # Metric for human baseline agreement
+    # Options: "krippendorff_alpha", "fleiss_kappa", "cohens_kappa", "percentage_agreement"
+    metric: "krippendorff_alpha"
+
+    # Convergence threshold (how close to human agreement)
+    # Model is converged when: |model_accuracy - human_agreement| < threshold
+    threshold: 0.05
+
+    # Minimum iterations before checking convergence
+    min_iterations: 3
+
+    # Statistical significance level for convergence test
+    alpha: 0.05
+
+  # Model training settings
+  model:
+    # Model architecture (for future implementation)
+    architecture: "transformer"
+    model_name: "bert-base-uncased"
+
+    # Training hyperparameters
+    learning_rate: 2e-5
+    batch_size: 16
+    epochs_per_iteration: 3
+    warmup_steps: 100
+
+    # Device
+    device: "cpu"
+
+  # Data settings
+  data:
+    # Train/validation split
+    validation_split: 0.2
+
+    # Random seed for reproducibility
+    random_seed: 42
+
+    # Class balancing
+    balance_classes: true
+
+# Active Learning Configuration
+# ============================================================================
+active_learning:
+  # Selection strategy: "uncertainty_sampling", "query_by_committee", "random"
+  strategy: "uncertainty_sampling"
+
+  # Uncertainty method: "entropy", "least_confidence", "margin"
+  method: "entropy"
+
+  # Budget per iteration (items to select and annotate)
+  budget_per_iteration: 200
+
+  # Maximum iterations
+  max_iterations: 20
+
+  # Stopping criterion: "max_iterations", "performance_threshold", "convergence"
+  stopping_criterion: "convergence"
+
+  # Initial training set size
+  initial_training_size: 500
+
+  # Batch mode (select multiple items at once)
+  batch_mode: true
+
+  # Diversity promotion in batch selection
+  promote_diversity: true
+  diversity_lambda: 0.1
+
+# Evaluation Configuration
+# ============================================================================
+evaluation:
+  # Cross-validation settings
+  cross_validation:
+    # K-fold CV
+    k_folds: 5
+
+    # Stratification variable
+    stratify_by: "metadata.pair_type"
+
+    # Shuffle before splitting
+    shuffle: true
+    random_seed: 42
+
+  # Metrics to compute
+  metrics:
+    - "accuracy"
+    - "precision"
+    - "recall"
+    - "f1"
+    - "confusion_matrix"
+
+  # Inter-annotator agreement metrics
+  interannotator:
+    metrics:
+      - "krippendorff_alpha"
+      - "fleiss_kappa"
+      - "percentage_agreement"
+      - "pairwise_agreement"
+
+    # Minimum number of raters per item
+    min_raters_per_item: 3
+
+  # Model performance tracking
+  tracking:
+    # Save checkpoints
+    save_checkpoints: true
+    checkpoint_dir: "checkpoints"
+
+    # Tensorboard logging
+    use_tensorboard: true
+    log_dir: "logs"
+
+    # Metrics to track per iteration
+    track_metrics:
+      - "train_accuracy"
+      - "val_accuracy"
+      - "human_agreement"
+      - "convergence_gap"
+
+# Deployment Configuration (for human data collection)
+# ============================================================================
+deployment:
+  # Platform: "jatos", "prolific", "mturk"
+  platform: "jatos"
+
+  # Experiment settings
+  experiment:
+    title: "Sentence Acceptability Judgments"
+    description: "Rate which sentence sounds more natural"
+    estimated_duration_minutes: 15
+
+  # jsPsych configuration
+  jspsych:
+    version: "7.3.0"
+
+    # Trial settings
+    trial:
+      type: "html-button-response"
+      stimulus_duration: null  # No time limit
+      trial_duration: null
+
+    # Button labels for 2AFC
+    choices:
+      - "Sentence A"
+      - "Sentence B"
+
+    # Randomization
+    randomize_order: true
+    randomize_choices: true
+
+  # Participant requirements
+  participants:
+    # Number of participants per list
+    n_per_list: 30
+
+    # Qualifications
+    qualifications:
+      - "Native English speaker"
+      - "Age 18+"
+      - "Approval rate > 95%"
+
+    # Compensation
+    payment_usd: 2.50
+    bonus_usd: 0.50  # For high-quality responses
+
+# Logging Configuration
+# ============================================================================
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+  # Log files
+  file:
+    enabled: true
+    path: "pipeline.log"
+    max_bytes: 10485760  # 10 MB
+    backup_count: 5
+
+  # Console logging
+  console:
+    enabled: true
+    colored: true
