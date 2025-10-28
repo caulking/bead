@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any, TypedDict
 
 import numpy as np
 
+from sash.evaluation.convergence import ConvergenceDetector
 from sash.items.models import Item
 from sash.training.active_learning.selection import ItemSelector
 from sash.training.trainers.base import BaseTrainer, ModelMetadata
@@ -137,6 +138,8 @@ class ActiveLearningLoop:
         initial_items: list[Item],
         initial_model: Any,
         unlabeled_pool: list[Item],
+        human_ratings: dict[str, list[Any]] | None = None,
+        convergence_detector: ConvergenceDetector | None = None,
         stopping_criterion: str = "max_iterations",
         performance_threshold: float | None = None,
         metric_name: str = "accuracy",
@@ -151,12 +154,18 @@ class ActiveLearningLoop:
             Initial trained model (or None to train from scratch).
         unlabeled_pool : list[Item]
             Pool of unlabeled items to select from.
+        human_ratings : dict[str, list[Any]] | None
+            Human ratings for computing inter-rater agreement baseline.
+            Dictionary mapping rater IDs to their ratings.
+        convergence_detector : ConvergenceDetector | None
+            Detector for checking convergence to human-level performance.
+            If provided, will check convergence after each iteration.
         stopping_criterion : str
-            When to stop ("max_iterations" or "performance_threshold").
+            When to stop ("max_iterations", "performance_threshold", or "convergence").
         performance_threshold : float | None
             Stop when performance exceeds this (if using performance_threshold).
         metric_name : str
-            Name of metric to check for performance threshold.
+            Name of metric to check for performance threshold or convergence.
 
         Returns
         -------
@@ -189,6 +198,19 @@ class ActiveLearningLoop:
             raise ValueError(
                 "performance_threshold must be provided when using "
                 "performance_threshold stopping criterion"
+            )
+
+        if stopping_criterion == "convergence" and convergence_detector is None:
+            raise ValueError(
+                "convergence_detector must be provided when using "
+                "convergence stopping criterion"
+            )
+
+        valid_criteria = {"max_iterations", "performance_threshold", "convergence"}
+        if stopping_criterion not in valid_criteria:
+            raise ValueError(
+                f"stopping_criterion must be one of {valid_criteria}, "
+                f"got '{stopping_criterion}'"
             )
 
         model_history: list[ModelMetadata] = []
@@ -233,8 +255,22 @@ class ActiveLearningLoop:
                 if metadata and metric_name in metadata.metrics:
                     if metadata.metrics[metric_name] >= performance_threshold:  # type: ignore
                         break
-            else:
-                raise ValueError(f"Unknown stopping criterion: {stopping_criterion}")
+            elif stopping_criterion == "convergence":
+                if convergence_detector is not None and metadata is not None:
+                    # Compute human baseline on first iteration
+                    if iteration == 0 and human_ratings is not None:
+                        convergence_detector.compute_human_baseline(human_ratings)
+
+                    # Check if converged
+                    if metric_name in metadata.metrics:
+                        converged = convergence_detector.check_convergence(
+                            model_accuracy=metadata.metrics[metric_name],
+                            iteration=iteration + 1,
+                        )
+
+                        if converged:
+                            print(f"✓ Converged at iteration {iteration + 1}")
+                            break
 
             # Check if unlabeled pool is exhausted
             if not current_unlabeled:
