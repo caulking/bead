@@ -10,7 +10,9 @@ from pathlib import Path
 from tempfile import gettempdir
 
 from sash.config.models import (
+    ActiveLearningConfig,
     DeploymentConfig,
+    ForcedChoiceModelConfig,
     ItemConfig,
     ListConfig,
     LoggingConfig,
@@ -19,7 +21,7 @@ from sash.config.models import (
     ResourceConfig,
     SashConfig,
     TemplateConfig,
-    TrainingConfig,
+    TrainerConfig,
 )
 
 # Development profile: verbose logging, small batches, relative paths
@@ -53,10 +55,13 @@ DEV_CONFIG = SashConfig(
         num_lists=1,
     ),
     deployment=DeploymentConfig(),
-    training=TrainingConfig(
-        epochs=1,  # Quick training for testing
-        batch_size=8,
-        learning_rate=2e-5,
+    active_learning=ActiveLearningConfig(
+        forced_choice_model=ForcedChoiceModelConfig(
+            num_epochs=1,  # Quick training for testing
+            batch_size=8,
+            learning_rate=2e-5,
+        ),
+        trainer=TrainerConfig(epochs=1),
     ),
     logging=LoggingConfig(
         level="DEBUG",  # Verbose logging for development
@@ -118,11 +123,13 @@ PROD_CONFIG = SashConfig(
         include_demographics=True,
         include_attention_checks=True,
     ),
-    training=TrainingConfig(
-        epochs=10,  # Full training
-        batch_size=32,
-        learning_rate=2e-5,
-        use_wandb=True,  # Track metrics
+    active_learning=ActiveLearningConfig(
+        forced_choice_model=ForcedChoiceModelConfig(
+            num_epochs=10,  # Full training
+            batch_size=32,
+            learning_rate=2e-5,
+        ),
+        trainer=TrainerConfig(epochs=10, use_wandb=True),
     ),
     logging=LoggingConfig(
         level="WARNING",  # Minimal logging for production
@@ -191,11 +198,13 @@ TEST_CONFIG = SashConfig(
         include_demographics=False,
         include_attention_checks=False,
     ),
-    training=TrainingConfig(
-        epochs=1,  # Minimal training
-        batch_size=2,
-        learning_rate=2e-5,
-        use_wandb=False,  # No tracking for tests
+    active_learning=ActiveLearningConfig(
+        forced_choice_model=ForcedChoiceModelConfig(
+            num_epochs=1,  # Minimal training
+            batch_size=2,
+            learning_rate=2e-5,
+        ),
+        trainer=TrainerConfig(epochs=1, use_wandb=False),
     ),
     logging=LoggingConfig(
         level="CRITICAL",  # Minimal logging for tests

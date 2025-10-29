@@ -58,11 +58,11 @@ def main(verb_limit: int | None = None) -> None:
     print("=" * 80)
     output_path = templates_dir / "verbnet_frames.jsonl"
 
-    with open(output_path, 'w') as f:
+    with open(output_path, "w") as f:
         for template in templates:
             # Convert Template object to JSON string (handles UUID serialization)
             template_json = template.model_dump_json()
-            f.write(template_json + '\n')
+            f.write(template_json + "\n")
 
     print(f"✓ Saved {len(templates)} templates to {output_path}")
 
@@ -85,7 +85,7 @@ if __name__ == "__main__":
         "--limit",
         type=int,
         default=None,
-        help="Limit number of verb-class pairs to process (for testing)"
+        help="Limit number of verb-class pairs to process (for testing)",
     )
     args = parser.parse_args()
 

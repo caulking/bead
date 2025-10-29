@@ -70,10 +70,12 @@ def check_paths_exist(config: SashConfig) -> list[str]:
 
     # Check training logging dir
     if (
-        config.training.logging_dir.is_absolute()
-        and not config.training.logging_dir.exists()
+        config.active_learning.trainer.logging_dir.is_absolute()
+        and not config.active_learning.trainer.logging_dir.exists()
     ):
-        errors.append(f"logging_dir does not exist: {config.training.logging_dir}")
+        errors.append(
+            f"logging_dir does not exist: {config.active_learning.trainer.logging_dir}"
+        )
 
     # Check logging file parent directory
     if (
@@ -180,18 +182,18 @@ def check_training_configuration(config: SashConfig) -> list[str]:
     errors: list[str] = []
 
     # Check that batch size is positive
-    if config.training.batch_size <= 0:
-        errors.append(
-            f"Training batch size must be positive, got {config.training.batch_size}"
-        )
+    if config.active_learning.forced_choice_model.batch_size <= 0:
+        batch_size = config.active_learning.forced_choice_model.batch_size
+        errors.append(f"Training batch size must be positive, got {batch_size}")
 
     # Check that epochs is positive
-    if config.training.epochs <= 0:
-        errors.append(f"Training epochs must be positive, got {config.training.epochs}")
+    if config.active_learning.trainer.epochs <= 0:
+        epochs = config.active_learning.trainer.epochs
+        errors.append(f"Training epochs must be positive, got {epochs}")
 
     # Check that learning rate is positive
-    if config.training.learning_rate <= 0:
-        lr = config.training.learning_rate
+    if config.active_learning.forced_choice_model.learning_rate <= 0:
+        lr = config.active_learning.forced_choice_model.learning_rate
         errors.append(f"Training learning rate must be positive, got {lr}")
 
     return errors

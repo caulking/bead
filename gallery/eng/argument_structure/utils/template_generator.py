@@ -20,12 +20,7 @@ from sash.resources.structures import Slot, Template
 
 from .clausal_frames import ClausalTemplate, map_verbnet_to_clausal_templates
 from .constraint_builder import (
-    build_bleached_adj_constraint,
-    build_bleached_noun_constraint,
-    build_bleached_verb_constraint,
-    build_combined_constraint,
     build_determiner_constraint,
-    build_preposition_constraint,
 )
 
 
@@ -269,13 +264,9 @@ class TemplateGenerator:
             constraints = []
 
             if slot_type == "noun":
-                constraints = [
-                    Constraint(expression="self.pos == 'NOUN'")
-                ]
+                constraints = [Constraint(expression="self.pos == 'NOUN'")]
             elif slot_type.startswith("verb"):
-                constraints = [
-                    Constraint(expression="self.pos == 'VERB'")
-                ]
+                constraints = [Constraint(expression="self.pos == 'VERB'")]
                 # Add form constraints for specific verb forms
                 if slot_type == "verb_past":
                     constraints.append(
@@ -374,7 +365,9 @@ class TemplateGenerator:
 
         return constraints
 
-    def _infer_slots_from_frame(self, frame_primary: str) -> tuple[dict[str, Slot], str]:
+    def _infer_slots_from_frame(
+        self, frame_primary: str
+    ) -> tuple[dict[str, Slot], str]:
         """Infer slots and template string from frame description.
 
         Parameters
@@ -419,9 +412,7 @@ class TemplateGenerator:
                 slots[slot_name] = Slot(
                     name=slot_name,
                     description=description,
-                    constraints=[
-                        Constraint(expression="self.pos == 'NOUN'")
-                    ],
+                    constraints=[Constraint(expression="self.pos == 'NOUN'")],
                     required=True,
                 )
                 template_parts.append(f"{{{slot_name}}}")
@@ -434,9 +425,7 @@ class TemplateGenerator:
                 slots[slot_name] = Slot(
                     name=slot_name,
                     description="Main verb",
-                    constraints=[
-                        Constraint(expression="self.pos == 'VERB'")
-                    ],
+                    constraints=[Constraint(expression="self.pos == 'VERB'")],
                     required=True,
                 )
                 template_parts.append(f"{{{slot_name}}}")
@@ -451,9 +440,7 @@ class TemplateGenerator:
                 slots[prep_slot] = Slot(
                     name=prep_slot,
                     description="Preposition",
-                    constraints=[
-                        Constraint(expression="self.pos == 'ADP'")
-                    ],
+                    constraints=[Constraint(expression="self.pos == 'ADP'")],
                     required=True,
                 )
 
@@ -461,9 +448,7 @@ class TemplateGenerator:
                 slots[obj_slot] = Slot(
                     name=obj_slot,
                     description="Prepositional phrase object",
-                    constraints=[
-                        Constraint(expression="self.pos == 'NOUN'")
-                    ],
+                    constraints=[Constraint(expression="self.pos == 'NOUN'")],
                     required=True,
                 )
 

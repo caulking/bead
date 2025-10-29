@@ -77,7 +77,7 @@ def load_bleached_nouns(csv_path: str | Path) -> set[str]:
     True
     """
     nouns = set()
-    with open(csv_path, "r") as f:
+    with open(csv_path) as f:
         reader = csv.DictReader(f)
         for row in reader:
             nouns.add(row["word"])
@@ -104,7 +104,7 @@ def load_bleached_verbs(csv_path: str | Path) -> set[str]:
     True
     """
     verbs = set()
-    with open(csv_path, "r") as f:
+    with open(csv_path) as f:
         reader = csv.DictReader(f)
         for row in reader:
             verbs.add(row["word"])
@@ -131,7 +131,7 @@ def load_bleached_adjectives(csv_path: str | Path) -> set[str]:
     True
     """
     adjectives = set()
-    with open(csv_path, "r") as f:
+    with open(csv_path) as f:
         reader = csv.DictReader(f)
         for row in reader:
             adjectives.add(row["word"])

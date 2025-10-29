@@ -110,7 +110,9 @@ def test_glazing_adapter_framenet() -> None:
         adapter.fetch_items(query="break", language_code="en")
 
 
-def test_glazing_adapter_include_frames_verbnet(glazing_adapter: GlazingAdapter) -> None:
+def test_glazing_adapter_include_frames_verbnet(
+    glazing_adapter: GlazingAdapter,
+) -> None:
     """Test VerbNet adapter with include_frames parameter."""
     items = glazing_adapter.fetch_items(
         query="break", language_code="en", include_frames=True

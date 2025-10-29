@@ -26,6 +26,7 @@ from sash.config.defaults import DEFAULT_CONFIG, get_default_config
 from sash.config.env import load_from_env
 from sash.config.loader import load_config, load_yaml_file, merge_configs
 from sash.config.models import (
+    ActiveLearningConfig,
     DeploymentConfig,
     ItemConfig,
     ListConfig,
@@ -35,7 +36,6 @@ from sash.config.models import (
     ResourceConfig,
     SashConfig,
     TemplateConfig,
-    TrainingConfig,
 )
 from sash.config.profiles import (
     DEV_CONFIG,
@@ -59,7 +59,7 @@ __all__ = [
     "ItemConfig",
     "ListConfig",
     "DeploymentConfig",
-    "TrainingConfig",
+    "ActiveLearningConfig",
     "LoggingConfig",
     # Defaults
     "DEFAULT_CONFIG",

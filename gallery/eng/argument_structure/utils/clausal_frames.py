@@ -16,7 +16,6 @@ MegaAttitude Frame Types Covered:
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal
 
 
 @dataclass
@@ -351,7 +350,9 @@ def map_verbnet_to_clausal_templates(
             templates.append(MEGAATTITUDE_FRAMES["wh_finite"])
 
     # Small clauses / bare infinitives (e.g., "NP V NP VP")
-    if "np v np vp" in frame_lower.replace(" ", "") or "np v np inf" in frame_lower.replace(" ", ""):
+    if "np v np vp" in frame_lower.replace(
+        " ", ""
+    ) or "np v np inf" in frame_lower.replace(" ", ""):
         templates.append(MEGAATTITUDE_FRAMES["bare_infinitive"])
 
     # PP + clausal complement
@@ -359,7 +360,9 @@ def map_verbnet_to_clausal_templates(
         templates.append(MEGAATTITUDE_FRAMES["about_whether"])
 
     # Dative + clausal
-    if ("to np" in frame_lower or "pp.recipient" in frame_lower) and "that" in frame_lower:
+    if (
+        "to np" in frame_lower or "pp.recipient" in frame_lower
+    ) and "that" in frame_lower:
         templates.append(MEGAATTITUDE_FRAMES["dative_that"])
 
     return templates

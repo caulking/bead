@@ -224,9 +224,7 @@ class TestPrecisionRecallF1:
         y_true = [0, 0, 0, 1, 1, 2]
         y_pred = [0, 0, 1, 1, 1, 2]  # One error in class 0
 
-        metrics = ModelMetrics.precision_recall_f1(
-            y_true, y_pred, average="weighted"
-        )
+        metrics = ModelMetrics.precision_recall_f1(y_true, y_pred, average="weighted")
 
         # Should weight by class support
         assert 0.8 < metrics["precision"] <= 1.0

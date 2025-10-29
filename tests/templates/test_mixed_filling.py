@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import pytest
 
-from sash.dsl.evaluator import DSLEvaluator
 from sash.resources.constraints import Constraint
 from sash.resources.lexicon import Lexicon
 from sash.resources.models import LexicalItem

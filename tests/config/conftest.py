@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from sash.config.models import (
+    ActiveLearningConfig,
     DeploymentConfig,
     ItemConfig,
     ListConfig,
@@ -16,7 +17,6 @@ from sash.config.models import (
     ResourceConfig,
     SashConfig,
     TemplateConfig,
-    TrainingConfig,
 )
 
 
@@ -222,19 +222,15 @@ def sample_deployment_config() -> DeploymentConfig:
 
 
 @pytest.fixture
-def sample_training_config() -> TrainingConfig:
-    """Provide sample TrainingConfig for testing.
+def sample_active_learning_config() -> ActiveLearningConfig:
+    """Provide sample ActiveLearningConfig for testing.
 
     Returns
     -------
-    TrainingConfig
-        A sample training configuration with common test values.
+    ActiveLearningConfig
+        A sample active learning configuration with common test values.
     """
-    return TrainingConfig(
-        trainer="huggingface",
-        epochs=3,
-        batch_size=16,
-    )
+    return ActiveLearningConfig()
 
 
 @pytest.fixture
@@ -260,7 +256,7 @@ def sample_full_config(
     sample_item_config: ItemConfig,
     sample_list_config: ListConfig,
     sample_deployment_config: DeploymentConfig,
-    sample_training_config: TrainingConfig,
+    sample_active_learning_config: ActiveLearningConfig,
     sample_logging_config: LoggingConfig,
 ) -> SashConfig:
     """Provide complete sample configuration for testing.
@@ -279,8 +275,8 @@ def sample_full_config(
         Sample list configuration fixture.
     sample_deployment_config : DeploymentConfig
         Sample deployment configuration fixture.
-    sample_training_config : TrainingConfig
-        Sample training configuration fixture.
+    sample_active_learning_config : ActiveLearningConfig
+        Sample active learning configuration fixture.
     sample_logging_config : LoggingConfig
         Sample logging configuration fixture.
 
@@ -303,6 +299,6 @@ def sample_full_config(
         items=sample_item_config,
         lists=sample_list_config,
         deployment=sample_deployment_config,
-        training=sample_training_config,
+        active_learning=sample_active_learning_config,
         logging=sample_logging_config,
     )

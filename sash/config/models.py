@@ -156,8 +156,8 @@ class TemplateConfig(BaseModel):
     {'noun': {'strategy': 'exhaustive'}, 'verb': {'strategy': 'exhaustive'}, 'adjective': {'strategy': 'mlm'}}
     """
 
-    filling_strategy: Literal["exhaustive", "random", "stratified", "mlm", "mixed"] = Field(
-        default="exhaustive", description="Strategy for filling templates"
+    filling_strategy: Literal["exhaustive", "random", "stratified", "mlm", "mixed"] = (
+        Field(default="exhaustive", description="Strategy for filling templates")
     )
     batch_size: int = Field(default=1000, description="Batch size for filling", gt=0)
     max_combinations: int | None = Field(
@@ -275,9 +275,7 @@ class TemplateConfig(BaseModel):
 
                 # If MLM, check model config is available
                 if strategy_name == "mlm" and self.mlm_model_name is None:
-                    msg = (
-                        f"mlm_model_name must be specified when slot '{slot_name}' uses MLM"
-                    )
+                    msg = f"mlm_model_name must be specified when slot '{slot_name}' uses MLM"
                     raise ValueError(msg)
 
         return self
@@ -468,19 +466,183 @@ class DeploymentConfig(BaseModel):
     jatos_export: bool = Field(default=False, description="Export to JATOS")
 
 
-class TrainingConfig(BaseModel):
-    """Configuration for model training.
+class ForcedChoiceModelConfig(BaseModel):
+    """Configuration for forced choice active learning models.
 
     Parameters
     ----------
-    trainer : str
-        Trainer type.
+    model_name : str
+        HuggingFace model identifier.
+    max_length : int
+        Maximum sequence length for tokenization.
+    encoder_mode : Literal["single_encoder", "dual_encoder"]
+        Encoding strategy for options.
+    include_instructions : bool
+        Whether to include task instructions.
+    learning_rate : float
+        Learning rate for AdamW optimizer.
+    batch_size : int
+        Batch size for training.
+    num_epochs : int
+        Number of training epochs.
+    device : Literal["cpu", "cuda", "mps"]
+        Device to train on.
+
+    Examples
+    --------
+    >>> config = ForcedChoiceModelConfig()
+    >>> config.model_name
+    'bert-base-uncased'
+    >>> config.batch_size
+    16
+    """
+
+    model_name: str = Field(
+        default="bert-base-uncased",
+        description="HuggingFace model identifier",
+    )
+    max_length: int = Field(
+        default=128,
+        description="Maximum sequence length for tokenization",
+        gt=0,
+    )
+    encoder_mode: Literal["single_encoder", "dual_encoder"] = Field(
+        default="single_encoder",
+        description="Encoding strategy for options",
+    )
+    include_instructions: bool = Field(
+        default=False,
+        description="Whether to include task instructions",
+    )
+    learning_rate: float = Field(
+        default=2e-5,
+        description="Learning rate for AdamW optimizer",
+        gt=0,
+    )
+    batch_size: int = Field(
+        default=16,
+        description="Batch size for training",
+        gt=0,
+    )
+    num_epochs: int = Field(
+        default=3,
+        description="Number of training epochs",
+        gt=0,
+    )
+    device: Literal["cpu", "cuda", "mps"] = Field(
+        default="cpu",
+        description="Device to train on",
+    )
+
+
+class UncertaintySamplerConfig(BaseModel):
+    """Configuration for uncertainty sampling strategies.
+
+    Parameters
+    ----------
+    method : str
+        Uncertainty method to use ("entropy", "margin", "least_confidence").
+    batch_size : int | None
+        Number of items to select per iteration. If None, uses the
+        budget_per_iteration from ActiveLearningLoopConfig.
+
+    Examples
+    --------
+    >>> config = UncertaintySamplerConfig()
+    >>> config.method
+    'entropy'
+    >>> config = UncertaintySamplerConfig(method="margin", batch_size=50)
+    >>> config.method
+    'margin'
+    """
+
+    method: Literal["entropy", "margin", "least_confidence"] = Field(
+        default="entropy",
+        description="Uncertainty sampling method",
+    )
+    batch_size: int | None = Field(
+        default=None,
+        description="Number of items to select per iteration",
+        gt=0,
+    )
+
+
+class ActiveLearningLoopConfig(BaseModel):
+    """Configuration for active learning loop orchestration.
+
+    Parameters
+    ----------
+    max_iterations : int
+        Maximum number of AL iterations to run.
+    budget_per_iteration : int
+        Number of items to select per iteration.
+    stopping_criterion : str
+        Stopping criterion.
+    performance_threshold : float | None
+        Performance threshold for stopping.
+    metric_name : str
+        Metric name for convergence/threshold checks.
+    convergence_patience : int
+        Iterations to wait before declaring convergence.
+    convergence_threshold : float
+        Minimum improvement to avoid convergence.
+
+    Examples
+    --------
+    >>> config = ActiveLearningLoopConfig()
+    >>> config.max_iterations
+    10
+    >>> config.budget_per_iteration
+    100
+    """
+
+    max_iterations: int = Field(
+        default=10,
+        description="Maximum number of iterations",
+        gt=0,
+    )
+    budget_per_iteration: int = Field(
+        default=100,
+        description="Number of items to select per iteration",
+        gt=0,
+    )
+    stopping_criterion: Literal[
+        "max_iterations", "convergence", "performance_threshold"
+    ] = Field(
+        default="max_iterations",
+        description="Stopping criterion for the loop",
+    )
+    performance_threshold: float | None = Field(
+        default=None,
+        description="Performance threshold for stopping",
+        ge=0,
+        le=1,
+    )
+    metric_name: str = Field(
+        default="accuracy",
+        description="Metric name for convergence/threshold checks",
+    )
+    convergence_patience: int = Field(
+        default=3,
+        description="Iterations to wait before declaring convergence",
+        gt=0,
+    )
+    convergence_threshold: float = Field(
+        default=0.01,
+        description="Minimum improvement to avoid convergence",
+        gt=0,
+    )
+
+
+class TrainerConfig(BaseModel):
+    """Configuration for active learning trainers (HuggingFace, Lightning, etc.).
+
+    Parameters
+    ----------
+    trainer_type : str
+        Trainer type ("huggingface", "lightning").
     epochs : int
         Number of training epochs.
-    learning_rate : float
-        Learning rate.
-    batch_size : int
-        Training batch size.
     eval_strategy : str
         Evaluation strategy.
     save_strategy : str
@@ -494,22 +656,74 @@ class TrainingConfig(BaseModel):
 
     Examples
     --------
-    >>> config = TrainingConfig()
-    >>> config.trainer
+    >>> config = TrainerConfig()
+    >>> config.trainer_type
     'huggingface'
     >>> config.epochs
     3
     """
 
-    trainer: str = Field(default="huggingface", description="Trainer type")
+    trainer_type: Literal["huggingface", "lightning"] = Field(
+        default="huggingface",
+        description="Trainer type",
+    )
     epochs: int = Field(default=3, description="Training epochs", gt=0)
-    learning_rate: float = Field(default=2e-5, description="Learning rate", gt=0)
-    batch_size: int = Field(default=16, description="Training batch size", gt=0)
     eval_strategy: str = Field(default="epoch", description="Evaluation strategy")
     save_strategy: str = Field(default="epoch", description="Save strategy")
     logging_dir: Path = Field(default=Path("logs"), description="Logging directory")
     use_wandb: bool = Field(default=False, description="Use Weights & Biases")
     wandb_project: str | None = Field(default=None, description="W&B project name")
+
+
+class ActiveLearningConfig(BaseModel):
+    """Configuration for active learning infrastructure.
+
+    Reflects the sash/active_learning/ module structure:
+    - models: Active learning models (ForcedChoiceModel, etc.)
+    - trainers: Training infrastructure (HuggingFace, Lightning)
+    - loop: Active learning loop orchestration
+    - selection: Item selection strategies (uncertainty sampling, etc.)
+
+    Parameters
+    ----------
+    forced_choice_model : ForcedChoiceModelConfig
+        Configuration for forced choice models.
+    trainer : TrainerConfig
+        Configuration for trainers (HuggingFace, Lightning).
+    loop : ActiveLearningLoopConfig
+        Configuration for active learning loop.
+    uncertainty_sampler : UncertaintySamplerConfig
+        Configuration for uncertainty sampling strategies.
+
+    Examples
+    --------
+    >>> config = ActiveLearningConfig()
+    >>> config.forced_choice_model.model_name
+    'bert-base-uncased'
+    >>> config.trainer.trainer_type
+    'huggingface'
+    >>> config.loop.max_iterations
+    10
+    >>> config.uncertainty_sampler.method
+    'entropy'
+    """
+
+    forced_choice_model: ForcedChoiceModelConfig = Field(
+        default_factory=ForcedChoiceModelConfig,
+        description="Forced choice model configuration",
+    )
+    trainer: TrainerConfig = Field(
+        default_factory=TrainerConfig,
+        description="Trainer configuration",
+    )
+    loop: ActiveLearningLoopConfig = Field(
+        default_factory=ActiveLearningLoopConfig,
+        description="Active learning loop configuration",
+    )
+    uncertainty_sampler: UncertaintySamplerConfig = Field(
+        default_factory=UncertaintySamplerConfig,
+        description="Uncertainty sampler configuration",
+    )
 
 
 class LoggingConfig(BaseModel):
@@ -549,6 +763,16 @@ class LoggingConfig(BaseModel):
 class SashConfig(BaseModel):
     """Main configuration for the sash package.
 
+    Reflects the actual sash/ module structure:
+    - active_learning: Active learning infrastructure (models, trainers, loop, selection)
+    - data_collection: Human data collection (JATOS, Prolific)
+    - deployment: Experiment deployment (jsPsych, JATOS)
+    - evaluation: Model evaluation and metrics
+    - items: Item generation and management
+    - lists: List construction and balancing
+    - resources: Linguistic resources (VerbNet, PropBank, UniMorph)
+    - templates: Template management
+
     Parameters
     ----------
     profile : str
@@ -565,8 +789,8 @@ class SashConfig(BaseModel):
         Lists configuration.
     deployment : DeploymentConfig
         Deployment configuration.
-    training : TrainingConfig
-        Training configuration.
+    active_learning : ActiveLearningConfig
+        Active learning configuration (models, trainers, loop, selection).
     logging : LoggingConfig
         Logging configuration.
 
@@ -577,6 +801,12 @@ class SashConfig(BaseModel):
     'default'
     >>> config.paths.data_dir
     PosixPath('data')
+    >>> config.active_learning.forced_choice_model.model_name
+    'bert-base-uncased'
+    >>> config.active_learning.trainer.trainer_type
+    'huggingface'
+    >>> config.active_learning.loop.max_iterations
+    10
     """
 
     profile: str = Field(default="default", description="Configuration profile name")
@@ -598,8 +828,9 @@ class SashConfig(BaseModel):
     deployment: DeploymentConfig = Field(
         default_factory=DeploymentConfig, description="Deployment configuration"
     )
-    training: TrainingConfig = Field(
-        default_factory=TrainingConfig, description="Training configuration"
+    active_learning: ActiveLearningConfig = Field(
+        default_factory=ActiveLearningConfig,
+        description="Active learning configuration",
     )
     logging: LoggingConfig = Field(
         default_factory=LoggingConfig, description="Logging configuration"
@@ -691,10 +922,12 @@ class SashConfig(BaseModel):
 
         # Check training logging dir
         if (
-            not self.training.logging_dir.exists()
-            and self.training.logging_dir.is_absolute()
+            not self.active_learning.trainer.logging_dir.exists()
+            and self.active_learning.trainer.logging_dir.is_absolute()
         ):
-            errors.append(f"logging_dir does not exist: {self.training.logging_dir}")
+            errors.append(
+                f"logging_dir does not exist: {self.active_learning.trainer.logging_dir}"
+            )
 
         # Check logging file
         if self.logging.file is not None and not self.logging.file.parent.exists():

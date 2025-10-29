@@ -141,8 +141,7 @@ def fill_templates_with_mixed_strategy(
             # Check if any slots remain unfilled
             if "{" in filled_text and "}" in filled_text:
                 print(
-                    f"Warning: Unfilled slots remain in item {item.id}: "
-                    f"{filled_text}"
+                    f"Warning: Unfilled slots remain in item {item.id}: {filled_text}"
                 )
                 # Skip items with unfilled slots
                 continue
@@ -207,19 +206,21 @@ def create_pairs(
                 score1 = lm_scores[str(item1.id)]
                 score2 = lm_scores[str(item2.id)]
 
-                pairs.append({
-                    "item1_id": str(item1.id),
-                    "item2_id": str(item2.id),
-                    "text1": filled_texts[str(item1.id)],
-                    "text2": filled_texts[str(item2.id)],
-                    "pair_type": "same_verb",
-                    "verb": verb,
-                    "template1": item1.item_metadata["template_structure"],
-                    "template2": item2.item_metadata["template_structure"],
-                    "lm_score1": score1,
-                    "lm_score2": score2,
-                    "lm_score_diff": abs(score1 - score2),
-                })
+                pairs.append(
+                    {
+                        "item1_id": str(item1.id),
+                        "item2_id": str(item2.id),
+                        "text1": filled_texts[str(item1.id)],
+                        "text2": filled_texts[str(item2.id)],
+                        "pair_type": "same_verb",
+                        "verb": verb,
+                        "template1": item1.item_metadata["template_structure"],
+                        "template2": item2.item_metadata["template_structure"],
+                        "lm_score1": score1,
+                        "lm_score2": score2,
+                        "lm_score_diff": abs(score1 - score2),
+                    }
+                )
 
     # Group by template for different-verb pairs
     by_template = defaultdict(list)
@@ -234,20 +235,22 @@ def create_pairs(
                 score1 = lm_scores[str(item1.id)]
                 score2 = lm_scores[str(item2.id)]
 
-                pairs.append({
-                    "item1_id": str(item1.id),
-                    "item2_id": str(item2.id),
-                    "text1": filled_texts[str(item1.id)],
-                    "text2": filled_texts[str(item2.id)],
-                    "pair_type": "different_verb",
-                    "template_id": template_id,
-                    "template_structure": item1.item_metadata["template_structure"],
-                    "verb1": item1.item_metadata["verb_lemma"],
-                    "verb2": item2.item_metadata["verb_lemma"],
-                    "lm_score1": score1,
-                    "lm_score2": score2,
-                    "lm_score_diff": abs(score1 - score2),
-                })
+                pairs.append(
+                    {
+                        "item1_id": str(item1.id),
+                        "item2_id": str(item2.id),
+                        "text1": filled_texts[str(item1.id)],
+                        "text2": filled_texts[str(item2.id)],
+                        "pair_type": "different_verb",
+                        "template_id": template_id,
+                        "template_structure": item1.item_metadata["template_structure"],
+                        "verb1": item1.item_metadata["verb_lemma"],
+                        "verb2": item2.item_metadata["verb_lemma"],
+                        "lm_score1": score1,
+                        "lm_score2": score2,
+                        "lm_score_diff": abs(score1 - score2),
+                    }
+                )
 
     return pairs
 
@@ -363,7 +366,7 @@ def main(item_limit: int | None = None) -> None:
     # Show examples
     print("\nExample filled texts:")
     for i, (_item_id, text) in enumerate(list(filled_texts.items())[:3]):
-        print(f"  {i+1}. {text}")
+        print(f"  {i + 1}. {text}")
 
     print("\n[5/6] Scoring with language model...")
     cache_dir = base_dir / ".cache"

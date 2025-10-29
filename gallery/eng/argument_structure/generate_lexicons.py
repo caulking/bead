@@ -15,12 +15,12 @@ import argparse
 import csv
 from pathlib import Path
 
-from sash.resources.models import LexicalItem
-from sash.resources.lexicon import Lexicon
-from sash.resources.adapters.cache import AdapterCache
-
-from utils.verbnet_parser import VerbNetExtractor
 from utils.morphology import MorphologyExtractor
+from utils.verbnet_parser import VerbNetExtractor
+
+from sash.resources.adapters.cache import AdapterCache
+from sash.resources.lexicon import Lexicon
+from sash.resources.models import LexicalItem
 
 
 def main(verb_limit: int | None = None):
@@ -67,11 +67,13 @@ def main(verb_limit: int | None = None):
         # Add VerbNet metadata to each form
         for form_item in forms:
             # Merge attributes from base verb and morphology
-            form_item.attributes.update({
-                "verbnet_class": base_verb.attributes.get("verbnet_class", ""),
-                "themroles": base_verb.attributes.get("themroles", []),
-                "frame_count": base_verb.attributes.get("frame_count", 0),
-            })
+            form_item.attributes.update(
+                {
+                    "verbnet_class": base_verb.attributes.get("verbnet_class", ""),
+                    "themroles": base_verb.attributes.get("themroles", []),
+                    "frame_count": base_verb.attributes.get("frame_count", 0),
+                }
+            )
 
             # Use LexicalItem's UUID as key
             verb_items_dict[str(form_item.id)] = form_item
@@ -82,7 +84,7 @@ def main(verb_limit: int | None = None):
         name="verbnet_verbs",
         description="All VerbNet verbs with inflected forms",
         language_code="eng",
-        items=verb_items_dict
+        items=verb_items_dict,
     )
 
     output_path = lexicons_dir / "verbnet_verbs.jsonl"
@@ -110,7 +112,7 @@ def main(verb_limit: int | None = None):
                 },
                 attributes={
                     "semantic_class": row["semantic_class"],
-                }
+                },
             )
             noun_items[str(item.id)] = item
 
@@ -120,7 +122,7 @@ def main(verb_limit: int | None = None):
         name="bleached_nouns",
         description="Controlled noun inventory for templates",
         language_code="eng",
-        items=noun_items
+        items=noun_items,
     )
 
     output_path = lexicons_dir / "bleached_nouns.jsonl"
@@ -147,7 +149,7 @@ def main(verb_limit: int | None = None):
                 },
                 attributes={
                     "semantic_class": row.get("semantic_class", ""),
-                }
+                },
             )
             bleached_verb_items[str(item.id)] = item
 
@@ -157,7 +159,7 @@ def main(verb_limit: int | None = None):
         name="bleached_verbs",
         description="Controlled verb inventory for templates",
         language_code="eng",
-        items=bleached_verb_items
+        items=bleached_verb_items,
     )
 
     output_path = lexicons_dir / "bleached_verbs.jsonl"
@@ -182,7 +184,7 @@ def main(verb_limit: int | None = None):
                 features={},
                 attributes={
                     "semantic_class": row.get("semantic_class", ""),
-                }
+                },
             )
             adj_items[str(item.id)] = item
 
@@ -192,7 +194,7 @@ def main(verb_limit: int | None = None):
         name="bleached_adjectives",
         description="Controlled adjective inventory for templates",
         language_code="eng",
-        items=adj_items
+        items=adj_items,
     )
 
     output_path = lexicons_dir / "bleached_adjectives.jsonl"
@@ -206,24 +208,66 @@ def main(verb_limit: int | None = None):
 
     # Comprehensive English preposition list (52 prepositions from constraint_builder.py)
     prepositions = [
-        "about", "above", "across", "after", "against", "along", "among", "around",
-        "at", "before", "behind", "below", "beneath", "beside", "between", "beyond",
-        "by", "concerning", "despite", "down", "during", "except", "for", "from",
-        "in", "inside", "into", "like", "near", "of", "off", "on", "onto", "out",
-        "outside", "over", "past", "regarding", "round", "since", "through",
-        "throughout", "to", "toward", "towards", "under", "underneath", "until",
-        "up", "upon", "with", "within", "without"
+        "about",
+        "above",
+        "across",
+        "after",
+        "against",
+        "along",
+        "among",
+        "around",
+        "at",
+        "before",
+        "behind",
+        "below",
+        "beneath",
+        "beside",
+        "between",
+        "beyond",
+        "by",
+        "concerning",
+        "despite",
+        "down",
+        "during",
+        "except",
+        "for",
+        "from",
+        "in",
+        "inside",
+        "into",
+        "like",
+        "near",
+        "of",
+        "off",
+        "on",
+        "onto",
+        "out",
+        "outside",
+        "over",
+        "past",
+        "regarding",
+        "round",
+        "since",
+        "through",
+        "throughout",
+        "to",
+        "toward",
+        "towards",
+        "under",
+        "underneath",
+        "until",
+        "up",
+        "upon",
+        "with",
+        "within",
+        "without",
     ]
 
     prep_items: dict[str, LexicalItem] = {}
 
     for prep in prepositions:
         item = LexicalItem(
-            lemma=prep,
-            pos="ADP",
-            language_code="eng",
-            features={},
-            attributes={}
+            lemma=prep, pos="ADP", language_code="eng", features={}, attributes={}
         )
         prep_items[str(item.id)] = item
 
@@ -233,7 +277,7 @@ def main(verb_limit: int | None = None):
         name="prepositions",
         description="Comprehensive English preposition inventory",
         language_code="eng",
-        items=prep_items
+        items=prep_items,
     )
 
     output_path = lexicons_dir / "prepositions.jsonl"
@@ -250,11 +294,7 @@ def main(verb_limit: int | None = None):
 
     for det in determiners:
         item = LexicalItem(
-            lemma=det,
-            pos="DET",
-            language_code="eng",
-            features={},
-            attributes={}
+            lemma=det, pos="DET", language_code="eng", features={}, attributes={}
         )
         det_items[str(item.id)] = item
 
@@ -264,7 +304,7 @@ def main(verb_limit: int | None = None):
         name="determiners",
         description="Basic determiner inventory",
         language_code="eng",
-        items=det_items
+        items=det_items,
     )
 
     output_path = lexicons_dir / "determiners.jsonl"
@@ -293,7 +333,7 @@ if __name__ == "__main__":
         "--limit",
         type=int,
         default=None,
-        help="Limit number of VerbNet verbs to process (for testing)"
+        help="Limit number of VerbNet verbs to process (for testing)",
     )
     args = parser.parse_args()
 

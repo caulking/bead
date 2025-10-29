@@ -223,9 +223,7 @@ class GlazingAdapter(ResourceAdapter):
                     "themroles": [r.type for r in verb_class.themroles]
                     if verb_class.themroles
                     else [],
-                    "frame_count": len(verb_class.frames)
-                    if verb_class.frames
-                    else 0,
+                    "frame_count": len(verb_class.frames) if verb_class.frames else 0,
                 }
 
                 # Add detailed frame information if requested
@@ -302,18 +300,14 @@ class GlazingAdapter(ResourceAdapter):
             # Get all framesets from PropBank
             for frameset in loader.framesets.values():
                 items.extend(
-                    self._create_propbank_items(
-                        frameset, language_code, include_frames
-                    )
+                    self._create_propbank_items(frameset, language_code, include_frames)
                 )
         else:
             # Get specific frameset for the predicate
             frameset = loader.get_frameset(query)
             if frameset:
                 items.extend(
-                    self._create_propbank_items(
-                        frameset, language_code, include_frames
-                    )
+                    self._create_propbank_items(frameset, language_code, include_frames)
                 )
 
         return items

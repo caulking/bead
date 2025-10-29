@@ -12,8 +12,8 @@ from typing import TypeVar
 
 import numpy as np
 
+from sash.active_learning.trainers.base import BaseTrainer
 from sash.items.models import Item
-from sash.training.trainers.base import BaseTrainer
 
 T = TypeVar("T")
 

@@ -9,6 +9,7 @@ from __future__ import annotations
 from pydantic import BaseModel
 
 from sash.config.models import (
+    ActiveLearningConfig,
     DeploymentConfig,
     ItemConfig,
     ListConfig,
@@ -17,7 +18,6 @@ from sash.config.models import (
     ResourceConfig,
     SashConfig,
     TemplateConfig,
-    TrainingConfig,
 )
 
 DEFAULT_CONFIG = SashConfig(
@@ -28,7 +28,7 @@ DEFAULT_CONFIG = SashConfig(
     items=ItemConfig(),
     lists=ListConfig(),
     deployment=DeploymentConfig(),
-    training=TrainingConfig(),
+    active_learning=ActiveLearningConfig(),
     logging=LoggingConfig(),
 )
 """Default configuration instance.

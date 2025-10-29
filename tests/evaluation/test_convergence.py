@@ -117,7 +117,9 @@ class TestComputeHumanBaseline:
         """Test that Fleiss' kappa raises NotImplementedError."""
         detector = ConvergenceDetector(human_agreement_metric="fleiss_kappa")
 
-        with pytest.raises(NotImplementedError, match="fleiss_kappa not yet implemented"):
+        with pytest.raises(
+            NotImplementedError, match="fleiss_kappa not yet implemented"
+        ):
             detector.compute_human_baseline(multi_rater_data)
 
     def test_empty_ratings(self):
@@ -138,7 +140,9 @@ class TestComputeHumanBaseline:
         """Test with high agreement data."""
         detector = ConvergenceDetector()
 
-        baseline = detector.compute_human_baseline(perfect_agreement_data, metric="nominal")
+        baseline = detector.compute_human_baseline(
+            perfect_agreement_data, metric="nominal"
+        )
 
         # Perfect agreement should give high score
         assert baseline > 0.95
@@ -279,7 +283,9 @@ class TestStatisticalTest:
         """Test that t-test raises NotImplementedError."""
         detector = ConvergenceDetector()
 
-        with pytest.raises(NotImplementedError, match="ttest not yet fully implemented"):
+        with pytest.raises(
+            NotImplementedError, match="ttest not yet fully implemented"
+        ):
             detector.compute_statistical_test([1, 1, 0], [1, 0, 0], test_type="ttest")
 
     def test_invalid_test_type(self):
@@ -525,7 +531,9 @@ class TestEdgeCases:
         detector = ConvergenceDetector(human_agreement_metric="krippendorff_alpha")
 
         # Krippendorff's alpha handles missing data
-        baseline = detector.compute_human_baseline(ratings_with_missing, metric="nominal")
+        baseline = detector.compute_human_baseline(
+            ratings_with_missing, metric="nominal"
+        )
 
         assert isinstance(baseline, float)
         assert -1.0 <= baseline <= 1.0

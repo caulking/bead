@@ -395,9 +395,7 @@ class TestPairwiseAgreement:
 
     def test_many_raters(self):
         """Test with many raters."""
-        data = {
-            f"rater{i}": [1, 2, 3, 1, 2] for i in range(5)
-        }
+        data = {f"rater{i}": [1, 2, 3, 1, 2] for i in range(5)}
 
         result = InterAnnotatorMetrics.pairwise_agreement(data)
 
@@ -427,9 +425,7 @@ class TestPairwiseAgreement:
         expected_kappa = InterAnnotatorMetrics.cohens_kappa(
             data["rater1"], data["rater2"]
         )
-        assert result["cohens_kappa"][pair] == pytest.approx(
-            expected_kappa, abs=0.001
-        )
+        assert result["cohens_kappa"][pair] == pytest.approx(expected_kappa, abs=0.001)
 
 
 class TestEdgeCases:

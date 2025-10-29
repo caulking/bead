@@ -8,6 +8,7 @@ import pytest
 from pydantic import ValidationError
 
 from sash.config.models import (
+    ActiveLearningConfig,
     DeploymentConfig,
     ItemConfig,
     ListConfig,
@@ -17,7 +18,6 @@ from sash.config.models import (
     ResourceConfig,
     SashConfig,
     TemplateConfig,
-    TrainingConfig,
 )
 
 
@@ -113,8 +113,9 @@ class TestTemplateConfig:
         """Test filling strategy validation with invalid value."""
         with pytest.raises(ValidationError) as exc_info:
             TemplateConfig(filling_strategy="invalid")  # type: ignore[arg-type]
-        assert "Input should be 'exhaustive', 'random', 'stratified' or 'mlm'" in str(
-            exc_info.value
+        assert (
+            "Input should be 'exhaustive', 'random', 'stratified', 'mlm' or 'mixed'"
+            in str(exc_info.value)
         )
 
     def test_batch_size_validation_positive(self) -> None:
@@ -358,60 +359,45 @@ class TestDeploymentConfig:
         assert config.jatos_export is True
 
 
-class TestTrainingConfig:
-    """Tests for TrainingConfig model."""
+class TestActivelearningConfig:
+    """Tests for ActiveLearningConfig model."""
 
     def test_creation_with_defaults(self) -> None:
-        """Test creating TrainingConfig with default values."""
-        config = TrainingConfig()
-        assert config.trainer == "huggingface"
-        assert config.epochs == 3
-        assert config.learning_rate == 2e-5
-        assert config.batch_size == 16
-        assert config.eval_strategy == "epoch"
-        assert config.save_strategy == "epoch"
-        assert config.logging_dir == Path("logs")
-        assert config.use_wandb is False
-        assert config.wandb_project is None
+        """Test creating ActiveLearningConfig with default values."""
+        config = ActiveLearningConfig()
+        assert config.forced_choice_model.model_name == "bert-base-uncased"
+        assert config.trainer.trainer_type == "huggingface"
+        assert config.trainer.epochs == 3
+        assert config.loop.max_iterations == 10
+        assert config.loop.budget_per_iteration == 100
+        assert config.uncertainty_sampler.method == "entropy"
 
-    def test_hyperparameter_validation(self) -> None:
-        """Test hyperparameter validation."""
-        config = TrainingConfig(epochs=10, learning_rate=1e-4, batch_size=32)
-        assert config.epochs == 10
-        assert config.learning_rate == 1e-4
-        assert config.batch_size == 32
+    def test_trainer_configuration(self) -> None:
+        """Test trainer configuration."""
+        config = ActiveLearningConfig()
+        assert config.trainer.trainer_type == "huggingface"
+        assert config.trainer.epochs == 3
+        assert config.trainer.use_wandb is False
 
-    def test_strategy_validation(self) -> None:
-        """Test strategy validation."""
-        config = TrainingConfig(eval_strategy="steps", save_strategy="steps")
-        assert config.eval_strategy == "steps"
-        assert config.save_strategy == "steps"
+    def test_loop_configuration(self) -> None:
+        """Test loop configuration."""
+        config = ActiveLearningConfig()
+        assert config.loop.max_iterations == 10
+        assert config.loop.budget_per_iteration == 100
+        assert config.loop.stopping_criterion == "max_iterations"
 
-    def test_logging_directory(self) -> None:
-        """Test logging directory."""
-        config = TrainingConfig(logging_dir=Path("/custom/logs"))
-        assert config.logging_dir == Path("/custom/logs")
+    def test_model_configuration(self) -> None:
+        """Test model configuration."""
+        config = ActiveLearningConfig()
+        assert config.forced_choice_model.model_name == "bert-base-uncased"
+        assert config.forced_choice_model.batch_size == 16
+        assert config.forced_choice_model.device == "cpu"
 
-    def test_wandb_integration_settings(self) -> None:
-        """Test W&B integration settings."""
-        config = TrainingConfig(use_wandb=True, wandb_project="my-project")
-        assert config.use_wandb is True
-        assert config.wandb_project == "my-project"
-
-    def test_epochs_validation(self) -> None:
-        """Test epochs must be positive."""
-        with pytest.raises(ValidationError):
-            TrainingConfig(epochs=0)
-
-    def test_learning_rate_validation(self) -> None:
-        """Test learning_rate must be positive."""
-        with pytest.raises(ValidationError):
-            TrainingConfig(learning_rate=0)
-
-    def test_batch_size_validation(self) -> None:
-        """Test batch_size must be positive."""
-        with pytest.raises(ValidationError):
-            TrainingConfig(batch_size=0)
+    def test_sampler_configuration(self) -> None:
+        """Test sampler configuration."""
+        config = ActiveLearningConfig()
+        assert config.uncertainty_sampler.method == "entropy"
+        assert config.uncertainty_sampler.batch_size is None
 
 
 class TestLoggingConfig:
@@ -466,7 +452,7 @@ class TestSashConfig:
             items=ItemConfig(),
             lists=ListConfig(),
             deployment=DeploymentConfig(),
-            training=TrainingConfig(),
+            active_learning=ActiveLearningConfig(),
             logging=LoggingConfig(),
         )
         assert config.profile == "test"
@@ -476,7 +462,7 @@ class TestSashConfig:
         assert isinstance(config.items, ItemConfig)
         assert isinstance(config.lists, ListConfig)
         assert isinstance(config.deployment, DeploymentConfig)
-        assert isinstance(config.training, TrainingConfig)
+        assert isinstance(config.active_learning, ActiveLearningConfig)
         assert isinstance(config.logging, LoggingConfig)
 
     def test_to_dict_method(self) -> None:

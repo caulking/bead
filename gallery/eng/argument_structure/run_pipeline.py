@@ -52,9 +52,7 @@ def load_config(config_path: Path) -> dict[str, Any]:
     return config
 
 
-def load_2afc_pairs(
-    path: Path, limit: int | None = None, skip: int = 0
-) -> list[Item]:
+def load_2afc_pairs(path: Path, limit: int | None = None, skip: int = 0) -> list[Item]:
     """Load 2AFC pairs from JSONL file.
 
     Parameters
@@ -378,9 +376,7 @@ def main(args: argparse.Namespace) -> None:
     unlabeled_size = args.unlabeled_size or 500
 
     try:
-        initial_items = load_2afc_pairs(
-            pairs_path, limit=initial_size, skip=0
-        )
+        initial_items = load_2afc_pairs(pairs_path, limit=initial_size, skip=0)
         unlabeled_pool = load_2afc_pairs(
             pairs_path, limit=unlabeled_size, skip=initial_size
         )

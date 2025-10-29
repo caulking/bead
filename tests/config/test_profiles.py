@@ -56,7 +56,7 @@ class TestDevConfig:
 
     def test_dev_has_minimal_training(self) -> None:
         """Test DEV_CONFIG has minimal training epochs."""
-        assert DEV_CONFIG.training.epochs == 1
+        assert DEV_CONFIG.active_learning.trainer.epochs == 1
 
 
 class TestProdConfig:
@@ -100,11 +100,11 @@ class TestProdConfig:
 
     def test_prod_has_full_training(self) -> None:
         """Test PROD_CONFIG has full training epochs."""
-        assert PROD_CONFIG.training.epochs == 10
+        assert PROD_CONFIG.active_learning.trainer.epochs == 10
 
     def test_prod_has_wandb_enabled(self) -> None:
         """Test PROD_CONFIG enables W&B tracking."""
-        assert PROD_CONFIG.training.use_wandb is True
+        assert PROD_CONFIG.active_learning.trainer.use_wandb is True
 
     def test_prod_has_stream_mode(self) -> None:
         """Test PROD_CONFIG enables stream mode."""
@@ -165,12 +165,12 @@ class TestTestConfig:
 
     def test_test_has_minimal_training(self) -> None:
         """Test TEST_CONFIG has minimal training."""
-        assert TEST_CONFIG.training.epochs == 1
-        assert TEST_CONFIG.training.batch_size == 2
+        assert TEST_CONFIG.active_learning.trainer.epochs == 1
+        assert TEST_CONFIG.active_learning.forced_choice_model.batch_size == 2
 
     def test_test_has_no_wandb(self) -> None:
         """Test TEST_CONFIG disables W&B tracking."""
-        assert TEST_CONFIG.training.use_wandb is False
+        assert TEST_CONFIG.active_learning.trainer.use_wandb is False
 
 
 class TestProfilesRegistry:

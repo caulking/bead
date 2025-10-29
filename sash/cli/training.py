@@ -15,7 +15,7 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
 
 from sash.cli.utils import print_error, print_info, print_success
-from sash.training.data_collection.jatos import JATOSDataCollector
+from sash.data_collection.jatos import JATOSDataCollector
 
 console = Console()
 

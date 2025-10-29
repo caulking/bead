@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any
 from unittest.mock import MagicMock
 from uuid import uuid4
 
@@ -205,9 +204,7 @@ class TestStratifiedSplit:
         folds_by_label = cv.k_fold_split(items, stratify_by="item_metadata.label")
 
         # Stratify by category
-        folds_by_category = cv.k_fold_split(
-            items, stratify_by="item_metadata.category"
-        )
+        folds_by_category = cv.k_fold_split(items, stratify_by="item_metadata.category")
 
         # Both should work and produce different splits
         assert len(folds_by_label) == 5
@@ -303,9 +300,7 @@ class TestEvaluateFold:
 
         # Create mock trainer
         trainer = MagicMock()
-        trainer.train.return_value = MagicMock(
-            metrics={"accuracy": 0.85, "f1": 0.82}
-        )
+        trainer.train.return_value = MagicMock(metrics={"accuracy": 0.85, "f1": 0.82})
 
         # Create sample items
         train_items = [
@@ -411,9 +406,7 @@ class TestCrossValidate:
 
         # Create mock trainer
         trainer = MagicMock()
-        trainer.train.return_value = MagicMock(
-            metrics={"accuracy": 0.85, "f1": 0.82}
-        )
+        trainer.train.return_value = MagicMock(metrics={"accuracy": 0.85, "f1": 0.82})
 
         # Run cross-validation
         results = cv.cross_validate(trainer, sample_items)
@@ -437,9 +430,7 @@ class TestCrossValidate:
 
         # Create mock trainer
         trainer = MagicMock()
-        trainer.train.return_value = MagicMock(
-            metrics={"accuracy": 0.85, "f1": 0.82}
-        )
+        trainer.train.return_value = MagicMock(metrics={"accuracy": 0.85, "f1": 0.82})
 
         # Run with stratification
         results = cv.cross_validate(

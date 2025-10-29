@@ -12,6 +12,7 @@ from sash.config.defaults import (
     get_default_for_model,
 )
 from sash.config.models import (
+    ActiveLearningConfig,
     DeploymentConfig,
     ItemConfig,
     ListConfig,
@@ -21,7 +22,6 @@ from sash.config.models import (
     ResourceConfig,
     SashConfig,
     TemplateConfig,
-    TrainingConfig,
 )
 
 
@@ -44,7 +44,7 @@ class TestDefaultConfig:
         assert isinstance(DEFAULT_CONFIG.items, ItemConfig)
         assert isinstance(DEFAULT_CONFIG.lists, ListConfig)
         assert isinstance(DEFAULT_CONFIG.deployment, DeploymentConfig)
-        assert isinstance(DEFAULT_CONFIG.training, TrainingConfig)
+        assert isinstance(DEFAULT_CONFIG.active_learning, ActiveLearningConfig)
         assert isinstance(DEFAULT_CONFIG.logging, LoggingConfig)
 
     def test_default_paths_are_relative(self) -> None:
@@ -57,7 +57,7 @@ class TestDefaultConfig:
         """Test default batch sizes are reasonable."""
         assert DEFAULT_CONFIG.templates.batch_size == 1000
         assert DEFAULT_CONFIG.items.model.batch_size == 8
-        assert DEFAULT_CONFIG.training.batch_size == 16
+        assert DEFAULT_CONFIG.active_learning.forced_choice_model.batch_size == 16
 
     def test_default_logging_level_is_info(self) -> None:
         """Test default logging level is INFO."""
@@ -166,11 +166,11 @@ class TestGetDefaultForModel:
         assert isinstance(config, DeploymentConfig)
         assert config.platform == "jspsych"
 
-    def test_returns_training_config_default(self) -> None:
-        """Test get_default_for_model returns TrainingConfig default."""
-        config = get_default_for_model(TrainingConfig)
-        assert isinstance(config, TrainingConfig)
-        assert config.epochs == 3
+    def test_returns_active_learning_config_default(self) -> None:
+        """Test get_default_for_model returns ActiveLearningConfig default."""
+        config = get_default_for_model(ActiveLearningConfig)
+        assert isinstance(config, ActiveLearningConfig)
+        assert config.trainer.epochs == 3
 
     def test_returns_logging_config_default(self) -> None:
         """Test get_default_for_model returns LoggingConfig default."""

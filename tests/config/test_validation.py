@@ -57,7 +57,7 @@ class TestCheckPathsExist:
     def test_check_paths_exist_with_missing_logging_dir(self, tmp_path: Path) -> None:
         """Test path checking with missing logging directory."""
         config = get_default_config()
-        config.training.logging_dir = tmp_path / "nonexistent"
+        config.active_learning.trainer.logging_dir = tmp_path / "nonexistent"
         errors = check_paths_exist(config)
         assert len(errors) > 0
         assert any("logging_dir does not exist" in e for e in errors)
@@ -133,7 +133,7 @@ class TestCheckTrainingConfiguration:
     def test_check_training_configuration_negative_batch_size(self) -> None:
         """Test training configuration with negative batch size."""
         config = get_default_config()
-        config.training.batch_size = -1
+        config.active_learning.forced_choice_model.batch_size = -1
         errors = check_training_configuration(config)
         assert len(errors) > 0
         assert any("batch size" in e.lower() for e in errors)
@@ -141,7 +141,7 @@ class TestCheckTrainingConfiguration:
     def test_check_training_configuration_zero_batch_size(self) -> None:
         """Test training configuration with zero batch size."""
         config = get_default_config()
-        config.training.batch_size = 0
+        config.active_learning.forced_choice_model.batch_size = 0
         errors = check_training_configuration(config)
         assert len(errors) > 0
         assert any("batch size" in e.lower() for e in errors)
@@ -149,7 +149,7 @@ class TestCheckTrainingConfiguration:
     def test_check_training_configuration_negative_epochs(self) -> None:
         """Test training configuration with negative epochs."""
         config = get_default_config()
-        config.training.epochs = -5
+        config.active_learning.trainer.epochs = -5
         errors = check_training_configuration(config)
         assert len(errors) > 0
         assert any("epochs" in e.lower() for e in errors)
@@ -157,7 +157,7 @@ class TestCheckTrainingConfiguration:
     def test_check_training_configuration_zero_epochs(self) -> None:
         """Test training configuration with zero epochs."""
         config = get_default_config()
-        config.training.epochs = 0
+        config.active_learning.trainer.epochs = 0
         errors = check_training_configuration(config)
         assert len(errors) > 0
         assert any("epochs" in e.lower() for e in errors)
@@ -165,7 +165,7 @@ class TestCheckTrainingConfiguration:
     def test_check_training_configuration_negative_learning_rate(self) -> None:
         """Test training configuration with negative learning rate."""
         config = get_default_config()
-        config.training.learning_rate = -0.001
+        config.active_learning.forced_choice_model.learning_rate = -0.001
         errors = check_training_configuration(config)
         assert len(errors) > 0
         assert any("learning rate" in e.lower() for e in errors)
@@ -173,7 +173,7 @@ class TestCheckTrainingConfiguration:
     def test_check_training_configuration_zero_learning_rate(self) -> None:
         """Test training configuration with zero learning rate."""
         config = get_default_config()
-        config.training.learning_rate = 0.0
+        config.active_learning.forced_choice_model.learning_rate = 0.0
         errors = check_training_configuration(config)
         assert len(errors) > 0
         assert any("learning rate" in e.lower() for e in errors)
@@ -241,8 +241,8 @@ class TestValidateConfig:
         config = get_default_config()
         # Create multiple errors
         config.paths.data_dir = tmp_path / "nonexistent"
-        config.training.batch_size = -1
-        config.training.epochs = 0
+        config.active_learning.forced_choice_model.batch_size = -1
+        config.active_learning.trainer.epochs = 0
         errors = validate_config(config)
         # Should have multiple errors
         assert len(errors) >= 3
