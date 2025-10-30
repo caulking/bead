@@ -29,9 +29,7 @@ class MultiSelectStrategy(SimulationStrategy):
     'multi_select'
     """
 
-    def __init__(
-        self, threshold: float = 0.5, temperature: float = 1.0
-    ) -> None:
+    def __init__(self, threshold: float = 0.5, temperature: float = 1.0) -> None:
         """Initialize multi-select strategy.
 
         Parameters
@@ -70,10 +68,7 @@ class MultiSelectStrategy(SimulationStrategy):
             If validation fails.
         """
         if item_template.task_type != "multi_select":
-            msg = (
-                f"Expected task_type 'multi_select', "
-                f"got '{item_template.task_type}'"
-            )
+            msg = f"Expected task_type 'multi_select', got '{item_template.task_type}'"
             raise ValueError(msg)
 
         if not item_template.task_spec.options:

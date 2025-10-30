@@ -112,9 +112,7 @@ def test_validate_item_insufficient_options() -> None:
         name="test_multi_select",
         judgment_type="preference",
         task_type="multi_select",
-        task_spec=TaskSpec(
-            prompt="Select all that apply:", options=["only_one"]
-        ),
+        task_spec=TaskSpec(prompt="Select all that apply:", options=["only_one"]),
         presentation_spec=PresentationSpec(mode="static"),
     )
 

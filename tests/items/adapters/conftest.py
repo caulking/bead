@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
@@ -11,6 +12,39 @@ import pytest
 import torch
 
 from sash.items.cache import ModelOutputCache
+
+
+@pytest.fixture(autouse=True, scope="function")
+def reset_adapter_imports():
+    """Reset adapter module imports between tests to ensure clean state.
+
+    This prevents issues where mocked API clients from one test
+    interfere with imports in subsequent tests.
+    """
+    # Modules to clean up - only API client adapters and their dependencies
+    # NOTE: We leave sash.items.adapters and huggingface adapters alone to avoid
+    # PyO3 reload issues with transformers/safetensors
+    modules_to_clean = [
+        "sash.items.adapters.openai",
+        "sash.items.adapters.anthropic",
+        "sash.items.adapters.google",
+        "sash.items.adapters.togetherai",
+        "openai",
+        "anthropic",
+        "google.generativeai",
+    ]
+
+    # Remove cached modules BEFORE test to ensure clean state
+    for module in modules_to_clean:
+        if module in sys.modules:
+            del sys.modules[module]
+
+    yield
+
+    # Clean up again after test
+    for module in modules_to_clean:
+        if module in sys.modules:
+            del sys.modules[module]
 
 
 @pytest.fixture

@@ -62,9 +62,7 @@ class OrdinalScaleStrategy(SimulationStrategy):
             If validation fails.
         """
         if item_template.task_type != "ordinal_scale":
-            msg = (
-                f"Expected task_type 'ordinal_scale', got '{item_template.task_type}'"
-            )
+            msg = f"Expected task_type 'ordinal_scale', got '{item_template.task_type}'"
             raise ValueError(msg)
 
         if not item_template.task_spec.scale_bounds:

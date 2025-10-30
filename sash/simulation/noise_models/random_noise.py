@@ -21,9 +21,7 @@ class RandomNoiseModel(NoiseModel):
     >>> # Adds gaussian noise with stddev=0.5 to numeric responses
     """
 
-    def __init__(
-        self, noise_type: str = "gaussian", strength: float = 1.0
-    ) -> None:
+    def __init__(self, noise_type: str = "gaussian", strength: float = 1.0) -> None:
         """Initialize random noise model.
 
         Parameters

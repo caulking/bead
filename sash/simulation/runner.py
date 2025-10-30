@@ -92,9 +92,7 @@ class SimulationRunner:
 
         for i, annotator in enumerate(self.annotators):
             annotations = annotator.annotate_batch(items, templates)
-            results[f"annotator_{i}"] = [
-                annotations[str(item.id)] for item in items
-            ]
+            results[f"annotator_{i}"] = [annotations[str(item.id)] for item in items]
 
         # Save if configured
         if self.config.save_path:
@@ -126,9 +124,7 @@ class SimulationRunner:
                     row = {
                         "item_id": results["item_ids"][i],
                         **{
-                            key: results[key][i]
-                            for key in results
-                            if key != "item_ids"
+                            key: results[key][i] for key in results if key != "item_ids"
                         },
                     }
                     f.write(json.dumps(row) + "\n")

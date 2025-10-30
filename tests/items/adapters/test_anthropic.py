@@ -19,8 +19,12 @@ def mock_anthropic(mocker: MockerFixture):
     mock_anthropic_module.APIError = Exception
     mock_anthropic_module.APIConnectionError = Exception
     mock_anthropic_module.RateLimitError = Exception
+    # Set __spec__ to avoid ValueError when transformers checks module availability
+    mock_anthropic_module.__spec__ = mocker.MagicMock()
 
+    # Patch both sys.modules and the module-level import in the adapter
     mocker.patch.dict("sys.modules", {"anthropic": mock_anthropic_module})
+    mocker.patch("sash.items.adapters.anthropic.anthropic", mock_anthropic_module)
 
     return mock_client
 
@@ -46,7 +50,9 @@ class TestAnthropicAdapterInitialization:
         mock_client = mocker.MagicMock()
         mock_anthropic_module = mocker.MagicMock()
         mock_anthropic_module.Anthropic.return_value = mock_client
+        mock_anthropic_module.__spec__ = mocker.MagicMock()
         mocker.patch.dict("sys.modules", {"anthropic": mock_anthropic_module})
+        mocker.patch("sash.items.adapters.anthropic.anthropic", mock_anthropic_module)
 
         from sash.items.adapters.anthropic import AnthropicAdapter  # noqa: PLC0415
 
@@ -66,7 +72,9 @@ class TestAnthropicAdapterInitialization:
         mock_client = mocker.MagicMock()
         mock_anthropic_module = mocker.MagicMock()
         mock_anthropic_module.Anthropic.return_value = mock_client
+        mock_anthropic_module.__spec__ = mocker.MagicMock()
         mocker.patch.dict("sys.modules", {"anthropic": mock_anthropic_module})
+        mocker.patch("sash.items.adapters.anthropic.anthropic", mock_anthropic_module)
         mocker.patch.dict(os.environ, {"ANTHROPIC_API_KEY": "env-key"})
 
         from sash.items.adapters.anthropic import AnthropicAdapter  # noqa: PLC0415
@@ -82,7 +90,9 @@ class TestAnthropicAdapterInitialization:
     ) -> None:
         """Test that initialization fails without API key."""
         mock_anthropic_module = mocker.MagicMock()
+        mock_anthropic_module.__spec__ = mocker.MagicMock()
         mocker.patch.dict("sys.modules", {"anthropic": mock_anthropic_module})
+        mocker.patch("sash.items.adapters.anthropic.anthropic", mock_anthropic_module)
         mocker.patch.dict(os.environ, {}, clear=True)
 
         from sash.items.adapters.anthropic import AnthropicAdapter  # noqa: PLC0415

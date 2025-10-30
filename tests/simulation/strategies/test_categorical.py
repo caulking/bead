@@ -235,9 +235,7 @@ def test_simulate_response_with_two_categories() -> None:
         name="test_sentiment",
         judgment_type="preference",
         task_type="categorical",
-        task_spec=TaskSpec(
-            prompt="Sentiment?", options=["Positive", "Negative"]
-        ),
+        task_spec=TaskSpec(prompt="Sentiment?", options=["Positive", "Negative"]),
         presentation_spec=PresentationSpec(mode="static"),
     )
 

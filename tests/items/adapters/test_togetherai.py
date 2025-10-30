@@ -21,8 +21,12 @@ def mock_openai(mocker: MockerFixture):
     mock_openai_module.APIConnectionError = Exception
     mock_openai_module.RateLimitError = Exception
     mock_openai_module.BadRequestError = Exception
+    # Set __spec__ to avoid ValueError when transformers checks if openai is available
+    mock_openai_module.__spec__ = mocker.MagicMock()
 
+    # Patch both sys.modules and the module-level import in the adapter
     mocker.patch.dict("sys.modules", {"openai": mock_openai_module})
+    mocker.patch("sash.items.adapters.togetherai.openai", mock_openai_module)
 
     return mock_client
 
@@ -48,7 +52,9 @@ class TestTogetherAIAdapterInitialization:
         mock_client = mocker.MagicMock()
         mock_openai_module = mocker.MagicMock()
         mock_openai_module.OpenAI.return_value = mock_client
+        mock_openai_module.__spec__ = mocker.MagicMock()
         mocker.patch.dict("sys.modules", {"openai": mock_openai_module})
+        mocker.patch("sash.items.adapters.togetherai.openai", mock_openai_module)
 
         from sash.items.adapters.togetherai import TogetherAIAdapter  # noqa: PLC0415
 
@@ -70,7 +76,9 @@ class TestTogetherAIAdapterInitialization:
         mock_client = mocker.MagicMock()
         mock_openai_module = mocker.MagicMock()
         mock_openai_module.OpenAI.return_value = mock_client
+        mock_openai_module.__spec__ = mocker.MagicMock()
         mocker.patch.dict("sys.modules", {"openai": mock_openai_module})
+        mocker.patch("sash.items.adapters.togetherai.openai", mock_openai_module)
         mocker.patch.dict(os.environ, {"TOGETHER_API_KEY": "env-key"})
 
         from sash.items.adapters.togetherai import TogetherAIAdapter  # noqa: PLC0415
@@ -88,7 +96,9 @@ class TestTogetherAIAdapterInitialization:
     ) -> None:
         """Test that initialization fails without API key."""
         mock_openai_module = mocker.MagicMock()
+        mock_openai_module.__spec__ = mocker.MagicMock()
         mocker.patch.dict("sys.modules", {"openai": mock_openai_module})
+        mocker.patch("sash.items.adapters.togetherai.openai", mock_openai_module)
         mocker.patch.dict(os.environ, {}, clear=True)
 
         from sash.items.adapters.togetherai import TogetherAIAdapter  # noqa: PLC0415

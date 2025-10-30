@@ -99,9 +99,7 @@ def test_annotate_categorical_with_ground_truth() -> None:
         name="test_categorical",
         judgment_type="inference",
         task_type="categorical",
-        task_spec=TaskSpec(
-            prompt="Classify:", options=["cat_a", "cat_b", "cat_c"]
-        ),
+        task_spec=TaskSpec(prompt="Classify:", options=["cat_a", "cat_b", "cat_c"]),
         presentation_spec=PresentationSpec(mode="static"),
     )
 
@@ -145,9 +143,7 @@ def test_annotate_multi_select_with_ground_truth() -> None:
         name="test_multi",
         judgment_type="preference",
         task_type="multi_select",
-        task_spec=TaskSpec(
-            prompt="Select:", options=["opt_a", "opt_b", "opt_c"]
-        ),
+        task_spec=TaskSpec(prompt="Select:", options=["opt_a", "opt_b", "opt_c"]),
         presentation_spec=PresentationSpec(mode="static"),
     )
 
@@ -281,9 +277,7 @@ def test_annotate_invalid_ground_truth_multi_select() -> None:
         name="test_multi",
         judgment_type="preference",
         task_type="multi_select",
-        task_spec=TaskSpec(
-            prompt="Select:", options=["opt_a", "opt_b", "opt_c"]
-        ),
+        task_spec=TaskSpec(prompt="Select:", options=["opt_a", "opt_b", "opt_c"]),
         presentation_spec=PresentationSpec(mode="static"),
     )
 

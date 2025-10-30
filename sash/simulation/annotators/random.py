@@ -146,11 +146,33 @@ class RandomAnnotator(SimulatedAnnotator):
 
         # Common word bank for random selection
         word_bank = [
-            "the", "a", "is", "was", "has", "can", "will",
-            "thing", "person", "place", "time", "way",
-            "good", "new", "old", "big", "small",
-            "very", "well", "just", "now", "here",
-            "in", "on", "at", "to", "for",
+            "the",
+            "a",
+            "is",
+            "was",
+            "has",
+            "can",
+            "will",
+            "thing",
+            "person",
+            "place",
+            "time",
+            "way",
+            "good",
+            "new",
+            "old",
+            "big",
+            "small",
+            "very",
+            "well",
+            "just",
+            "now",
+            "here",
+            "in",
+            "on",
+            "at",
+            "to",
+            "for",
         ]
 
         for slot in item.unfilled_slots:

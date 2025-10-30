@@ -106,9 +106,7 @@ class SimulatedHumanAnnotator:
         return {str(item.id): self.annotate(item) for item in items}
 
 
-def load_2afc_pairs(
-    path: Path, limit: int | None = None, skip: int = 0
-) -> list[Item]:
+def load_2afc_pairs(path: Path, limit: int | None = None, skip: int = 0) -> list[Item]:
     """Load 2AFC pairs from JSONL.
 
     Parameters
@@ -198,7 +196,7 @@ def run_simulation(
     print("=" * 80)
     print("SIMULATION: Argument Structure Active Learning Pipeline")
     print("=" * 80)
-    print(f"Configuration:")
+    print("Configuration:")
     print(f"  Initial size: {initial_size}")
     print(f"  Budget/iteration: {budget_per_iteration}")
     print(f"  Max iterations: {max_iterations}")
@@ -222,8 +220,7 @@ def run_simulation(
 
     if not pairs_path.exists():
         raise FileNotFoundError(
-            f"2AFC pairs not found: {pairs_path}\n"
-            "Run: make 2afc-pairs"
+            f"2AFC pairs not found: {pairs_path}\nRun: make 2afc-pairs"
         )
 
     # Load and sample data
@@ -315,8 +312,8 @@ def run_simulation(
         config=loop_config,
     )
 
-    print(f"  Strategy: Uncertainty sampling (entropy)")
-    print(f"  Model: ForcedChoiceModel (BERT-based)")
+    print("  Strategy: Uncertainty sampling (entropy)")
+    print("  Model: ForcedChoiceModel (BERT-based)")
     print()
 
     # [6/7] Run active learning loop
@@ -330,7 +327,7 @@ def run_simulation(
 
     for iteration in range(max_iterations):
         print(f"  Iteration {iteration + 1}/{max_iterations}")
-        print(f"  " + "-" * 70)
+        print("  " + "-" * 70)
 
         # Extract labels
         labels = [human_ratings[str(item.id)] for item in current_labeled]
@@ -379,12 +376,12 @@ def run_simulation(
         print(f"    Agreement gap: {gap:.3f}")
 
         if converged:
-            print(f"    ✓ Converged!")
+            print("    ✓ Converged!")
             break
 
         # Select next batch
         if not current_unlabeled:
-            print(f"    No more unlabeled items")
+            print("    No more unlabeled items")
             break
 
         n_select = min(budget_per_iteration, len(current_unlabeled))
@@ -425,9 +422,9 @@ def run_simulation(
     )
 
     if converged:
-        print(f"Status: ✓ CONVERGED")
+        print("Status: ✓ CONVERGED")
     else:
-        print(f"Status: ⚠ MAX ITERATIONS REACHED")
+        print("Status: ⚠ MAX ITERATIONS REACHED")
     print()
 
     # Save results

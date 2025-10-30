@@ -6,18 +6,16 @@ This module tests the SimulatedHumanAnnotator and simulation pipeline.
 from __future__ import annotations
 
 import json
+
+# Import from parent directory
+import sys
 import tempfile
 from pathlib import Path
 from uuid import uuid4
 
-import numpy as np
 import pytest
 
 from sash.items.models import Item
-
-
-# Import from parent directory
-import sys
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from simulate_pipeline import (
@@ -338,7 +336,8 @@ class TestRunSimulation:
         )
 
         # Compare final accuracies
-        assert results1["iterations"][-1]["test_accuracy"] == results2["iterations"][
-            -1
-        ]["test_accuracy"]
+        assert (
+            results1["iterations"][-1]["test_accuracy"]
+            == results2["iterations"][-1]["test_accuracy"]
+        )
         assert results1["human_agreement"] == results2["human_agreement"]

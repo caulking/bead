@@ -384,7 +384,7 @@ class GlazingAdapter(ResourceAdapter):
         Parameters
         ----------
         query : str | None
-            Lexical unit name to search for. If None, fetch ALL lexical units.
+            Lemma to search for. If None, fetch ALL lexical units.
         language_code : LanguageCode
             Language code filter.
         **kwargs : Any
@@ -394,21 +394,93 @@ class GlazingAdapter(ResourceAdapter):
         Returns
         -------
         list[LexicalItem]
-            LexicalItem objects for matching frames.
-
-        Raises
-        ------
-        NotImplementedError
-            FrameNet lexical units are not currently available in glazing.
-            This is a limitation of the glazing package that needs to be
-            fixed upstream.
+            LexicalItem objects for matching lexical units.
         """
-        # FrameNet lexical units are not currently loaded by glazing
-        # This is a known limitation that needs to be fixed in the glazing package
-        raise NotImplementedError(
-            "FrameNet lexical unit fetching is not currently supported. "
-            "The glazing package does not load lexical units from FrameNet data. "
-            "This needs to be fixed in the glazing package upstream."
+        loader = self._get_loader()
+        assert isinstance(loader, FrameNetLoader)
+
+        include_frames = kwargs.get("include_frames", False)
+        items: list[LexicalItem] = []
+
+        # Iterate through all frames and their lexical units
+        for frame in loader.frames:
+            if not frame.lexical_units:
+                continue
+
+            for lu in frame.lexical_units:
+                # Extract lemma from lexical unit name (format: "lemma.pos")
+                lemma = lu.name.split(".")[0] if "." in lu.name else lu.name
+
+                # Filter by query if provided
+                if query is not None and lemma != query:
+                    continue
+
+                # Create LexicalItem for this lexical unit
+                item = self._create_framenet_item(lu, frame, language_code, include_frames)
+                items.append(item)
+
+        return items
+
+    def _create_framenet_item(
+        self, lu: Any, frame: Any, language_code: LanguageCode, include_frames: bool
+    ) -> LexicalItem:
+        """Create a LexicalItem from a FrameNet lexical unit.
+
+        Parameters
+        ----------
+        lu : Any
+            FrameNet LexicalUnit object.
+        frame : Any
+            FrameNet Frame object containing the lexical unit.
+        language_code : LanguageCode
+            Language code filter.
+        include_frames : bool
+            Whether to include detailed frame information.
+
+        Returns
+        -------
+        LexicalItem
+            LexicalItem object for the lexical unit.
+        """
+        # Extract lemma from lexical unit name (format: "lemma.pos")
+        lemma = lu.name.split(".")[0] if "." in lu.name else lu.name
+
+        # Map FrameNet POS to standard POS tags
+        pos_map = {"V": "VERB", "N": "NOUN", "A": "ADJ", "ADV": "ADV", "PREP": "ADP"}
+        pos = pos_map.get(lu.pos, "VERB")
+
+        # Build attributes
+        attributes: dict[str, Any] = {
+            "framenet_frame": frame.name,
+            "framenet_frame_id": frame.id,
+            "lexical_unit_name": lu.name,
+            "lexical_unit_id": lu.id,
+        }
+
+        # Add definition if available
+        if hasattr(lu, "definition") and lu.definition:
+            attributes["definition"] = lu.definition
+
+        # Add detailed frame information if requested
+        if include_frames:
+            attributes["frame_definition"] = frame.definition
+
+            # Add frame elements (semantic roles)
+            if frame.frame_elements:
+                attributes["frame_elements"] = [
+                    {
+                        "name": fe.name,
+                        "core_type": fe.core_type,
+                        "definition": fe.definition if hasattr(fe, "definition") else None,
+                    }
+                    for fe in frame.frame_elements
+                ]
+
+        return LexicalItem(
+            lemma=lemma,
+            pos=pos,
+            language_code=language_code or "en",
+            attributes=attributes,
         )
 
     def is_available(self) -> bool:

@@ -96,8 +96,7 @@ class OracleAnnotator(SimulatedAnnotator):
         if task_type == "forced_choice":
             if not isinstance(ground_truth, str):
                 msg = (
-                    f"forced_choice ground truth must be str, "
-                    f"got {type(ground_truth)}"
+                    f"forced_choice ground truth must be str, got {type(ground_truth)}"
                 )
                 raise ValueError(msg)
             options = template.task_spec.options or []
@@ -108,17 +107,14 @@ class OracleAnnotator(SimulatedAnnotator):
 
         elif task_type == "binary":
             if not isinstance(ground_truth, bool):
-                msg = (
-                    f"binary ground truth must be bool, got {type(ground_truth)}"
-                )
+                msg = f"binary ground truth must be bool, got {type(ground_truth)}"
                 raise ValueError(msg)
             return ground_truth
 
         elif task_type == "ordinal_scale":
             if not isinstance(ground_truth, int):
                 msg = (
-                    f"ordinal_scale ground truth must be int, "
-                    f"got {type(ground_truth)}"
+                    f"ordinal_scale ground truth must be int, got {type(ground_truth)}"
                 )
                 raise ValueError(msg)
             scale_bounds = template.task_spec.scale_bounds
@@ -133,10 +129,7 @@ class OracleAnnotator(SimulatedAnnotator):
 
         elif task_type == "categorical":
             if not isinstance(ground_truth, str):
-                msg = (
-                    f"categorical ground truth must be str, "
-                    f"got {type(ground_truth)}"
-                )
+                msg = f"categorical ground truth must be str, got {type(ground_truth)}"
                 raise ValueError(msg)
             options = template.task_spec.options or []
             if ground_truth not in options:
@@ -147,8 +140,7 @@ class OracleAnnotator(SimulatedAnnotator):
         elif task_type == "magnitude":
             if not isinstance(ground_truth, (int, float)):
                 msg = (
-                    f"magnitude ground truth must be numeric, "
-                    f"got {type(ground_truth)}"
+                    f"magnitude ground truth must be numeric, got {type(ground_truth)}"
                 )
                 raise ValueError(msg)
             return float(ground_truth)
@@ -156,35 +148,25 @@ class OracleAnnotator(SimulatedAnnotator):
         elif task_type == "multi_select":
             if not isinstance(ground_truth, list):
                 msg = (
-                    f"multi_select ground truth must be list, "
-                    f"got {type(ground_truth)}"
+                    f"multi_select ground truth must be list, got {type(ground_truth)}"
                 )
                 raise ValueError(msg)
             options = template.task_spec.options or []
             for item_val in ground_truth:
                 if item_val not in options:
-                    msg = (
-                        f"Ground truth item '{item_val}' "
-                        f"not in options {options}"
-                    )
+                    msg = f"Ground truth item '{item_val}' not in options {options}"
                     raise ValueError(msg)
             return ground_truth
 
         elif task_type == "free_text":
             if not isinstance(ground_truth, str):
-                msg = (
-                    f"free_text ground truth must be str, "
-                    f"got {type(ground_truth)}"
-                )
+                msg = f"free_text ground truth must be str, got {type(ground_truth)}"
                 raise ValueError(msg)
             return ground_truth
 
         elif task_type == "cloze":
             if not isinstance(ground_truth, dict):
-                msg = (
-                    f"cloze ground truth must be dict, "
-                    f"got {type(ground_truth)}"
-                )
+                msg = f"cloze ground truth must be dict, got {type(ground_truth)}"
                 raise ValueError(msg)
             # Validate all required slots are present
             for slot in template.unfilled_slots:

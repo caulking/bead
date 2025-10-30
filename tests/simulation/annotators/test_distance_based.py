@@ -40,9 +40,7 @@ def test_annotator_instantiation() -> None:
 
 def test_annotator_has_all_strategies() -> None:
     """Test that annotator has strategies for all task types."""
-    config = SimulatedAnnotatorConfig(
-        strategy="distance", model_output_key="embedding"
-    )
+    config = SimulatedAnnotatorConfig(strategy="distance", model_output_key="embedding")
     annotator = DistanceBasedAnnotator(config)
 
     # Should have all 7 task type strategies
@@ -196,9 +194,7 @@ def test_annotate_categorical() -> None:
         name="test_categorical",
         judgment_type="inference",
         task_type="categorical",
-        task_spec=TaskSpec(
-            prompt="Classify:", options=["cat_a", "cat_b", "cat_c"]
-        ),
+        task_spec=TaskSpec(prompt="Classify:", options=["cat_a", "cat_b", "cat_c"]),
         presentation_spec=PresentationSpec(mode="static"),
     )
 
@@ -255,9 +251,7 @@ def test_annotate_multi_select() -> None:
         name="test_multi",
         judgment_type="preference",
         task_type="multi_select",
-        task_spec=TaskSpec(
-            prompt="Select:", options=["opt_a", "opt_b", "opt_c"]
-        ),
+        task_spec=TaskSpec(prompt="Select:", options=["opt_a", "opt_b", "opt_c"]),
         presentation_spec=PresentationSpec(mode="static"),
     )
 

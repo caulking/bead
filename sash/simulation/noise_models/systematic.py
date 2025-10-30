@@ -23,9 +23,7 @@ class SystematicNoiseModel(NoiseModel):
     >>> # Adds 30% bias toward first option in forced choice
     """
 
-    def __init__(
-        self, bias_type: str = "position", bias_strength: float = 0.0
-    ) -> None:
+    def __init__(self, bias_type: str = "position", bias_strength: float = 0.0) -> None:
         """Initialize systematic noise model.
 
         Parameters

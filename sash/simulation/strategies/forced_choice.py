@@ -63,9 +63,7 @@ class ForcedChoiceStrategy(SimulationStrategy):
             If validation fails.
         """
         if item_template.task_type != "forced_choice":
-            msg = (
-                f"Expected task_type 'forced_choice', got '{item_template.task_type}'"
-            )
+            msg = f"Expected task_type 'forced_choice', got '{item_template.task_type}'"
             raise ValueError(msg)
 
         if not item_template.task_spec.options:

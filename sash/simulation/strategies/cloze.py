@@ -61,10 +61,7 @@ class ClozeStrategy(SimulationStrategy):
             If validation fails.
         """
         if item_template.task_type != "cloze":
-            msg = (
-                f"Expected task_type 'cloze', "
-                f"got '{item_template.task_type}'"
-            )
+            msg = f"Expected task_type 'cloze', got '{item_template.task_type}'"
             raise ValueError(msg)
 
         if not item.unfilled_slots:
@@ -124,9 +121,7 @@ class ClozeStrategy(SimulationStrategy):
                 response[slot_name] = fillers[selected_idx]
             else:
                 # Fallback: use ground truth if available, else placeholder
-                response[slot_name] = self._get_fallback_filler(
-                    item, slot_name, rng
-                )
+                response[slot_name] = self._get_fallback_filler(item, slot_name, rng)
 
         return response
 
