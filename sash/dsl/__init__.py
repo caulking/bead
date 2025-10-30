@@ -40,7 +40,7 @@ from sash.dsl.context import EvaluationContext
 from sash.dsl.errors import DSLError, EvaluationError, ParseError
 from sash.dsl.evaluator import Evaluator
 from sash.dsl.parser import parse
-from sash.dsl.stdlib import STDLIB_FUNCTIONS, register_stdlib
+from sash.dsl.stdlib import SIMULATION_FUNCTIONS, STDLIB_FUNCTIONS, register_stdlib
 
 __all__ = [
     # AST nodes
@@ -64,6 +64,7 @@ __all__ = [
     "evaluate",
     # Standard library
     "STDLIB_FUNCTIONS",
+    "SIMULATION_FUNCTIONS",
     "register_stdlib",
 ]
 

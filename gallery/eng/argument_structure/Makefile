@@ -61,6 +61,11 @@ help: ## Show this help message
 		awk 'BEGIN {FS = ":.*?## "}; {printf "  $(YELLOW)%-25s$(NC) %s\n", $$1, $$2}' | \
 		grep -E "(run|dry-run)"
 	@echo ""
+	@echo "$(GREEN)Simulation:$(NC)"
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
+		awk 'BEGIN {FS = ":.*?## "}; {printf "  $(YELLOW)%-25s$(NC) %s\n", $$1, $$2}' | \
+		grep -E "simulate"
+	@echo ""
 	@echo "$(GREEN)Testing & Quality:$(NC)"
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
 		awk 'BEGIN {FS = ":.*?## "}; {printf "  $(YELLOW)%-25s$(NC) %s\n", $$1, $$2}' | \
@@ -298,6 +303,12 @@ clean-results: ## Clean pipeline results
 	@rm -rf $(RESULTS_DIR)
 	@echo "$(GREEN)✓ Results cleaned$(NC)"
 
+.PHONY: clean-simulation
+clean-simulation: ## Clean simulation outputs
+	@echo "$(BLUE)Cleaning simulation outputs...$(NC)"
+	@rm -rf simulation_output/
+	@echo "$(GREEN)✓ Simulation outputs cleaned$(NC)"
+
 .PHONY: clean-all
 clean-all: clean-items clean-cache clean-results clean-lexicons clean-templates ## Clean everything (including lexicons and templates)
 	@echo "$(RED)⚠ Warning: All generated data has been removed$(NC)"
@@ -381,6 +392,102 @@ docs: ## Generate documentation
 	@echo ""
 	@echo "To view configuration: make show-config"
 	@echo "To view data stats: make show-stats"
+
+# ============================================================================
+# Simulation Targets
+# ============================================================================
+
+.PHONY: simulate simulate-quick simulate-medium simulate-full simulate-noisy simulate-clean
+.PHONY: show-simulation-results analyze-convergence clean-simulation
+
+simulate: simulate-quick ## Run simulation (alias for simulate-quick)
+
+simulate-quick: ## Quick simulation (50 items, 3 iterations, ~2 min)
+	@echo "$(BLUE)Running quick simulation...$(NC)"
+	$(PYTHON) simulate_pipeline.py \
+		--initial-size 30 \
+		--budget 10 \
+		--max-iterations 3 \
+		--temperature 1.0 \
+		--seed 42 \
+		--max-items 50 \
+		--output-dir simulation_output/quick
+	@echo "$(GREEN)✓ Quick simulation completed$(NC)"
+
+simulate-medium: ## Medium simulation (200 items, 10 iterations, ~10 min)
+	@echo "$(BLUE)Running medium simulation...$(NC)"
+	$(PYTHON) simulate_pipeline.py \
+		--initial-size 50 \
+		--budget 20 \
+		--max-iterations 10 \
+		--temperature 1.0 \
+		--seed 42 \
+		--max-items 200 \
+		--output-dir simulation_output/medium
+	@echo "$(GREEN)✓ Medium simulation completed$(NC)"
+
+simulate-full: ## Full simulation (1000 items, 20 iterations, ~30 min)
+	@echo "$(BLUE)Running full simulation...$(NC)"
+	@echo "$(YELLOW)⚠ This may take 10-30 minutes$(NC)"
+	$(PYTHON) simulate_pipeline.py \
+		--initial-size 100 \
+		--budget 50 \
+		--max-iterations 20 \
+		--temperature 1.0 \
+		--seed 42 \
+		--max-items 1000 \
+		--output-dir simulation_output/full
+	@echo "$(GREEN)✓ Full simulation completed$(NC)"
+
+simulate-noisy: ## Simulation with high temperature (noisy judgments)
+	@echo "$(BLUE)Running noisy simulation (temperature=2.0)...$(NC)"
+	$(PYTHON) simulate_pipeline.py \
+		--initial-size 50 \
+		--budget 20 \
+		--max-iterations 15 \
+		--temperature 2.0 \
+		--seed 42 \
+		--max-items 200 \
+		--output-dir simulation_output/noisy
+	@echo "$(GREEN)✓ Noisy simulation completed$(NC)"
+
+simulate-clean: ## Simulation with low temperature (clean judgments)
+	@echo "$(BLUE)Running clean simulation (temperature=0.5)...$(NC)"
+	$(PYTHON) simulate_pipeline.py \
+		--initial-size 50 \
+		--budget 20 \
+		--max-iterations 15 \
+		--temperature 0.5 \
+		--seed 42 \
+		--max-items 200 \
+		--output-dir simulation_output/clean
+	@echo "$(GREEN)✓ Clean simulation completed$(NC)"
+
+show-simulation-results: ## Show latest simulation results
+	@echo "$(BLUE)============================================================================$(NC)"
+	@echo "$(BLUE)Latest Simulation Results$(NC)"
+	@echo "$(BLUE)============================================================================$(NC)"
+	@if [ -f simulation_output/simulation_results.json ]; then \
+		$(PYTHON) -m json.tool simulation_output/simulation_results.json; \
+	else \
+		echo "$(RED)No simulation results found. Run 'make simulate' first.$(NC)"; \
+	fi
+
+analyze-convergence: ## Analyze convergence from simulation results
+	@echo "$(BLUE)============================================================================$(NC)"
+	@echo "$(BLUE)Convergence Analysis$(NC)"
+	@echo "$(BLUE)============================================================================$(NC)"
+	@if [ -f simulation_output/simulation_results.json ]; then \
+		$(PYTHON) -c "import json; \
+		data = json.load(open('simulation_output/simulation_results.json')); \
+		print('Iterations:', len(data['iterations'])); \
+		print('Final accuracy: {:.3f}'.format(data['iterations'][-1]['test_accuracy'])); \
+		print('Human agreement: {:.3f}'.format(data['human_agreement'])); \
+		print('Gap: {:.3f}'.format(abs(data['iterations'][-1]['test_accuracy'] - data['human_agreement']))); \
+		print('Converged:', data['converged'])"; \
+	else \
+		echo "$(RED)No simulation results found. Run 'make simulate' first.$(NC)"; \
+	fi
 
 # ============================================================================
 # Utility Targets

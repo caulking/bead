@@ -8,6 +8,7 @@ the evaluation context.
 from __future__ import annotations
 
 import math
+import random
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -599,6 +600,255 @@ def not_(value: Any) -> bool:
     return not value
 
 
+# ============================================================================
+# Simulation Functions
+# ============================================================================
+
+
+def sigmoid(x: float) -> float:
+    """Sigmoid activation function.
+
+    Converts unbounded value to probability in (0, 1).
+
+    Parameters
+    ----------
+    x : float
+        Input value.
+
+    Returns
+    -------
+    float
+        Sigmoid output in (0, 1).
+
+    Examples
+    --------
+    >>> sigmoid(0.0)
+    0.5
+    >>> round(sigmoid(5.0), 3)
+    0.993
+    >>> round(sigmoid(-5.0), 3)
+    0.007
+    """
+    return 1.0 / (1.0 + math.exp(-x))
+
+
+def softmax(values: list[float]) -> list[float]:
+    """Softmax function over list of values.
+
+    Converts list of scores to probability distribution.
+
+    Parameters
+    ----------
+    values : list[float]
+        Input scores.
+
+    Returns
+    -------
+    list[float]
+        Probability distribution (sums to 1.0).
+
+    Examples
+    --------
+    >>> probs = softmax([1.0, 2.0, 3.0])
+    >>> [round(p, 2) for p in probs]
+    [0.09, 0.24, 0.67]
+    """
+    if not values:
+        return []
+    exp_values = [math.exp(v) for v in values]
+    total = sum(exp_values)
+    return [e / total for e in exp_values]
+
+
+def sample_categorical(probs: list[float], seed: int | None = None) -> int:
+    """Sample from categorical distribution.
+
+    Parameters
+    ----------
+    probs : list[float]
+        Probability distribution.
+    seed : int | None
+        Random seed.
+
+    Returns
+    -------
+    int
+        Sampled index (0-based).
+
+    Examples
+    --------
+    >>> sample_categorical([0.2, 0.5, 0.3], seed=42)
+    1
+    """
+    if seed is not None:
+        random.seed(seed)
+    return random.choices(range(len(probs)), weights=probs)[0]
+
+
+def add_noise(
+    value: float, noise_type: str, strength: float, seed: int | None = None
+) -> float:
+    """Add noise to a value.
+
+    Parameters
+    ----------
+    value : float
+        Original value.
+    noise_type : str
+        Type of noise ("gaussian", "uniform").
+    strength : float
+        Noise strength (stddev for gaussian, range for uniform).
+    seed : int | None
+        Random seed.
+
+    Returns
+    -------
+    float
+        Value with noise added.
+
+    Examples
+    --------
+    >>> result = add_noise(5.0, "gaussian", 0.1, seed=42)
+    >>> isinstance(result, float)
+    True
+    >>> result = add_noise(5.0, "uniform", 0.1, seed=42)
+    >>> isinstance(result, float)
+    True
+    """
+    if seed is not None:
+        random.seed(seed)
+
+    if noise_type == "gaussian":
+        return value + random.gauss(0, strength)
+    elif noise_type == "uniform":
+        return value + random.uniform(-strength, strength)
+    else:
+        return value
+
+
+def model_output(item: Any, key: str, default: Any = None) -> Any:
+    """Extract model output from item.
+
+    Parameters
+    ----------
+    item : Item
+        Item with model outputs.
+    key : str
+        Key to extract (e.g., "lm_score", "embedding").
+    default : Any
+        Default value if key not found.
+
+    Returns
+    -------
+    Any
+        Extracted value or default.
+
+    Examples
+    --------
+    >>> # Would work with actual Item object
+    >>> # model_output(item, "lm_score", default=0.0)
+    >>> # -12.4
+    """
+    if not hasattr(item, "model_outputs"):
+        return default
+
+    for output in item.model_outputs:
+        if output.operation == key or key in output.computation_metadata:
+            return output.output
+
+    # Try item_metadata as fallback
+    if hasattr(item, "item_metadata") and key in item.item_metadata:
+        return item.item_metadata[key]
+
+    return default
+
+
+def distance(emb1: list[float], emb2: list[float], metric: str = "cosine") -> float:
+    """Compute distance between embeddings.
+
+    Parameters
+    ----------
+    emb1 : list[float]
+        First embedding.
+    emb2 : list[float]
+        Second embedding.
+    metric : str
+        Distance metric ("cosine", "euclidean", "manhattan").
+
+    Returns
+    -------
+    float
+        Distance value.
+
+    Examples
+    --------
+    >>> distance([1.0, 0.0], [0.0, 1.0], "cosine")
+    1.0
+    >>> round(distance([1.0, 0.0], [0.0, 1.0], "euclidean"), 3)
+    1.414
+    >>> distance([1.0, 0.0], [0.0, 1.0], "manhattan")
+    2.0
+    """
+    if metric == "cosine":
+        dot = sum(a * b for a, b in zip(emb1, emb2, strict=True))
+        norm1 = math.sqrt(sum(a * a for a in emb1))
+        norm2 = math.sqrt(sum(b * b for b in emb2))
+        if norm1 == 0 or norm2 == 0:
+            return 1.0
+        return 1.0 - (dot / (norm1 * norm2))
+
+    elif metric == "euclidean":
+        return math.sqrt(sum((a - b) ** 2 for a, b in zip(emb1, emb2, strict=True)))
+
+    elif metric == "manhattan":
+        return sum(abs(a - b) for a, b in zip(emb1, emb2, strict=True))
+
+    else:
+        msg = f"Unknown metric: {metric}"
+        raise ValueError(msg)
+
+
+def preference_prob(score1: float, score2: float, temperature: float = 1.0) -> float:
+    """Compute preference probability using sigmoid.
+
+    P(choose option 1) = sigmoid((score1 - score2) / temperature)
+
+    Parameters
+    ----------
+    score1 : float
+        Score for option 1.
+    score2 : float
+        Score for option 2.
+    temperature : float
+        Temperature for scaling.
+
+    Returns
+    -------
+    float
+        Probability of choosing option 1.
+
+    Examples
+    --------
+    >>> round(preference_prob(10.0, 5.0, temperature=1.0), 3)
+    0.993
+    >>> round(preference_prob(10.0, 5.0, temperature=5.0), 2)
+    0.73
+    """
+    return sigmoid((score1 - score2) / temperature)
+
+
+# Register simulation functions
+SIMULATION_FUNCTIONS: dict[str, Any] = {
+    "sigmoid": sigmoid,
+    "softmax": softmax,
+    "sample_categorical": sample_categorical,
+    "add_noise": add_noise,
+    "model_output": model_output,
+    "distance": distance,
+    "preference_prob": preference_prob,
+}
+
+
 # Registry
 STDLIB_FUNCTIONS: dict[str, Any] = {
     # String functions
@@ -633,6 +883,9 @@ STDLIB_FUNCTIONS: dict[str, Any] = {
     # Logic functions
     "not": not_,
 }
+
+# Update STDLIB_FUNCTIONS with simulation functions
+STDLIB_FUNCTIONS.update(SIMULATION_FUNCTIONS)
 
 
 def register_stdlib(context: EvaluationContext) -> None:
