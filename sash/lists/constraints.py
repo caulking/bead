@@ -33,6 +33,14 @@ ListConstraintType = Literal[
     "ordering",  # Presentation order constraints (runtime enforcement)
 ]
 
+# Type alias for batch constraint types
+BatchConstraintType = Literal[
+    "coverage",  # All values appear somewhere in batch
+    "balance",  # Balanced distribution across entire batch
+    "diversity",  # Prevent values appearing in too many lists
+    "min_occurrence",  # Minimum occurrences per value across batch
+]
+
 
 class UniquenessConstraint(SashBaseModel):
     """Constraint requiring unique values for a property.
@@ -692,5 +700,292 @@ ListConstraint = Annotated[
     | GroupedQuantileConstraint
     | SizeConstraint
     | OrderingConstraint,
+    Field(discriminator="constraint_type"),
+]
+
+
+# ============================================================================
+# Batch-Level Constraints
+# ============================================================================
+
+
+class BatchCoverageConstraint(SashBaseModel):
+    """Constraint ensuring all values appear somewhere in the batch.
+
+    Ensures that all values of a property appear across the collection of lists.
+    Useful for guaranteeing coverage of experimental conditions, templates, or
+    stimulus categories across all participants.
+
+    Attributes
+    ----------
+    constraint_type : Literal["coverage"]
+        Discriminator field for constraint type (always "coverage").
+    property_expression : str
+        DSL expression that extracts the property value to check coverage.
+        The item is available as 'item' in the expression (metadata dict).
+        Example: "item['template_id']"
+    context : dict[str, ContextValue]
+        Additional context variables for DSL evaluation.
+    target_values : list[str | int | float] | None
+        Target values that must be covered. If None, uses all observed values.
+    min_coverage : float, default=1.0
+        Minimum coverage fraction (0.0-1.0). 1.0 means 100% of target values
+        must appear.
+    priority : int, default=1
+        Constraint priority (higher = more important).
+
+    Examples
+    --------
+    >>> # Ensure all 26 templates appear across all lists
+    >>> constraint = BatchCoverageConstraint(
+    ...     property_expression="item['template_id']",
+    ...     target_values=list(range(26)),
+    ...     min_coverage=1.0
+    ... )
+    >>> # Ensure at least 90% of verbs are covered
+    >>> constraint = BatchCoverageConstraint(
+    ...     property_expression="item['verb_lemma']",
+    ...     target_values=["run", "jump", "eat", "sleep", "think"],
+    ...     min_coverage=0.9
+    ... )
+    """
+
+    constraint_type: Literal["coverage"] = "coverage"
+    property_expression: str = Field(
+        ..., description="DSL expression for property to check coverage"
+    )
+    context: dict[str, ContextValue] = Field(
+        default_factory=dict, description="Additional context variables"
+    )
+    target_values: list[str | int | float] | None = Field(
+        default=None, description="Target values that must be covered"
+    )
+    min_coverage: float = Field(
+        default=1.0, ge=0.0, le=1.0, description="Minimum coverage fraction"
+    )
+    priority: int = Field(
+        default=1, ge=1, description="Constraint priority (higher = more important)"
+    )
+
+    @field_validator("property_expression")
+    @classmethod
+    def validate_property_expression(cls, v: str) -> str:
+        """Validate property expression is non-empty."""
+        if not v or not v.strip():
+            raise ValueError("property_expression must be non-empty")
+        return v.strip()
+
+
+class BatchBalanceConstraint(SashBaseModel):
+    """Constraint ensuring balanced distribution across the entire batch.
+
+    Ensures balanced distribution of a categorical property across all lists
+    combined. Unlike per-list balance constraints, this operates on the
+    aggregate distribution across the entire batch.
+
+    Attributes
+    ----------
+    constraint_type : Literal["balance"]
+        Discriminator field for constraint type (always "balance").
+    property_expression : str
+        DSL expression that extracts the category value to balance.
+        Example: "item['pair_type']"
+    context : dict[str, ContextValue]
+        Additional context variables for DSL evaluation.
+    target_distribution : dict[str, float]
+        Target distribution (values sum to 1.0). Keys are category values,
+        values are target proportions.
+    tolerance : float, default=0.1
+        Allowed deviation from target as a proportion (0.0-1.0).
+    priority : int, default=1
+        Constraint priority (higher = more important).
+
+    Examples
+    --------
+    >>> # Ensure 50/50 balance of pair types across all lists
+    >>> constraint = BatchBalanceConstraint(
+    ...     property_expression="item['pair_type']",
+    ...     target_distribution={"same_verb": 0.5, "different_verb": 0.5},
+    ...     tolerance=0.05
+    ... )
+    >>> # Three-way split across conditions
+    >>> constraint = BatchBalanceConstraint(
+    ...     property_expression="item['condition']",
+    ...     target_distribution={"A": 0.333, "B": 0.333, "C": 0.334},
+    ...     tolerance=0.1
+    ... )
+    """
+
+    constraint_type: Literal["balance"] = "balance"
+    property_expression: str = Field(
+        ..., description="DSL expression for category value"
+    )
+    context: dict[str, ContextValue] = Field(
+        default_factory=dict, description="Additional context variables"
+    )
+    target_distribution: dict[str, float] = Field(
+        ..., description="Target distribution (values sum to 1.0)"
+    )
+    tolerance: float = Field(
+        default=0.1, ge=0.0, le=1.0, description="Allowed deviation from target"
+    )
+    priority: int = Field(
+        default=1, ge=1, description="Constraint priority (higher = more important)"
+    )
+
+    @field_validator("property_expression")
+    @classmethod
+    def validate_property_expression(cls, v: str) -> str:
+        """Validate property expression is non-empty."""
+        if not v or not v.strip():
+            raise ValueError("property_expression must be non-empty")
+        return v.strip()
+
+    @field_validator("target_distribution")
+    @classmethod
+    def validate_target_distribution(cls, v: dict[str, float]) -> dict[str, float]:
+        """Validate target distribution sums to ~1.0 and values are in [0, 1]."""
+        if not v:
+            raise ValueError("target_distribution must not be empty")
+
+        for category, prob in v.items():
+            if not 0.0 <= prob <= 1.0:
+                raise ValueError(
+                    f"target_distribution values must be in [0, 1], "
+                    f"got {prob} for '{category}'"
+                )
+
+        total = sum(v.values())
+        if not 0.99 <= total <= 1.01:
+            raise ValueError(
+                f"target_distribution values must sum to ~1.0, got {total}"
+            )
+
+        return v
+
+
+class BatchDiversityConstraint(SashBaseModel):
+    """Constraint preventing values from appearing in too many lists.
+
+    Ensures that no single value of a property appears in too many lists,
+    promoting diversity across lists. Useful for ensuring that stimuli
+    (e.g., verbs, nouns) are distributed across participants rather than
+    concentrated in a few lists.
+
+    Attributes
+    ----------
+    constraint_type : Literal["diversity"]
+        Discriminator field for constraint type (always "diversity").
+    property_expression : str
+        DSL expression that extracts the property value to check diversity.
+        Example: "item['verb_lemma']"
+    context : dict[str, ContextValue]
+        Additional context variables for DSL evaluation.
+    max_lists_per_value : int
+        Maximum number of lists any value can appear in.
+    priority : int, default=1
+        Constraint priority (higher = more important).
+
+    Examples
+    --------
+    >>> # No verb should appear in more than 3 out of 8 lists
+    >>> constraint = BatchDiversityConstraint(
+    ...     property_expression="item['verb_lemma']",
+    ...     max_lists_per_value=3
+    ... )
+    >>> # No template in more than half the lists
+    >>> constraint = BatchDiversityConstraint(
+    ...     property_expression="item['template_id']",
+    ...     max_lists_per_value=4
+    ... )
+    """
+
+    constraint_type: Literal["diversity"] = "diversity"
+    property_expression: str = Field(
+        ..., description="DSL expression for property value"
+    )
+    context: dict[str, ContextValue] = Field(
+        default_factory=dict, description="Additional context variables"
+    )
+    max_lists_per_value: int = Field(
+        ..., ge=1, description="Maximum lists any value can appear in"
+    )
+    priority: int = Field(
+        default=1, ge=1, description="Constraint priority (higher = more important)"
+    )
+
+    @field_validator("property_expression")
+    @classmethod
+    def validate_property_expression(cls, v: str) -> str:
+        """Validate property expression is non-empty."""
+        if not v or not v.strip():
+            raise ValueError("property_expression must be non-empty")
+        return v.strip()
+
+
+class BatchMinOccurrenceConstraint(SashBaseModel):
+    """Constraint ensuring minimum representation across the batch.
+
+    Ensures that each value of a property appears at least a minimum number
+    of times across all lists. Useful for guaranteeing sufficient data for
+    each experimental condition or stimulus category.
+
+    Attributes
+    ----------
+    constraint_type : Literal["min_occurrence"]
+        Discriminator field for constraint type (always "min_occurrence").
+    property_expression : str
+        DSL expression that extracts the property value to check occurrences.
+        Example: "item['quantile']"
+    context : dict[str, ContextValue]
+        Additional context variables for DSL evaluation.
+    min_occurrences : int
+        Minimum number of times each value must appear across all lists.
+    priority : int, default=1
+        Constraint priority (higher = more important).
+
+    Examples
+    --------
+    >>> # Each quantile appears at least 50 times across all lists
+    >>> constraint = BatchMinOccurrenceConstraint(
+    ...     property_expression="item['quantile']",
+    ...     min_occurrences=50
+    ... )
+    >>> # Each template at least 5 times
+    >>> constraint = BatchMinOccurrenceConstraint(
+    ...     property_expression="item['template_id']",
+    ...     min_occurrences=5
+    ... )
+    """
+
+    constraint_type: Literal["min_occurrence"] = "min_occurrence"
+    property_expression: str = Field(
+        ..., description="DSL expression for property value"
+    )
+    context: dict[str, ContextValue] = Field(
+        default_factory=dict, description="Additional context variables"
+    )
+    min_occurrences: int = Field(
+        ..., ge=1, description="Minimum occurrences per value across batch"
+    )
+    priority: int = Field(
+        default=1, ge=1, description="Constraint priority (higher = more important)"
+    )
+
+    @field_validator("property_expression")
+    @classmethod
+    def validate_property_expression(cls, v: str) -> str:
+        """Validate property expression is non-empty."""
+        if not v or not v.strip():
+            raise ValueError("property_expression must be non-empty")
+        return v.strip()
+
+
+# Discriminated union for all batch constraints
+BatchConstraint = Annotated[
+    BatchCoverageConstraint
+    | BatchBalanceConstraint
+    | BatchDiversityConstraint
+    | BatchMinOccurrenceConstraint,
     Field(discriminator="constraint_type"),
 ]

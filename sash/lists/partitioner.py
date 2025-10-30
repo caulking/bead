@@ -7,7 +7,7 @@ and stratified. Uses stand-off annotation (works with UUIDs only).
 
 from __future__ import annotations
 
-from collections import Counter
+from collections import Counter, defaultdict
 from typing import Any
 from uuid import UUID
 
@@ -17,6 +17,11 @@ from sash.dsl.evaluator import DSLEvaluator
 from sash.lists.balancer import QuantileBalancer
 from sash.lists.constraints import (
     BalanceConstraint,
+    BatchBalanceConstraint,
+    BatchConstraint,
+    BatchCoverageConstraint,
+    BatchDiversityConstraint,
+    BatchMinOccurrenceConstraint,
     ListConstraint,
     QuantileConstraint,
     SizeConstraint,
@@ -687,3 +692,443 @@ class ListPartitioner:
             "n_categories": len(counts),
             "most_common": counts.most_common(1)[0] if counts else None,
         }
+
+    # ========================================================================
+    # Batch Constraint Methods
+    # ========================================================================
+
+    def partition_with_batch_constraints(
+        self,
+        items: list[UUID],
+        n_lists: int,
+        list_constraints: list[ListConstraint] | None = None,
+        batch_constraints: list[BatchConstraint] | None = None,
+        strategy: str = "balanced",
+        metadata: MetadataDict | None = None,
+        max_iterations: int = 1000,
+        tolerance: float = 0.05,
+    ) -> list[ExperimentList]:
+        """Partition items with batch-level constraints.
+
+        Creates initial partition using standard partitioning, then iteratively
+        refines to satisfy batch constraints through item swaps between lists.
+
+        Parameters
+        ----------
+        items : list[UUID]
+            Item UUIDs to partition.
+        n_lists : int
+            Number of lists to create.
+        list_constraints : list[ListConstraint] | None, default=None
+            Per-list constraints to satisfy.
+        batch_constraints : list[BatchConstraint] | None, default=None
+            Batch-level constraints to satisfy.
+        strategy : str, default="balanced"
+            Initial partitioning strategy ("balanced", "random", "stratified").
+        metadata : dict[UUID, dict[str, Any]] | None, default=None
+            Metadata for each item UUID.
+        max_iterations : int, default=1000
+            Maximum refinement iterations.
+        tolerance : float, default=0.05
+            Tolerance for batch constraint satisfaction (score >= 1.0 - tolerance).
+
+        Returns
+        -------
+        list[ExperimentList]
+            Partitioned lists satisfying both list and batch constraints.
+
+        Examples
+        --------
+        >>> from sash.lists.constraints import BatchCoverageConstraint
+        >>> partitioner = ListPartitioner(random_seed=42)
+        >>> constraint = BatchCoverageConstraint(
+        ...     property_expression="item['template_id']",
+        ...     target_values=list(range(26)),
+        ...     min_coverage=1.0
+        ... )
+        >>> lists = partitioner.partition_with_batch_constraints(
+        ...     items=item_uids,
+        ...     n_lists=8,
+        ...     batch_constraints=[constraint],
+        ...     metadata=metadata_dict,
+        ...     max_iterations=500
+        ... )
+        """
+        # Initial partitioning with list constraints
+        lists = self.partition(
+            items=items,
+            n_lists=n_lists,
+            constraints=list_constraints,
+            strategy=strategy,
+            metadata=metadata,
+        )
+
+        # If no batch constraints, return immediately
+        if not batch_constraints:
+            return lists
+
+        metadata = metadata or {}
+
+        # Iterative refinement loop
+        for _ in range(max_iterations):
+            # Check all batch constraints
+            all_satisfied = True
+            min_score = 1.0
+            worst_constraint = None
+
+            for constraint in batch_constraints:
+                score = self._compute_batch_constraint_score(
+                    lists, constraint, metadata
+                )
+                if score < (1.0 - tolerance):
+                    all_satisfied = False
+                if score < min_score:
+                    min_score = score
+                    worst_constraint = constraint
+
+            # If all satisfied, we're done
+            if all_satisfied:
+                break
+
+            # Try to improve worst constraint
+            if worst_constraint is not None:
+                improved = self._improve_batch_constraint(
+                    lists,
+                    worst_constraint,
+                    list_constraints or [],
+                    batch_constraints,
+                    metadata,
+                )
+                if not improved:
+                    # No improvement possible, stop
+                    break
+
+        return lists
+
+    def _improve_batch_constraint(
+        self,
+        lists: list[ExperimentList],
+        constraint: BatchConstraint,
+        list_constraints: list[ListConstraint],
+        batch_constraints: list[BatchConstraint],
+        metadata: MetadataDict,
+        n_attempts: int = 100,
+    ) -> bool:
+        """Attempt to improve batch constraint through item swaps.
+
+        Parameters
+        ----------
+        lists : list[ExperimentList]
+            Current lists.
+        constraint : BatchConstraint
+            Constraint to improve.
+        list_constraints : list[ListConstraint]
+            Per-list constraints that must remain satisfied.
+        batch_constraints : list[BatchConstraint]
+            All batch constraints to check.
+        metadata : MetadataDict
+            Item metadata.
+        n_attempts : int, default=100
+            Number of swap attempts.
+
+        Returns
+        -------
+        bool
+            True if improvement was made.
+        """
+        current_score = self._compute_batch_constraint_score(
+            lists, constraint, metadata
+        )
+
+        for _ in range(n_attempts):
+            # Select two random lists
+            if len(lists) < 2:
+                return False
+
+            list_idx_a = int(self._rng.integers(0, len(lists)))
+            list_idx_b = int(self._rng.integers(0, len(lists)))
+
+            if list_idx_a == list_idx_b:
+                continue
+
+            list_a = lists[list_idx_a]
+            list_b = lists[list_idx_b]
+
+            # Select random items from each list
+            if len(list_a.item_refs) == 0 or len(list_b.item_refs) == 0:
+                continue
+
+            item_idx_a = int(self._rng.integers(0, len(list_a.item_refs)))
+            item_idx_b = int(self._rng.integers(0, len(list_b.item_refs)))
+
+            item_a = list_a.item_refs[item_idx_a]
+            item_b = list_b.item_refs[item_idx_b]
+
+            # Perform swap
+            list_a.item_refs[item_idx_a] = item_b
+            list_b.item_refs[item_idx_b] = item_a
+
+            # Check if batch constraint improved
+            new_score = self._compute_batch_constraint_score(
+                lists, constraint, metadata
+            )
+
+            # Check if list constraints still satisfied
+            list_a_valid = (
+                self._count_violations(list_a, list_constraints, metadata) == 0
+            )
+            list_b_valid = (
+                self._count_violations(list_b, list_constraints, metadata) == 0
+            )
+
+            # Accept if improved and list constraints still satisfied
+            if new_score > current_score and list_a_valid and list_b_valid:
+                return True
+
+            # Revert swap
+            list_a.item_refs[item_idx_a] = item_a
+            list_b.item_refs[item_idx_b] = item_b
+
+        return False
+
+    def _compute_batch_constraint_score(
+        self,
+        lists: list[ExperimentList],
+        constraint: BatchConstraint,
+        metadata: MetadataDict,
+    ) -> float:
+        """Compute satisfaction score for batch constraint.
+
+        Parameters
+        ----------
+        lists : list[ExperimentList]
+            All lists in the batch.
+        constraint : BatchConstraint
+            Batch constraint to check.
+        metadata : MetadataDict
+            Item metadata.
+
+        Returns
+        -------
+        float
+            Satisfaction score in [0, 1].
+        """
+        if isinstance(constraint, BatchCoverageConstraint):
+            return self._compute_batch_coverage_score(lists, constraint, metadata)
+        elif isinstance(constraint, BatchBalanceConstraint):
+            return self._compute_batch_balance_score(lists, constraint, metadata)
+        elif isinstance(constraint, BatchDiversityConstraint):
+            return self._compute_batch_diversity_score(lists, constraint, metadata)
+        elif isinstance(constraint, BatchMinOccurrenceConstraint):
+            return self._compute_batch_min_occurrence_score(lists, constraint, metadata)
+        else:
+            return 1.0
+
+    def _compute_batch_coverage_score(
+        self,
+        lists: list[ExperimentList],
+        constraint: BatchCoverageConstraint,
+        metadata: MetadataDict,
+    ) -> float:
+        """Compute coverage score across all lists.
+
+        Parameters
+        ----------
+        lists : list[ExperimentList]
+            All lists in the batch.
+        constraint : BatchCoverageConstraint
+            Coverage constraint.
+        metadata : MetadataDict
+            Item metadata.
+
+        Returns
+        -------
+        float
+            Coverage ratio (observed_values / target_values).
+        """
+        # Collect all observed values across all lists
+        observed_values = set()
+        for exp_list in lists:
+            for item_id in exp_list.item_refs:
+                try:
+                    value = self._extract_property_value(
+                        item_id,
+                        constraint.property_expression,
+                        constraint.context,
+                        metadata,
+                    )
+                    observed_values.add(value)
+                except Exception:
+                    continue
+
+        # Compute coverage
+        if constraint.target_values is None:
+            return 1.0
+
+        if len(constraint.target_values) == 0:
+            return 1.0
+
+        target_set = set(constraint.target_values)
+        coverage = len(observed_values & target_set) / len(target_set)
+        return float(coverage)
+
+    def _compute_batch_balance_score(
+        self,
+        lists: list[ExperimentList],
+        constraint: BatchBalanceConstraint,
+        metadata: MetadataDict,
+    ) -> float:
+        """Compute balance score across all lists.
+
+        Parameters
+        ----------
+        lists : list[ExperimentList]
+            All lists in the batch.
+        constraint : BatchBalanceConstraint
+            Balance constraint.
+        metadata : MetadataDict
+            Item metadata.
+
+        Returns
+        -------
+        float
+            Score in [0, 1] based on deviation from target distribution.
+        """
+        # Count occurrences across all lists
+        counts: Counter = Counter()
+        total = 0
+
+        for exp_list in lists:
+            for item_id in exp_list.item_refs:
+                try:
+                    value = self._extract_property_value(
+                        item_id,
+                        constraint.property_expression,
+                        constraint.context,
+                        metadata,
+                    )
+                    counts[value] += 1
+                    total += 1
+                except Exception:
+                    continue
+
+        if total == 0:
+            return 1.0
+
+        # Compute actual distribution
+        actual_dist = {k: v / total for k, v in counts.items()}
+
+        # Compute max deviation from target
+        max_deviation = 0.0
+        for value, target_prob in constraint.target_distribution.items():
+            actual_prob = actual_dist.get(value, 0.0)
+            deviation = abs(actual_prob - target_prob)
+            max_deviation = max(max_deviation, deviation)
+
+        # Score decreases with deviation
+        score = max(0.0, 1.0 - max_deviation)
+        return float(score)
+
+    def _compute_batch_diversity_score(
+        self,
+        lists: list[ExperimentList],
+        constraint: BatchDiversityConstraint,
+        metadata: MetadataDict,
+    ) -> float:
+        """Compute diversity score across all lists.
+
+        Parameters
+        ----------
+        lists : list[ExperimentList]
+            All lists in the batch.
+        constraint : BatchDiversityConstraint
+            Diversity constraint.
+        metadata : MetadataDict
+            Item metadata.
+
+        Returns
+        -------
+        float
+            Score in [0, 1]. 1.0 if constraint satisfied, decreases with violations.
+        """
+        # Track which lists contain each value
+        value_to_lists: defaultdict[str | int | float, set[int]] = defaultdict(set)
+
+        for list_idx, exp_list in enumerate(lists):
+            for item_id in exp_list.item_refs:
+                try:
+                    value = self._extract_property_value(
+                        item_id,
+                        constraint.property_expression,
+                        constraint.context,
+                        metadata,
+                    )
+                    value_to_lists[value].add(list_idx)
+                except Exception:
+                    continue
+
+        if not value_to_lists:
+            return 1.0
+
+        # Compute violations
+        violations = 0
+        total_values = len(value_to_lists)
+
+        for _value, list_indices in value_to_lists.items():
+            if len(list_indices) > constraint.max_lists_per_value:
+                violations += 1
+
+        # Score = 1.0 when no violations, decreases linearly
+        score = 1.0 - (violations / max(total_values, 1))
+        return float(max(0.0, score))
+
+    def _compute_batch_min_occurrence_score(
+        self,
+        lists: list[ExperimentList],
+        constraint: BatchMinOccurrenceConstraint,
+        metadata: MetadataDict,
+    ) -> float:
+        """Compute minimum occurrence score across all lists.
+
+        Parameters
+        ----------
+        lists : list[ExperimentList]
+            All lists in the batch.
+        constraint : BatchMinOccurrenceConstraint
+            Minimum occurrence constraint.
+        metadata : MetadataDict
+            Item metadata.
+
+        Returns
+        -------
+        float
+            Score in [0, 1] based on minimum count ratio.
+        """
+        # Count occurrences of each value
+        counts: Counter = Counter()
+
+        for exp_list in lists:
+            for item_id in exp_list.item_refs:
+                try:
+                    value = self._extract_property_value(
+                        item_id,
+                        constraint.property_expression,
+                        constraint.context,
+                        metadata,
+                    )
+                    counts[value] += 1
+                except Exception:
+                    continue
+
+        if not counts:
+            return 1.0
+
+        # Score = min(count / target) across all values
+        min_ratio = float("inf")
+        for _value, count in counts.items():
+            ratio = count / constraint.min_occurrences
+            min_ratio = min(min_ratio, ratio)
+
+        # Clip to [0, 1]
+        score = min(1.0, max(0.0, min_ratio))
+        return float(score)
