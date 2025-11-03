@@ -6,14 +6,9 @@ from uuid import uuid4
 
 import pytest
 
-from bead.config.models import NoiseModelConfig, SimulatedAnnotatorConfig
-from bead.items.models import (
-    Item,
-    ItemTemplate,
-    ModelOutput,
-    PresentationSpec,
-    TaskSpec,
-)
+from bead.config.simulation import NoiseModelConfig, SimulatedAnnotatorConfig
+from bead.items.item import Item, ModelOutput
+from bead.items.item_template import ItemTemplate, PresentationSpec, TaskSpec
 from bead.simulation.annotators.base import SimulatedAnnotator
 from bead.simulation.annotators.lm_based import LMBasedAnnotator
 

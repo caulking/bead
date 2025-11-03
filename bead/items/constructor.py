@@ -28,7 +28,8 @@ from bead.dsl.parser import parse
 from bead.dsl.stdlib import register_stdlib
 from bead.items.adapters.registry import ModelAdapterRegistry
 from bead.items.cache import ModelOutputCache
-from bead.items.models import Item, ItemTemplate, MetadataValue, ModelOutput
+from bead.items.item import Item, MetadataValue, ModelOutput
+from bead.items.item_template import ItemTemplate
 from bead.resources.constraints import Constraint
 from bead.templates.filler import FilledTemplate
 from bead.templates.resolver import ConstraintResolver

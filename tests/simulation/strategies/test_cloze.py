@@ -6,14 +6,8 @@ from uuid import uuid4
 
 import numpy as np
 
-from bead.items.models import (
-    Item,
-    ItemTemplate,
-    ModelOutput,
-    PresentationSpec,
-    TaskSpec,
-    UnfilledSlot,
-)
+from bead.items.item import Item, ModelOutput, UnfilledSlot
+from bead.items.item_template import ItemTemplate, PresentationSpec, TaskSpec
 from bead.simulation.strategies.cloze import ClozeStrategy
 
 

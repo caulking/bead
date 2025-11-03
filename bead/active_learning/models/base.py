@@ -8,10 +8,10 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 from bead.data.base import BeadBaseModel
-from bead.items.models import Item
+from bead.items.item import Item
 
 if TYPE_CHECKING:
-    from bead.items.models import ItemTemplate, TaskType
+    from bead.items.item_template import ItemTemplate, TaskType
 
 __all__ = ["ActiveLearningModel", "ModelPrediction"]
 

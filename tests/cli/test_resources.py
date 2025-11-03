@@ -9,8 +9,9 @@ from pathlib import Path
 from click.testing import CliRunner
 
 from bead.cli.resources import resources
-from bead.resources.lexicon import LexicalItem, Lexicon
-from bead.resources.structures import Template
+from bead.resources.lexical_item import LexicalItem
+from bead.resources.lexicon import Lexicon
+from bead.resources.template import Template
 
 
 def test_create_lexicon_from_csv(cli_runner: CliRunner, tmp_path: Path) -> None:

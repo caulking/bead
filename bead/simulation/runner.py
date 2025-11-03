@@ -7,8 +7,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from bead.config.models import SimulationRunnerConfig
-    from bead.items.models import Item, ItemTemplate
+    from bead.config.simulation import SimulationRunnerConfig
+    from bead.items.item import Item
+    from bead.items.item_template import ItemTemplate
 
 
 class SimulationRunner:
@@ -21,7 +22,7 @@ class SimulationRunner:
 
     Examples
     --------
-    >>> from bead.config.models import SimulationRunnerConfig, SimulatedAnnotatorConfig
+    >>> from bead.config.simulation import SimulationRunnerConfig, SimulatedAnnotatorConfig
     >>> config = SimulationRunnerConfig(
     ...     annotator_configs=[
     ...         SimulatedAnnotatorConfig(strategy="lm_score", random_state=1),

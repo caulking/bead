@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from bead.resources.adapters.base import ResourceAdapter
-from bead.resources.models import LexicalItem
+from bead.resources.lexical_item import LexicalItem
 
 
 def test_cannot_instantiate_abstract_class() -> None:

@@ -6,7 +6,7 @@ checking for common issues before the configuration is used.
 
 from __future__ import annotations
 
-from bead.config.models import BeadConfig
+from bead.config.config import BeadConfig
 
 
 def check_paths_exist(config: BeadConfig) -> list[str]:

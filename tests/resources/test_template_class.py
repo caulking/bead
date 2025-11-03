@@ -7,7 +7,7 @@ from uuid import UUID, uuid4
 import pytest
 
 from bead.resources.classification import TemplateClass
-from bead.resources.structures import Slot, Template
+from bead.resources.template import Slot, Template
 
 
 class TestTemplateClassCreation:

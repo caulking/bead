@@ -4,7 +4,7 @@ from uuid import uuid4
 
 import pytest
 
-from bead.items.models import Item
+from bead.items.item import Item
 
 
 @pytest.fixture

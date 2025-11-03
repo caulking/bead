@@ -8,17 +8,15 @@ from __future__ import annotations
 
 from pydantic import BaseModel
 
-from bead.config.models import (
-    ActiveLearningConfig,
-    DeploymentConfig,
-    ItemConfig,
-    ListConfig,
-    LoggingConfig,
-    PathsConfig,
-    ResourceConfig,
-    BeadConfig,
-    TemplateConfig,
-)
+from bead.config.active_learning import ActiveLearningConfig
+from bead.config.config import BeadConfig
+from bead.config.deployment import DeploymentConfig
+from bead.config.item import ItemConfig
+from bead.config.list import ListConfig
+from bead.config.logging import LoggingConfig
+from bead.config.paths import PathsConfig
+from bead.config.resources import ResourceConfig
+from bead.config.template import TemplateConfig
 
 DEFAULT_CONFIG = BeadConfig(
     profile="default",
@@ -87,7 +85,7 @@ def get_default_for_model[T: BaseModel](model_type: type[T]) -> T:
     Examples
     --------
     >>> from bead.config.defaults import get_default_for_model
-    >>> from bead.config.models import PathsConfig
+    >>> from bead.config.paths import PathsConfig
     >>> paths = get_default_for_model(PathsConfig)
     >>> paths.data_dir
     PosixPath('data')

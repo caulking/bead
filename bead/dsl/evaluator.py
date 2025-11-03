@@ -17,9 +17,9 @@ from bead.dsl.parser import parse
 from bead.dsl.stdlib import register_stdlib
 
 if TYPE_CHECKING:
-    from bead.items.models import Item
+    from bead.items.item import Item
     from bead.resources.constraints import ContextValue
-    from bead.resources.models import LexicalItem
+    from bead.resources.lexical_item import LexicalItem
     from bead.templates.filler import FilledTemplate
 
 

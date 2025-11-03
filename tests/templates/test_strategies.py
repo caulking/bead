@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from bead.resources.models import LexicalItem
+from bead.resources.lexical_item import LexicalItem
 from bead.templates.strategies import (
     ExhaustiveStrategy,
     RandomStrategy,

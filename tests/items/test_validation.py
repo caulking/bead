@@ -7,11 +7,10 @@ from uuid import uuid4
 import pytest
 from pydantic import ValidationError
 
-from bead.items.models import (
-    Item,
+from bead.items.item import Item, ModelOutput
+from bead.items.item_template import (
     ItemElement,
     ItemTemplate,
-    ModelOutput,
     PresentationSpec,
     TaskSpec,
 )

@@ -15,8 +15,9 @@ from bead.simulation.strategies.multi_select import MultiSelectStrategy
 from bead.simulation.strategies.ordinal_scale import OrdinalScaleStrategy
 
 if TYPE_CHECKING:
-    from bead.config.models import SimulatedAnnotatorConfig
-    from bead.items.models import Item, ItemTemplate
+    from bead.config.simulation import SimulatedAnnotatorConfig
+    from bead.items.item import Item
+    from bead.items.item_template import ItemTemplate
 
 
 class DistanceBasedAnnotator(SimulatedAnnotator):
@@ -31,7 +32,7 @@ class DistanceBasedAnnotator(SimulatedAnnotator):
 
     Examples
     --------
-    >>> from bead.config.models import SimulatedAnnotatorConfig, NoiseModelConfig
+    >>> from bead.config.simulation import SimulatedAnnotatorConfig, NoiseModelConfig
     >>> config = SimulatedAnnotatorConfig(
     ...     strategy="distance",
     ...     model_output_key="embedding",

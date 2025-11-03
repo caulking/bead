@@ -7,7 +7,7 @@ import yaml
 
 from bead.config.defaults import get_default_config
 from bead.config.loader import load_config
-from bead.config.models import BeadConfig
+from bead.config.config import BeadConfig
 from bead.config.serialization import config_to_dict, save_yaml, to_yaml
 
 

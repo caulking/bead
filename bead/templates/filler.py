@@ -15,8 +15,8 @@ from bead.data.base import BeadBaseModel
 from bead.data.language_codes import LanguageCode, validate_iso639_code
 from bead.dsl import ast
 from bead.dsl.parser import parse
-from bead.resources.models import LexicalItem
-from bead.resources.structures import Template
+from bead.resources.lexical_item import LexicalItem
+from bead.resources.template import Template
 from bead.templates.resolver import ConstraintResolver
 
 if TYPE_CHECKING:

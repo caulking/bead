@@ -20,8 +20,9 @@ from bead.deployment.jatos.api import JATOSClient
 from bead.deployment.jatos.exporter import JATOSExporter
 from bead.deployment.jspsych.config import ExperimentConfig
 from bead.deployment.jspsych.generator import JsPsychExperimentGenerator
-from bead.items.models import Item, ItemTemplate
-from bead.lists.models import ExperimentList
+from bead.items.item import Item
+from bead.items.item_template import ItemTemplate
+from bead.lists import ExperimentList
 
 console = Console()
 

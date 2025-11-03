@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from bead.resources.adapters.cache import AdapterCache
 from bead.resources.adapters.unimorph import UniMorphAdapter
-from bead.resources.models import LexicalItem
+from bead.resources.lexical_item import LexicalItem
 
 
 class MorphologyExtractor:

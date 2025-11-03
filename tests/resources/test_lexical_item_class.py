@@ -7,7 +7,7 @@ from uuid import UUID, uuid4
 import pytest
 
 from bead.resources.classification import LexicalItemClass
-from bead.resources.models import LexicalItem
+from bead.resources.lexical_item import LexicalItem
 
 
 class TestLexicalItemClassCreation:

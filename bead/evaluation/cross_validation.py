@@ -13,7 +13,7 @@ from typing import TypeVar
 import numpy as np
 
 from bead.active_learning.trainers.base import BaseTrainer
-from bead.items.models import Item
+from bead.items.item import Item
 
 T = TypeVar("T")
 

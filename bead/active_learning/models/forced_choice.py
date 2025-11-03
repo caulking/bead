@@ -11,8 +11,9 @@ import torch.nn as nn
 from transformers import AutoModel, AutoTokenizer
 
 from bead.active_learning.models.base import ActiveLearningModel, ModelPrediction
-from bead.config.models import ForcedChoiceModelConfig
-from bead.items.models import Item, ItemTemplate, TaskType
+from bead.config.active_learning import ForcedChoiceModelConfig
+from bead.items.item import Item
+from bead.items.item_template import ItemTemplate, TaskType
 
 __all__ = ["ForcedChoiceModel"]
 
@@ -49,8 +50,8 @@ class ForcedChoiceModel(ActiveLearningModel):
     Examples
     --------
     >>> from uuid import uuid4
-    >>> from bead.items.models import Item
-    >>> from bead.config.models import ForcedChoiceModelConfig
+    >>> from bead.items.item import Item
+    >>> from bead.config.active_learning import ForcedChoiceModelConfig
     >>> items = [
     ...     Item(
     ...         item_template_id=uuid4(),

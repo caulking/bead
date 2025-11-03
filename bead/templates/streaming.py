@@ -7,8 +7,8 @@ from collections.abc import Iterator
 from bead.data.language_codes import LanguageCode, validate_iso639_code
 from bead.resources.adapters.registry import AdapterRegistry
 from bead.resources.lexicon import Lexicon
-from bead.resources.models import LexicalItem
-from bead.resources.structures import Template
+from bead.resources.lexical_item import LexicalItem
+from bead.resources.template import Template
 from bead.templates.combinatorics import cartesian_product
 from bead.templates.filler import FilledTemplate
 from bead.templates.resolver import ConstraintResolver

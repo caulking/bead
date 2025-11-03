@@ -14,7 +14,7 @@ from bead.resources.constraints import Constraint
 
 if TYPE_CHECKING:
     from bead.resources.constraints import ContextValue
-    from bead.resources.models import LexicalItem
+    from bead.resources.lexical_item import LexicalItem
 
 
 class ConstraintResolver:

@@ -10,7 +10,7 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 from bead.data.language_codes import LanguageCode
-from bead.resources.models import LexicalItem
+from bead.resources.lexical_item import LexicalItem
 
 
 class ResourceAdapter(ABC):

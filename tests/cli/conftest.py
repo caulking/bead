@@ -12,10 +12,11 @@ from pytest_mock import MockerFixture
 
 from bead.deployment.jatos.api import JATOSClient
 from bead.items.adapters.base import ModelAdapter
-from bead.items.models import Item, ModelOutput
-from bead.lists.models import ExperimentList
-from bead.resources.lexicon import LexicalItem, Lexicon
-from bead.resources.structures import Slot, Template
+from bead.items.item import Item, ModelOutput
+from bead.lists import ExperimentList
+from bead.resources.lexical_item import LexicalItem
+from bead.resources.lexicon import Lexicon
+from bead.resources.template import Slot, Template
 from bead.resources.template_collection import TemplateCollection
 from bead.templates.filler import FilledTemplate
 

@@ -10,15 +10,14 @@ import uuid
 import numpy as np
 import pytest
 
-from bead.config.models import (
+from bead.config.simulation import (
     NoiseModelConfig,
     SimulatedAnnotatorConfig,
     SimulationRunnerConfig,
 )
-from bead.items.models import (
-    Item,
+from bead.items.item import Item, ModelOutput
+from bead.items.item_template import (
     ItemTemplate,
-    ModelOutput,
     PresentationSpec,
     TaskSpec,
     TaskType,

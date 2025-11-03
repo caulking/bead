@@ -4,12 +4,8 @@ from uuid import uuid4
 
 import pytest
 
-from bead.items.models import (
-    Item,
-    ItemTemplate,
-    PresentationSpec,
-    TaskSpec,
-)
+from bead.items.item import Item
+from bead.items.item_template import ItemTemplate, PresentationSpec, TaskSpec
 
 
 @pytest.fixture

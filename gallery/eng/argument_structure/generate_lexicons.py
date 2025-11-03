@@ -20,7 +20,7 @@ from utils.verbnet_parser import VerbNetExtractor
 
 from bead.resources.adapters.cache import AdapterCache
 from bead.resources.lexicon import Lexicon
-from bead.resources.models import LexicalItem
+from bead.resources.lexical_item import LexicalItem
 
 
 def main(verb_limit: int | None = None):

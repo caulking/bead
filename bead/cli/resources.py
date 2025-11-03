@@ -18,8 +18,9 @@ from rich.console import Console
 from rich.table import Table
 
 from bead.cli.utils import print_error, print_info, print_success
-from bead.resources.lexicon import LexicalItem, Lexicon
-from bead.resources.structures import Slot, Template
+from bead.resources.lexical_item import LexicalItem
+from bead.resources.lexicon import Lexicon
+from bead.resources.template import Slot, Template
 from bead.resources.template_collection import TemplateCollection
 
 console = Console()

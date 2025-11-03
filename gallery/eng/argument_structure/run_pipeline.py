@@ -29,7 +29,7 @@ from bead.training.active_learning.selection import UncertaintySampler
 from bead.training.trainers.base import ModelMetadata
 
 from bead.evaluation.convergence import ConvergenceDetector
-from bead.items.models import Item
+from bead.items.item import Item
 
 
 def load_config(config_path: Path) -> dict[str, Any]:

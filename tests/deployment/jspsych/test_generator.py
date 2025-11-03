@@ -14,7 +14,7 @@ from bead.deployment.jspsych.config import (
     RatingScaleConfig,
 )
 from bead.deployment.jspsych.generator import JsPsychExperimentGenerator
-from bead.lists.models import ExperimentList
+from bead.lists import ExperimentList
 
 
 class TestGeneratorInitialization:

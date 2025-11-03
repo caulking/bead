@@ -8,8 +8,9 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 if TYPE_CHECKING:
-    from bead.config.models import SimulatedAnnotatorConfig
-    from bead.items.models import Item, ItemTemplate
+    from bead.config.simulation import SimulatedAnnotatorConfig
+    from bead.items.item import Item
+    from bead.items.item_template import ItemTemplate
     from bead.simulation.noise_models.base import NoiseModel
     from bead.simulation.strategies.base import SimulationStrategy
 
@@ -67,7 +68,7 @@ class SimulatedAnnotator(ABC):
 
         Examples
         --------
-        >>> from bead.config.models import SimulatedAnnotatorConfig
+        >>> from bead.config.simulation import SimulatedAnnotatorConfig
         >>> config = SimulatedAnnotatorConfig(strategy="lm_score")
         >>> annotator = SimulatedAnnotator.from_config(config)
         """

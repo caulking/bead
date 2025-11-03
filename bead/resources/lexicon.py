@@ -19,7 +19,7 @@ from pydantic import Field
 
 from bead.data.base import BeadBaseModel
 from bead.data.language_codes import LanguageCode
-from bead.resources.models import LexicalItem
+from bead.resources.lexical_item import LexicalItem
 
 # Type alias for supported DataFrame types
 type DataFrame = pd.DataFrame | pl.DataFrame

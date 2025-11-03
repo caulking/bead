@@ -1,41 +1,40 @@
 """Item models for experimental stimuli."""
 
-from bead.items.models import (
+from bead.items.item import Item, ItemCollection, ModelOutput, UnfilledSlot
+from bead.items.item_template import (
     ChunkingSpec,
     ChunkingUnit,
     ElementRefType,
-    Item,
-    ItemCollection,
     ItemElement,
     ItemTemplate,
     ItemTemplateCollection,
     JudgmentType,
-    ModelOutput,
     ParseType,
     PresentationMode,
     PresentationSpec,
     TaskSpec,
     TaskType,
     TimingParams,
-    UnfilledSlot,
 )
 
 __all__ = [
+    # Item template types
     "ChunkingSpec",
     "ChunkingUnit",
     "ElementRefType",
-    "Item",
-    "ItemCollection",
     "ItemElement",
     "ItemTemplate",
     "ItemTemplateCollection",
     "JudgmentType",
-    "ModelOutput",
     "ParseType",
     "PresentationMode",
     "PresentationSpec",
     "TaskSpec",
     "TaskType",
     "TimingParams",
+    # Item types
+    "Item",
+    "ItemCollection",
+    "ModelOutput",
     "UnfilledSlot",
 ]

@@ -13,7 +13,7 @@ from bead.lists.constraints import (
     SizeConstraint,
     UniquenessConstraint,
 )
-from bead.lists.models import ExperimentList
+from bead.lists import ExperimentList
 from bead.lists.partitioner import ListPartitioner
 
 type ItemMetadata = dict[str, str | float | int]

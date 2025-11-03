@@ -19,7 +19,8 @@ from bead.lists.constraints import (
     SizeConstraint,
     UniquenessConstraint,
 )
-from bead.lists.models import ExperimentList, ListCollection
+from bead.lists.experiment_list import ExperimentList
+from bead.lists.list_collection import ListCollection
 
 __all__ = [
     "ExperimentList",

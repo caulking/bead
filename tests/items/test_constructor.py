@@ -13,14 +13,14 @@ from bead.items.adapters.base import ModelAdapter
 from bead.items.adapters.registry import ModelAdapterRegistry
 from bead.items.cache import ModelOutputCache
 from bead.items.constructor import ItemConstructor
-from bead.items.models import (
+from bead.items.item_template import (
     ItemElement,
     ItemTemplate,
     PresentationSpec,
     TaskSpec,
 )
 from bead.resources.constraints import Constraint
-from bead.resources.models import LexicalItem
+from bead.resources.lexical_item import LexicalItem
 from bead.templates.filler import FilledTemplate
 
 

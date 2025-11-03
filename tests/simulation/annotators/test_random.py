@@ -6,14 +6,9 @@ from uuid import uuid4
 
 import pytest
 
-from bead.config.models import SimulatedAnnotatorConfig
-from bead.items.models import (
-    Item,
-    ItemTemplate,
-    PresentationSpec,
-    TaskSpec,
-    UnfilledSlot,
-)
+from bead.config.simulation import SimulatedAnnotatorConfig
+from bead.items.item import Item, UnfilledSlot
+from bead.items.item_template import ItemTemplate, PresentationSpec, TaskSpec
 from bead.simulation.annotators.random import RandomAnnotator
 
 

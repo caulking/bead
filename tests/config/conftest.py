@@ -6,18 +6,16 @@ from pathlib import Path
 
 import pytest
 
-from bead.config.models import (
-    ActiveLearningConfig,
-    DeploymentConfig,
-    ItemConfig,
-    ListConfig,
-    LoggingConfig,
-    ModelConfig,
-    PathsConfig,
-    ResourceConfig,
-    BeadConfig,
-    TemplateConfig,
-)
+from bead.config.active_learning import ActiveLearningConfig
+from bead.config.config import BeadConfig
+from bead.config.deployment import DeploymentConfig
+from bead.config.item import ItemConfig
+from bead.config.list import ListConfig
+from bead.config.logging import LoggingConfig
+from bead.config.model import ModelConfig
+from bead.config.paths import PathsConfig
+from bead.config.resources import ResourceConfig
+from bead.config.template import TemplateConfig
 
 
 @pytest.fixture

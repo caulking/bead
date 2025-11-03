@@ -12,8 +12,8 @@ from typing import TYPE_CHECKING, Any
 import numpy as np
 
 from bead.active_learning.strategies import create_strategy
-from bead.config.models import UncertaintySamplerConfig
-from bead.items.models import Item
+from bead.config.active_learning import UncertaintySamplerConfig
+from bead.items.item import Item
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -94,8 +94,8 @@ class UncertaintySampler(ItemSelector):
     --------
     >>> import numpy as np
     >>> from uuid import uuid4
-    >>> from bead.items.models import Item
-    >>> from bead.config.models import UncertaintySamplerConfig
+    >>> from bead.items.item import Item
+    >>> from bead.config.active_learning import UncertaintySamplerConfig
     >>> # Create sampler
     >>> config = UncertaintySamplerConfig(method="entropy")
     >>> sampler = UncertaintySampler(config=config)
@@ -159,8 +159,8 @@ class UncertaintySampler(ItemSelector):
         --------
         >>> import numpy as np
         >>> from uuid import uuid4
-        >>> from bead.items.models import Item
-        >>> from bead.config.models import UncertaintySamplerConfig
+        >>> from bead.items.item import Item
+        >>> from bead.config.active_learning import UncertaintySamplerConfig
         >>> config = UncertaintySamplerConfig(method="entropy")
         >>> sampler = UncertaintySampler(config=config)
         >>> items = [
@@ -225,7 +225,7 @@ class UncertaintySampler(ItemSelector):
         --------
         >>> import numpy as np
         >>> from uuid import uuid4
-        >>> from bead.items.models import Item
+        >>> from bead.items.item import Item
         >>> sampler = UncertaintySampler()
         >>> items = [
         ...     Item(item_template_id=uuid4(), rendered_elements={})
@@ -272,7 +272,7 @@ class RandomSelector(ItemSelector):
     Examples
     --------
     >>> from uuid import uuid4
-    >>> from bead.items.models import Item
+    >>> from bead.items.item import Item
     >>> selector = RandomSelector(seed=42)
     >>> items = [
     ...     Item(item_template_id=uuid4(), rendered_elements={})
@@ -326,7 +326,7 @@ class RandomSelector(ItemSelector):
         Examples
         --------
         >>> from uuid import uuid4
-        >>> from bead.items.models import Item
+        >>> from bead.items.item import Item
         >>> selector = RandomSelector(seed=123)
         >>> items = [
         ...     Item(item_template_id=uuid4(), rendered_elements={})

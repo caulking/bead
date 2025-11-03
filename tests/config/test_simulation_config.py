@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from bead.config.models import (
+from bead.config.simulation import (
     NoiseModelConfig,
     SimulatedAnnotatorConfig,
     SimulationRunnerConfig,

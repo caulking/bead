@@ -12,9 +12,10 @@ from bead.deployment.jspsych.config import (
     ExperimentConfig,
     RatingScaleConfig,
 )
-from bead.items.models import Item, ItemTemplate, PresentationSpec, TaskSpec
+from bead.items.item import Item
+from bead.items.item_template import ItemTemplate, PresentationSpec, TaskSpec
 from bead.lists.constraints import OrderingConstraint
-from bead.lists.models import ExperimentList
+from bead.lists import ExperimentList
 
 
 @pytest.fixture

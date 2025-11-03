@@ -8,7 +8,8 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 if TYPE_CHECKING:
-    from bead.items.models import Item, ItemTemplate
+    from bead.items.item import Item
+    from bead.items.item_template import ItemTemplate
 
 
 class SimulationStrategy(ABC):

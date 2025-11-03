@@ -25,18 +25,16 @@ from __future__ import annotations
 from bead.config.defaults import DEFAULT_CONFIG, get_default_config
 from bead.config.env import load_from_env
 from bead.config.loader import load_config, load_yaml_file, merge_configs
-from bead.config.models import (
-    ActiveLearningConfig,
-    DeploymentConfig,
-    ItemConfig,
-    ListConfig,
-    LoggingConfig,
-    ModelConfig,
-    PathsConfig,
-    ResourceConfig,
-    BeadConfig,
-    TemplateConfig,
-)
+from bead.config.active_learning import ActiveLearningConfig
+from bead.config.config import BeadConfig
+from bead.config.deployment import DeploymentConfig
+from bead.config.item import ItemConfig
+from bead.config.list import ListConfig
+from bead.config.logging import LoggingConfig
+from bead.config.model import ModelConfig
+from bead.config.paths import PathsConfig
+from bead.config.resources import ResourceConfig
+from bead.config.template import TemplateConfig
 from bead.config.profiles import (
     DEV_CONFIG,
     PROD_CONFIG,

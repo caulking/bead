@@ -27,7 +27,7 @@ from bead.lists.constraints import (
     SizeConstraint,
     UniquenessConstraint,
 )
-from bead.lists.models import ExperimentList
+from bead.lists import ExperimentList
 from bead.resources.constraints import ContextValue
 
 # Type aliases for clarity

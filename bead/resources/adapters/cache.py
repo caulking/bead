@@ -10,7 +10,7 @@ import hashlib
 import json
 from typing import Any
 
-from bead.resources.models import LexicalItem
+from bead.resources.lexical_item import LexicalItem
 
 
 class AdapterCache:

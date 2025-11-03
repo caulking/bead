@@ -7,11 +7,12 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pytest
 
-from bead.config.models import SimulatedAnnotatorConfig
+from bead.config.simulation import SimulatedAnnotatorConfig
 from bead.simulation.annotators.base import SimulatedAnnotator
 
 if TYPE_CHECKING:
-    from bead.items.models import Item, ItemTemplate
+    from bead.items.item import Item
+    from bead.items.item_template import ItemTemplate
 
 
 class ConcreteAnnotator(SimulatedAnnotator):

@@ -16,7 +16,7 @@ from glazing.verbnet.loader import VerbNetLoader
 from bead.data.language_codes import LanguageCode
 from bead.resources.adapters.base import ResourceAdapter
 from bead.resources.adapters.cache import AdapterCache
-from bead.resources.models import LexicalItem
+from bead.resources.lexical_item import LexicalItem
 
 
 class GlazingAdapter(ResourceAdapter):

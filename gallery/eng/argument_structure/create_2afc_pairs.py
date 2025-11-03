@@ -21,9 +21,9 @@ import numpy as np
 
 from bead.items.adapters.huggingface import HuggingFaceLanguageModel
 from bead.items.cache import ModelOutputCache
-from bead.items.models import Item
+from bead.items.item import Item
 from bead.resources.lexicon import Lexicon
-from bead.resources.structures import Template
+from bead.resources.template import Template
 
 
 def load_cross_product_items(path: str, limit: int | None = None) -> list[Item]:

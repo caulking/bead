@@ -9,11 +9,11 @@ from typing import Literal
 
 from bead.data.language_codes import LanguageCode, validate_iso639_code
 from bead.dsl.evaluator import DSLEvaluator
-from bead.items.models import Item
+from bead.items.item import Item
 from bead.resources.constraints import ContextValue
 from bead.resources.lexicon import Lexicon
-from bead.resources.models import LexicalItem
-from bead.resources.structures import Slot, Template
+from bead.resources.lexical_item import LexicalItem
+from bead.resources.template import Slot, Template
 from bead.templates.adapters import HuggingFaceMLMAdapter, ModelOutputCache
 from bead.templates.combinatorics import cartesian_product
 from bead.templates.filler import FilledTemplate, TemplateFiller

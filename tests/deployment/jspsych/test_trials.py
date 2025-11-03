@@ -19,7 +19,8 @@ from bead.deployment.jspsych.trials import (
     create_instruction_trial,
     create_trial,
 )
-from bead.items.models import Item, ItemTemplate, PresentationSpec, TaskSpec
+from bead.items.item import Item
+from bead.items.item_template import ItemTemplate, PresentationSpec, TaskSpec
 
 
 class TestCreateTrial:

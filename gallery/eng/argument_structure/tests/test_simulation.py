@@ -15,7 +15,7 @@ from uuid import uuid4
 
 import pytest
 
-from bead.items.models import Item
+from bead.items.item import Item
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from simulate_pipeline import (

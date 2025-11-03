@@ -15,8 +15,8 @@ from __future__ import annotations
 from pathlib import Path
 
 from bead.resources.constraints import Constraint
-from bead.resources.models import LexicalItem
-from bead.resources.structures import Slot, Template
+from bead.resources.lexical_item import LexicalItem
+from bead.resources.template import Slot, Template
 
 from .clausal_frames import ClausalTemplate, map_verbnet_to_clausal_templates
 from .constraint_builder import (

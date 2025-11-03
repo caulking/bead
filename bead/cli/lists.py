@@ -16,8 +16,8 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
 
 from bead.cli.utils import print_error, print_info, print_success
-from bead.items.models import Item
-from bead.lists.models import ExperimentList
+from bead.items.item import Item
+from bead.lists import ExperimentList
 from bead.lists.partitioner import ListPartitioner
 
 console = Console()

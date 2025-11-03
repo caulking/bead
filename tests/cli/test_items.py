@@ -8,13 +8,13 @@ from uuid import uuid4
 from click.testing import CliRunner
 
 from bead.cli.items import items
-from bead.items.models import (
+from bead.items.item_template import (
     ItemElement,
     ItemTemplate,
     PresentationSpec,
     TaskSpec,
 )
-from bead.resources.models import LexicalItem
+from bead.resources.lexical_item import LexicalItem
 from bead.templates.filler import FilledTemplate
 
 

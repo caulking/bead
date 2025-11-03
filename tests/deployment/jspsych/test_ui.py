@@ -9,7 +9,7 @@ from bead.deployment.jspsych.ui.components import (
     infer_widget_type,
 )
 from bead.deployment.jspsych.ui.styles import MaterialDesignStylesheet
-from bead.items.models import UnfilledSlot
+from bead.items.item import UnfilledSlot
 from bead.resources.constraints import Constraint
 
 

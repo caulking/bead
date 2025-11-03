@@ -5,19 +5,16 @@ and template structures.
 """
 
 from bead.resources.constraints import Constraint
+from bead.resources.lexical_item import LexicalItem, MWEComponent, MultiWordExpression
 from bead.resources.lexicon import Lexicon
-from bead.resources.models import LexicalItem
-from bead.resources.structures import (
-    Slot,
-    Template,
-    TemplateSequence,
-    TemplateTree,
-)
+from bead.resources.template import Slot, Template, TemplateSequence, TemplateTree
 from bead.resources.template_collection import TemplateCollection
 
 __all__ = [
     # Lexical items
     "LexicalItem",
+    "MWEComponent",
+    "MultiWordExpression",
     # Lexicon
     "Lexicon",
     # Constraints

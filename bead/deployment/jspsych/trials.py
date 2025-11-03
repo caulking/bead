@@ -14,7 +14,8 @@ from bead.deployment.jspsych.config import (
     ExperimentConfig,
     RatingScaleConfig,
 )
-from bead.items.models import Item, ItemTemplate
+from bead.items.item import Item
+from bead.items.item_template import ItemTemplate
 
 
 def _serialize_item_metadata(item: Item, template: ItemTemplate) -> dict[str, Any]:
@@ -184,7 +185,7 @@ def create_trial(
     Examples
     --------
     >>> from uuid import UUID
-    >>> from bead.items.models import TaskSpec, PresentationSpec
+    >>> from bead.items.item_template import TaskSpec, PresentationSpec
     >>> item = Item(
     ...     item_template_id=UUID("12345678-1234-5678-1234-567812345678"),
     ...     rendered_elements={"sentence": "The cat broke the vase"}

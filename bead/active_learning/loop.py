@@ -14,9 +14,10 @@ import numpy as np
 
 from bead.active_learning.selection import ItemSelector
 from bead.active_learning.trainers.base import ModelMetadata
-from bead.config.models import ActiveLearningLoopConfig
+from bead.config.active_learning import ActiveLearningLoopConfig
 from bead.evaluation.convergence import ConvergenceDetector
-from bead.items.models import Item, ItemTemplate
+from bead.items.item import Item
+from bead.items.item_template import ItemTemplate
 
 if TYPE_CHECKING:
     from bead.active_learning.models.base import ActiveLearningModel
@@ -72,7 +73,7 @@ class ActiveLearningLoop:
     Examples
     --------
     >>> from bead.active_learning.selection import UncertaintySampler
-    >>> from bead.config.models import ActiveLearningLoopConfig
+    >>> from bead.config.active_learning import ActiveLearningLoopConfig
     >>> import numpy as np
     >>> selector = UncertaintySampler()
     >>> config = ActiveLearningLoopConfig(  # doctest: +SKIP
@@ -149,8 +150,8 @@ class ActiveLearningLoop:
         Examples
         --------
         >>> from uuid import uuid4
-        >>> from bead.items.models import Item
-        >>> from bead.config.models import ActiveLearningLoopConfig
+        >>> from bead.items.item import Item
+        >>> from bead.config.active_learning import ActiveLearningLoopConfig
         >>> selector = UncertaintySampler()  # doctest: +SKIP
         >>> config = ActiveLearningLoopConfig(max_iterations=3)  # doctest: +SKIP
         >>> loop = ActiveLearningLoop(  # doctest: +SKIP
@@ -340,7 +341,7 @@ class ActiveLearningLoop:
         Examples
         --------
         >>> from uuid import uuid4
-        >>> from bead.items.models import Item
+        >>> from bead.items.item import Item
         >>> import numpy as np
         >>> selector = UncertaintySampler()
         >>> loop = ActiveLearningLoop(

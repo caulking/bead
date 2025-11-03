@@ -12,7 +12,7 @@ active learning pipelines without requiring real human data. The framework:
 Examples
 --------
 >>> from bead.simulation import SimulatedAnnotator
->>> from bead.config.models import SimulatedAnnotatorConfig, NoiseModelConfig
+>>> from bead.config.simulation import SimulatedAnnotatorConfig, NoiseModelConfig
 >>>
 >>> # Create annotator with configuration
 >>> config = SimulatedAnnotatorConfig(

@@ -6,8 +6,8 @@ import pytest
 
 from bead.resources.constraints import Constraint
 from bead.resources.lexicon import Lexicon
-from bead.resources.models import LexicalItem
-from bead.resources.structures import Slot, Template
+from bead.resources.lexical_item import LexicalItem
+from bead.resources.template import Slot, Template
 from bead.templates.filler import (
     ConstraintUnsatisfiableError,
     CSPFiller,

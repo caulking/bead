@@ -26,17 +26,17 @@ import numpy as np
 from bead.active_learning.loop import ActiveLearningLoop
 from bead.active_learning.models.forced_choice import ForcedChoiceModel
 from bead.active_learning.selection import UncertaintySampler
-from bead.config.models import (
+from bead.config.active_learning import (
     ActiveLearningLoopConfig,
     ForcedChoiceModelConfig,
-    NoiseModelConfig,
-    SimulatedAnnotatorConfig,
     UncertaintySamplerConfig,
 )
+from bead.config.simulation import NoiseModelConfig, SimulatedAnnotatorConfig
 from bead.evaluation.convergence import ConvergenceDetector
 from bead.evaluation.interannotator import InterAnnotatorMetrics
 from bead.evaluation.model_metrics import ModelMetrics
-from bead.items.models import Item, ItemTemplate, PresentationSpec, TaskSpec, TaskType
+from bead.items.item import Item
+from bead.items.item_template import ItemTemplate, PresentationSpec, TaskSpec, TaskType
 from bead.simulation.annotators.base import SimulatedAnnotator
 
 

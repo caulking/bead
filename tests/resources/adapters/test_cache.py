@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from bead.resources.adapters.cache import AdapterCache
-from bead.resources.models import LexicalItem
+from bead.resources.lexical_item import LexicalItem
 
 
 def test_cache_initialization(adapter_cache: AdapterCache) -> None:

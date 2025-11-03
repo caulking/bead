@@ -12,7 +12,7 @@ import argparse
 import json
 from pathlib import Path
 
-from bead.items.models import Item
+from bead.items.item import Item
 from bead.resources.lexicon import Lexicon
 
 

@@ -28,7 +28,8 @@ from bead.cli.utils import print_error, print_info, print_success
 from bead.items.adapters.registry import default_registry
 from bead.items.cache import ModelOutputCache
 from bead.items.constructor import ItemConstructor
-from bead.items.models import Item, ItemTemplate
+from bead.items.item import Item
+from bead.items.item_template import ItemTemplate
 from bead.resources.constraints import Constraint
 from bead.templates.filler import FilledTemplate
 

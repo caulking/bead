@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from bead.config.models import BeadConfig
+from bead.config.config import BeadConfig
 from bead.config.profiles import (
     DEV_CONFIG,
     PROD_CONFIG,

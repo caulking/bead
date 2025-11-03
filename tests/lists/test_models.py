@@ -8,7 +8,7 @@ from uuid import UUID, uuid4
 import pytest
 from pydantic import ValidationError
 
-from bead.lists.models import ExperimentList, ListCollection
+from bead.lists import ExperimentList, ListCollection
 
 
 class TestExperimentList:

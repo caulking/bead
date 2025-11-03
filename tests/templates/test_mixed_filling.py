@@ -6,8 +6,8 @@ import pytest
 
 from bead.resources.constraints import Constraint
 from bead.resources.lexicon import Lexicon
-from bead.resources.models import LexicalItem
-from bead.resources.structures import Slot, Template
+from bead.resources.lexical_item import LexicalItem
+from bead.resources.template import Slot, Template
 from bead.templates.resolver import ConstraintResolver
 from bead.templates.strategies import (
     ExhaustiveStrategy,
@@ -310,7 +310,7 @@ def test_mixed_strategy_single_slot():
 
 def test_config_validation():
     """Test that configuration validation works."""
-    from bead.config.models import TemplateConfig
+    from bead.config.template import TemplateConfig
 
     # Valid mixed configuration
     config = TemplateConfig(

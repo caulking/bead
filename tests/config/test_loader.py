@@ -7,7 +7,7 @@ import yaml
 from pydantic import ValidationError
 
 from bead.config.loader import load_config, load_yaml_file, merge_configs
-from bead.config.models import BeadConfig
+from bead.config.config import BeadConfig
 
 
 class TestMergeConfigs:

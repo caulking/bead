@@ -9,7 +9,7 @@ from typing import Any
 
 import yaml
 
-from bead.config.models import BeadConfig
+from bead.config.config import BeadConfig
 from bead.config.profiles import get_profile
 
 

@@ -9,7 +9,7 @@ import numpy as np
 import pytest
 
 from bead.evaluation.cross_validation import CrossValidator
-from bead.items.models import Item
+from bead.items.item import Item
 
 
 class TestCrossValidatorInitialization:

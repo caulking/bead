@@ -26,8 +26,8 @@ from pydantic import Field, field_validator
 
 from bead.data.base import BeadBaseModel
 from bead.data.language_codes import validate_iso639_code
-from bead.resources.models import LexicalItem
-from bead.resources.structures import Template
+from bead.resources.lexical_item import LexicalItem
+from bead.resources.template import Template
 
 
 def _empty_str_list() -> list[str]:

@@ -9,8 +9,8 @@ from typing import Any
 
 import yaml
 
+from bead.config.config import BeadConfig
 from bead.config.defaults import get_default_config
-from bead.config.models import BeadConfig
 
 
 def config_to_dict(

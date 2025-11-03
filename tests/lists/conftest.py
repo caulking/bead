@@ -14,7 +14,7 @@ from bead.lists.constraints import (
     SizeConstraint,
     UniquenessConstraint,
 )
-from bead.lists.models import ExperimentList, ListCollection
+from bead.lists import ExperimentList, ListCollection
 from bead.lists.partitioner import ListPartitioner
 
 

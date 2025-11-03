@@ -8,8 +8,9 @@ from bead.simulation.annotators.base import SimulatedAnnotator
 from bead.simulation.annotators.random import RandomAnnotator
 
 if TYPE_CHECKING:
-    from bead.config.models import SimulatedAnnotatorConfig
-    from bead.items.models import Item, ItemTemplate
+    from bead.config.simulation import SimulatedAnnotatorConfig
+    from bead.items.item import Item
+    from bead.items.item_template import ItemTemplate
 
 
 class OracleAnnotator(SimulatedAnnotator):
@@ -22,7 +23,7 @@ class OracleAnnotator(SimulatedAnnotator):
 
     Examples
     --------
-    >>> from bead.config.models import SimulatedAnnotatorConfig
+    >>> from bead.config.simulation import SimulatedAnnotatorConfig
     >>> config = SimulatedAnnotatorConfig(strategy="oracle", random_state=42)
     >>> annotator = OracleAnnotator(config)
     >>> # judgment = annotator.annotate(item, template)

@@ -6,13 +6,11 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from bead.items.models import (
-    Item,
-    ItemCollection,
+from bead.items.item import Item, ItemCollection, ModelOutput
+from bead.items.item_template import (
     ItemElement,
     ItemTemplate,
     ItemTemplateCollection,
-    ModelOutput,
     PresentationSpec,
     TaskSpec,
 )

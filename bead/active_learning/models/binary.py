@@ -9,7 +9,8 @@ from __future__ import annotations
 import numpy as np
 
 from bead.active_learning.models.base import ActiveLearningModel, ModelPrediction
-from bead.items.models import Item, ItemTemplate, TaskType
+from bead.items.item import Item
+from bead.items.item_template import ItemTemplate, TaskType
 
 __all__ = ["BinaryModel"]
 

@@ -17,7 +17,7 @@ import polars as pl
 from pydantic import Field
 
 from bead.data.base import BeadBaseModel
-from bead.resources.structures import Template
+from bead.resources.template import Template
 
 # Type alias for supported DataFrame types
 type DataFrame = pd.DataFrame | pl.DataFrame

@@ -7,13 +7,8 @@ from uuid import uuid4
 import numpy as np
 import pytest
 
-from bead.items.models import (
-    Item,
-    ItemTemplate,
-    ModelOutput,
-    PresentationSpec,
-    TaskSpec,
-)
+from bead.items.item import Item, ModelOutput
+from bead.items.item_template import ItemTemplate, PresentationSpec, TaskSpec
 from bead.simulation.strategies.categorical import CategoricalStrategy
 
 

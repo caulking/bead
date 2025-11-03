@@ -3,7 +3,7 @@
 from bead.active_learning.loop import ActiveLearningLoop
 from bead.active_learning.models.forced_choice import ForcedChoiceModel
 from bead.active_learning.selection import UncertaintySampler
-from bead.config.models import (
+from bead.config.active_learning import (
     ActiveLearningLoopConfig,
     ForcedChoiceModelConfig,
     UncertaintySamplerConfig,

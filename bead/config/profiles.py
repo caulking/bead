@@ -9,20 +9,20 @@ from __future__ import annotations
 from pathlib import Path
 from tempfile import gettempdir
 
-from bead.config.models import (
+from bead.config.active_learning import (
     ActiveLearningConfig,
-    DeploymentConfig,
     ForcedChoiceModelConfig,
-    ItemConfig,
-    ListConfig,
-    LoggingConfig,
-    ModelConfig,
-    PathsConfig,
-    ResourceConfig,
-    BeadConfig,
-    TemplateConfig,
     TrainerConfig,
 )
+from bead.config.config import BeadConfig
+from bead.config.deployment import DeploymentConfig
+from bead.config.item import ItemConfig
+from bead.config.list import ListConfig
+from bead.config.logging import LoggingConfig
+from bead.config.model import ModelConfig
+from bead.config.paths import PathsConfig
+from bead.config.resources import ResourceConfig
+from bead.config.template import TemplateConfig
 
 # Development profile: verbose logging, small batches, relative paths
 DEV_CONFIG = BeadConfig(

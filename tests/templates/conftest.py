@@ -8,7 +8,7 @@ from bead.resources.adapters.glazing import GlazingAdapter
 from bead.resources.adapters.registry import AdapterRegistry
 from bead.resources.adapters.unimorph import UniMorphAdapter
 from bead.resources.lexicon import Lexicon
-from bead.resources.models import LexicalItem
+from bead.resources.lexical_item import LexicalItem
 from bead.templates.resolver import ConstraintResolver
 
 

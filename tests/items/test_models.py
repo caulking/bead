@@ -7,18 +7,15 @@ from uuid import UUID, uuid4
 import pytest
 from pydantic import ValidationError
 
-from bead.items.models import (
+from bead.items.item import Item, ItemCollection, ModelOutput, UnfilledSlot
+from bead.items.item_template import (
     ChunkingSpec,
-    Item,
-    ItemCollection,
     ItemElement,
     ItemTemplate,
     ItemTemplateCollection,
-    ModelOutput,
     PresentationSpec,
     TaskSpec,
     TimingParams,
-    UnfilledSlot,
 )
 
 # ItemElement Tests

@@ -11,7 +11,7 @@ from uuid import UUID
 
 from bead.dsl import ast
 from bead.dsl.parser import parse
-from bead.items.models import UnfilledSlot
+from bead.items.item import UnfilledSlot
 from bead.resources.constraints import Constraint
 
 
@@ -88,7 +88,7 @@ def create_cloze_fields(
 
     Examples
     --------
-    >>> from bead.items.models import UnfilledSlot
+    >>> from bead.items.item import UnfilledSlot
     >>> from bead.resources.constraints import Constraint
     >>> from uuid import uuid4
     >>> constraint_id = uuid4()
