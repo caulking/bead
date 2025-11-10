@@ -12,7 +12,6 @@ This script creates all required lexicons using the bead adapter infrastructure:
 """
 
 import argparse
-import csv
 from pathlib import Path
 
 from utils.morphology import MorphologyExtractor
@@ -21,6 +20,7 @@ from utils.verbnet_parser import VerbNetExtractor
 from bead.resources.adapters.cache import AdapterCache
 from bead.resources.lexicon import Lexicon
 from bead.resources.lexical_item import LexicalItem
+from bead.resources.loaders import from_csv  # NEW: Use bead loader utilities
 
 
 def main(verb_limit: int | None = None):
@@ -96,34 +96,20 @@ def main(verb_limit: int | None = None):
     print("GENERATING BLEACHED NOUNS LEXICON")
     print("=" * 80)
 
-    noun_items: dict[str, LexicalItem] = {}
     csv_path = resources_dir / "bleached_nouns.csv"
 
-    with open(csv_path) as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            item = LexicalItem(
-                lemma=row["word"],
-                pos="NOUN",
-                language_code="eng",
-                features={
-                    "number": row["number"],
-                    "countability": row["countability"],
-                },
-                attributes={
-                    "semantic_class": row["semantic_class"],
-                },
-            )
-            noun_items[str(item.id)] = item
-
-    print(f"Loaded {len(noun_items)} bleached nouns from {csv_path}")
-
-    noun_lexicon = Lexicon(
+    # REFACTORED: Use bead/resources/loaders.py
+    noun_lexicon = from_csv(
+        path=csv_path,
         name="bleached_nouns",
-        description="Controlled noun inventory for templates",
+        column_mapping={"word": "lemma"},  # CSV "word" → LexicalItem "lemma"
+        feature_columns=["number", "countability"],
+        attribute_columns=["semantic_class"],
         language_code="eng",
-        items=noun_items,
+        description="Controlled noun inventory for templates",
     )
+
+    print(f"Loaded {len(noun_lexicon.items)} bleached nouns from {csv_path}")
 
     output_path = lexicons_dir / "bleached_nouns.jsonl"
     noun_lexicon.to_jsonl(str(output_path))
@@ -134,33 +120,20 @@ def main(verb_limit: int | None = None):
     print("GENERATING BLEACHED VERBS LEXICON")
     print("=" * 80)
 
-    bleached_verb_items: dict[str, LexicalItem] = {}
     csv_path = resources_dir / "bleached_verbs.csv"
 
-    with open(csv_path) as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            item = LexicalItem(
-                lemma=row["word"],
-                pos="VERB",
-                language_code="eng",
-                features={
-                    "tense": row.get("tense", ""),
-                },
-                attributes={
-                    "semantic_class": row.get("semantic_class", ""),
-                },
-            )
-            bleached_verb_items[str(item.id)] = item
-
-    print(f"Loaded {len(bleached_verb_items)} bleached verbs from {csv_path}")
-
-    bleached_verb_lexicon = Lexicon(
+    # REFACTORED: Use bead/resources/loaders.py
+    bleached_verb_lexicon = from_csv(
+        path=csv_path,
         name="bleached_verbs",
-        description="Controlled verb inventory for templates",
+        column_mapping={"word": "lemma"},
+        feature_columns=["tense"],
+        attribute_columns=["semantic_class"],
         language_code="eng",
-        items=bleached_verb_items,
+        description="Controlled verb inventory for templates",
     )
+
+    print(f"Loaded {len(bleached_verb_lexicon.items)} bleached verbs from {csv_path}")
 
     output_path = lexicons_dir / "bleached_verbs.jsonl"
     bleached_verb_lexicon.to_jsonl(str(output_path))
@@ -171,31 +144,19 @@ def main(verb_limit: int | None = None):
     print("GENERATING BLEACHED ADJECTIVES LEXICON")
     print("=" * 80)
 
-    adj_items: dict[str, LexicalItem] = {}
     csv_path = resources_dir / "bleached_adjectives.csv"
 
-    with open(csv_path) as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            item = LexicalItem(
-                lemma=row["word"],
-                pos="ADJ",
-                language_code="eng",
-                features={},
-                attributes={
-                    "semantic_class": row.get("semantic_class", ""),
-                },
-            )
-            adj_items[str(item.id)] = item
-
-    print(f"Loaded {len(adj_items)} bleached adjectives from {csv_path}")
-
-    adj_lexicon = Lexicon(
+    # REFACTORED: Use bead/resources/loaders.py
+    adj_lexicon = from_csv(
+        path=csv_path,
         name="bleached_adjectives",
-        description="Controlled adjective inventory for templates",
+        column_mapping={"word": "lemma"},
+        attribute_columns=["semantic_class"],
         language_code="eng",
-        items=adj_items,
+        description="Controlled adjective inventory for templates",
     )
+
+    print(f"Loaded {len(adj_lexicon.items)} bleached adjectives from {csv_path}")
 
     output_path = lexicons_dir / "bleached_adjectives.jsonl"
     adj_lexicon.to_jsonl(str(output_path))
@@ -317,9 +278,9 @@ def main(verb_limit: int | None = None):
     print("=" * 80)
     print(f"\nGenerated {6} lexicon files:")
     print(f"  1. verbnet_verbs.jsonl:       {len(verb_items_dict)} entries")
-    print(f"  2. bleached_nouns.jsonl:      {len(noun_items)} entries")
-    print(f"  3. bleached_verbs.jsonl:      {len(bleached_verb_items)} entries")
-    print(f"  4. bleached_adjectives.jsonl: {len(adj_items)} entries")
+    print(f"  2. bleached_nouns.jsonl:      {len(noun_lexicon.items)} entries")
+    print(f"  3. bleached_verbs.jsonl:      {len(bleached_verb_lexicon.items)} entries")
+    print(f"  4. bleached_adjectives.jsonl: {len(adj_lexicon.items)} entries")
     print(f"  5. prepositions.jsonl:        {len(prep_items)} entries")
     print(f"  6. determiners.jsonl:         {len(det_items)} entries")
     print(f"\nAll files saved to: {lexicons_dir}/")

@@ -1,10 +1,15 @@
-"""Constraint builder for DSL-based lexical constraints.
+"""English-specific constraint builders for argument structure experiment.
 
-This module provides helper functions to programmatically generate DSL
-constraints for template slots. It handles common constraint patterns like:
-- Determiner-noun agreement
-- Bleached lexicon restrictions
-- Preposition inventories
+This module provides LANGUAGE-SPECIFIC helper functions for English constraints.
+For general, language-agnostic constraint builders, see:
+    bead/resources/constraints/builders.py - AgreementConstraintBuilder, etc.
+
+This module handles English-specific patterns like:
+- English determiner-noun agreement ("a" vs "some" vs "the")
+- English bleached lexicon restrictions
+- English preposition inventories
+
+NOTE: This is intentionally kept in gallery/ because it's English-specific.
 """
 
 from __future__ import annotations
