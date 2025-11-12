@@ -46,7 +46,8 @@ class MorphologyExtractor:
     def get_verb_forms(self, lemma: str) -> dict[str, LexicalItem | None]:
         """Get required verb forms as LexicalItem objects.
 
-        Extracts the four core verb forms needed for template filling:
+        Extracts the five core verb forms needed for template filling:
+        - present_base: Present tense base (e.g., "walk" for "they walk")
         - 3sg_present: 3rd person singular present (e.g., "walks")
         - past: Simple past (e.g., "walked")
         - present_participle: Present participle (e.g., "walking")
@@ -75,6 +76,7 @@ class MorphologyExtractor:
 
         # Map to required forms
         forms: dict[str, LexicalItem | None] = {
+            "present_base": None,
             "3sg_present": None,
             "past": None,
             "present_participle": None,
@@ -92,8 +94,14 @@ class MorphologyExtractor:
             number = item.features.get("number")
             verb_form = item.features.get("verb_form")
 
+            # Present base: V (no tense/person/number/verb_form)
+            # Used for "I walk", "you walk", "they walk"
+            # UniMorph returns base form with empty features
+            if not tense and not person and not number and not verb_form:
+                forms["present_base"] = item
+
             # 3sg present: V;PRS;3;SG
-            if tense == "PRS" and person == "3" and number == "SG":
+            elif tense == "PRS" and person == "3" and number == "SG":
                 forms["3sg_present"] = item
 
             # Past: V;PST
@@ -237,8 +245,9 @@ class MorphologyExtractor:
     def get_all_required_forms(self, lemma: str) -> list[LexicalItem]:
         """Get all required forms for templates.
 
-        Extracts all verb forms needed for template filling, including
-        both simple forms and progressive constructions.
+        Extracts all verb forms needed for template filling (simple forms only).
+        Progressive aspect is handled by templates with separate {be} and {verb}
+        slots and cross-slot constraints.
 
         Parameters
         ----------
@@ -248,7 +257,7 @@ class MorphologyExtractor:
         Returns
         -------
         list[LexicalItem]
-            All required forms (simple + progressive).
+            All required forms (simple forms and participles only).
 
         Examples
         --------
@@ -263,12 +272,7 @@ class MorphologyExtractor:
         else:
             forms = self.get_verb_forms(lemma)
 
-        # Collect non-None forms
+        # Collect non-None forms (only simple forms and participles)
         result = [item for item in forms.values() if item is not None]
-
-        # Add progressive forms if we have present participle
-        if forms["present_participle"] is not None:
-            prog_forms = self.create_progressive_forms(forms["present_participle"])
-            result.extend(prog_forms.values())
 
         return result

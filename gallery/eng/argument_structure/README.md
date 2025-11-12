@@ -74,85 +74,100 @@ For clausal complement constructions, the project uses the **MegaAttitude** fram
 
 ### Core Components
 
+The pipeline consists of 10 main scripts organized into 4 stages:
+
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                    Data Generation Pipeline                      │
+│              Stage 1: Resource Generation                        │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                  │
 │  1. generate_lexicons.py                                        │
 │     ├─ VerbNet verbs (via GlazingAdapter)                      │
 │     ├─ Morphological forms (via UniMorphAdapter)               │
 │     └─ Controlled lexicons (from resources/ CSVs)              │
+│     → Output: lexicons/*.jsonl (19,160+ entries)               │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│          Stage 2: Template Generation & Filling                  │
+├─────────────────────────────────────────────────────────────────┤
 │                                                                  │
 │  2. generate_templates.py                                       │
 │     ├─ Extract all verb-specific VerbNet frames               │
 │     ├─ Map to MegaAttitude clausal structures                 │
 │     └─ Generate DSL constraints                               │
+│     → Output: templates/verbnet_frames.jsonl (21,453 templates)│
 │                                                                  │
 │  3. extract_generic_templates.py                               │
 │     └─ Abstract verb-specific → generic structures            │
+│     → Output: templates/generic_frames.jsonl (26 templates)    │
 │                                                                  │
-│  4. generate_cross_product.py                                  │
-│     └─ Cross all verbs × all generic frames                   │
-│                                                                  │
-│  5. create_2afc_pairs.py                                       │
+│  4. fill_templates.py                                          │
 │     ├─ Fill templates using MixedFillingStrategy              │
-│     ├─ Score with language model (GPT-2)                      │
-│     ├─ Create minimal pairs                                   │
-│     └─ Stratify by quantile                                   │
+│     ├─ Phase 1: Exhaustive filling (det, be, verb slots)      │
+│     └─ Phase 2: MLM-based filling (noun, prep, adj slots)     │
+│     → Output: filled_templates/generic_frames_filled.jsonl     │
 │                                                                  │
 └─────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────┐
-│              Active Learning & Orchestration                     │
+│        Stage 3: Item Generation & List Partitioning              │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                  │
-│  run_pipeline.py                                               │
-│     ├─ Load configuration (config.yaml)                       │
-│     ├─ Initialize convergence detector                        │
-│     ├─ Run active learning loop                               │
-│     ├─ Monitor human-model agreement                          │
-│     └─ Stop when converged                                    │
+│  5. generate_cross_product.py                                  │
+│     └─ Cross all verbs × all generic frames                   │
+│     → Output: items/cross_product_items.jsonl (~74,880 items)  │
+│                                                                  │
+│  6. create_2afc_pairs.py                                       │
+│     ├─ Load filled templates from previous step               │
+│     ├─ Score with language model (GPT-2)                      │
+│     ├─ Create minimal pairs (same_verb, different_verb)       │
+│     └─ Stratify by LM score quantiles                         │
+│     → Output: items/2afc_pairs.jsonl                           │
+│                                                                  │
+│  7. generate_lists.py                                          │
+│     ├─ Partition 2AFC pairs into balanced lists               │
+│     ├─ Apply list constraints (balance, uniqueness, etc.)     │
+│     └─ Apply batch constraints (coverage, diversity)          │
+│     → Output: lists/experiment_lists.jsonl                     │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│      Stage 4: Deployment & Active Learning                       │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  8. generate_deployment.py                                     │
+│     ├─ Generate jsPsych experiments for each list             │
+│     ├─ Create JATOS .jzip packages                            │
+│     └─ Material Design UI with randomization                  │
+│     → Output: deployment/list_*/                               │
+│                                                                  │
+│  9. simulate_pipeline.py (testing/validation)                  │
+│     ├─ Simulate human judgments (LM-based annotator)          │
+│     ├─ Test active learning loop                              │
+│     └─ Validate convergence detection                         │
+│     → Output: simulation_output/simulation_results.json        │
+│                                                                  │
+│  10. run_pipeline.py (production)                              │
+│      ├─ Load configuration (config.yaml)                      │
+│      ├─ Initialize convergence detector                       │
+│      ├─ Run active learning loop                              │
+│      ├─ Monitor human-model agreement                         │
+│      └─ Stop when converged to human IAA                      │
+│      → Output: results/pipeline_results.json                   │
 │                                                                  │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
 ### Utility Modules
 
-The `utils/` package provides specialized extraction and generation tools:
+The `utils/` package provides specialized extraction and generation tools. The `verbnet_parser.py` module wraps `GlazingAdapter` to extract verbs with frame information from VerbNet, filtering by patterns like clausal complements, PPs, and particle verbs. For morphology, `morphology.py` wraps `UniMorphAdapter` to get verb inflections (3sg present, past, participles) and handles particle verbs like "turn off" or "cross-examine", including progressive forms.
 
-**1. verbnet_parser.py** - VerbNet data extraction
-- Wraps `GlazingAdapter` for VerbNet access
-- Extracts verbs with frame information
-- Filters by patterns (clausal, PP, particle verbs)
-- Methods: `extract_all_verbs()`, `extract_all_verbs_with_frames()`, `get_clausal_frames()`, `get_frames_with_pp()`
+Template generation happens in `template_generator.py`, which creates `Template` objects from VerbNet frames and maps them to MegaAttitude clausal structures. It handles both simple frames (NP V NP) and complex ones (NP V that S) with DSL constraints. The `constraint_builder.py` module builds programmatic constraints for slots, handling determiner-noun agreement and bleached lexicon restrictions.
 
-**2. morphology.py** - Morphological paradigm extraction
-- Wraps `UniMorphAdapter` for verb inflections
-- Extracts: 3sg present, past, present participle, past participle
-- Handles particle verbs ("turn off", "cross-examine")
-- Creates progressive forms (is/was + V-ing)
-- Methods: `get_verb_forms()`, `handle_particle_verb()`, `get_all_required_forms()`
-
-**3. template_generator.py** - Template object generation
-- Generates `Template` objects from VerbNet frames
-- Maps to MegaAttitude clausal structures
-- Applies DSL constraints
-- Handles both simple (NP V NP) and complex (NP V that S) frames
-- Methods: `generate_from_frame()`, `_generate_clausal_templates()`, `_generate_simple_templates()`
-
-**4. constraint_builder.py** - DSL constraint helpers
-- Builds programmatic constraints for slots
-- Determiner-noun agreement (a/the/some)
-- Bleached lexicon restrictions
-- Preposition inventories
-- Methods: `build_determiner_constraint()`, `build_bleached_noun_constraint()`, `build_combined_constraint()`
-
-**5. clausal_frames.py** - MegaAttitude frame mapping
-- Maps VerbNet patterns to MegaAttitude frames
-- 13 frame types (that/whether/to/wh/gerund/etc.)
-- Mood tracking (indicative/subjunctive/conditional)
-- Methods: `map_verbnet_to_clausal_templates()`, `is_clausal_frame()`, `get_all_clausal_frame_types()`
+Finally, `clausal_frames.py` maps VerbNet patterns to MegaAttitude's 13 frame types (that/whether/to/wh/gerund/etc.) with mood tracking for indicative, subjunctive, and conditional complements.
 
 ## Dataset Design
 
@@ -193,18 +208,9 @@ This enables:
 
 ### Controlled Lexicons
 
-To minimize semantic confounds, the pipeline uses **bleached lexicons** for argument filling:
+To minimize semantic confounds, the pipeline uses bleached lexicons for argument filling. The noun inventory (41 nouns) includes generic, high-frequency items organized by semantic class: animates (person, people, group, organization), inanimate objects (thing, things, stuff), locations (place, places, area, areas), temporals (time, times), abstracts (information, idea, ideas, reason, reasons, matter, matters, situation, situations, way, ways, level, levels, event, events, activity, activities, amount, amounts, part, parts), plus other-marked variants (other person, other people, other thing, etc.).
 
-**Bleached Nouns (42 entries):**
-- person, people, thing, stuff, place, situation, idea, fact, reason, way, time, day, year, moment, life, world, part, side, point, end, hand, body, head, face, eye, voice, word, name, number, work, money, food, water, air, house, room, door, table, chair, car, book, paper
-
-**Bleached Verbs (8 entries):**
-- do, be, have, go, get, make, take, give
-
-**Bleached Adjectives (11 entries):**
-- good, bad, big, small, right, wrong, easy, hard, ready, sure, certain
-
-These are loaded from CSV files in `resources/` and converted to Lexicon format.
+For verbs, we use 8 light verbs (do, be, have, go, get, make, happen, come), and for adjectives, 11 basic descriptors (good, bad, right, wrong, okay, certain, ready, done, different, same, other). These are loaded from CSV files in `resources/` and converted to Lexicon format.
 
 ### 2AFC Judgment Format
 
@@ -219,25 +225,13 @@ B. The politician contributed the charity.
 [ Select A or B ]
 ```
 
-**Pair Types:**
-1. **same_verb:** Same verb, different frames (tests alternations)
-2. **different_verb:** Different verbs, same frame (tests verb licensing)
+We create two types of pairs: same_verb pairs test alternations by using the same verb in different frames, while different_verb pairs test verb licensing by comparing different verbs in the same frame.
 
-**Advantages:**
-- Eliminates scale bias (inter-rater reliability increases)
-- Forces relative judgments (more sensitive to gradients)
-- Faster annotation (no multi-point scale deliberation)
-- Natural task (aligns with linguistic intuitions)
+This format has several advantages over Likert scales. It eliminates scale bias and increases inter-rater reliability, forces relative rather than absolute judgments (making it more sensitive to acceptability gradients), speeds up annotation by removing multi-point scale deliberation, and feels like a natural task that aligns with linguistic intuitions.
 
 ### Stratified Sampling
 
-Items are stratified into **10 quantiles** based on language model score differences:
-
-- **Quantile 1-3:** Easy pairs (large LM score differences)
-- **Quantile 4-7:** Medium pairs (moderate differences)
-- **Quantile 8-10:** Hard pairs (small differences, near ceiling)
-
-This ensures the model learns across the full difficulty spectrum.
+Items are stratified into 10 quantiles based on language model score differences. Quantiles 1-3 contain easy pairs with large LM score differences, quantiles 4-7 have medium pairs with moderate differences, and quantiles 8-10 include hard pairs with small differences near the ceiling. This ensures the model learns across the full difficulty spectrum.
 
 ## Quick Start
 
@@ -261,16 +255,23 @@ make help
 make data
 
 # Or step-by-step:
-make lexicons          # Generate lexicon files from VerbNet + resources
-make templates         # Generate verb-specific VerbNet templates
-make generic-templates # Extract generic frame structures
-make cross-product     # Generate verb × frame cross-product
-make 2afc-pairs        # Create 2AFC pairs with LM scoring
+make lexicons           # 1. Generate lexicons from VerbNet + resources
+make verbnet-templates  # 2. Generate verb-specific VerbNet templates
+make templates          # 3. Extract generic frame structures
+make fill-templates     # 4. Fill templates with MLM strategy
+make cross-product      # 5. Generate verb × frame cross-product
+make 2afc-pairs         # 6. Create 2AFC pairs with LM scoring
+make lists              # 7. Partition pairs into experiment lists
+make deployment         # 8. Generate jsPsych/JATOS deployment
 ```
 
 ### Test Pipeline
 
 ```bash
+# Test with simulation (no real participants needed)
+make simulate-quick     # Quick test (~2 minutes)
+make simulate-medium    # Medium test (~10 minutes)
+
 # Dry run with test data (no actual training)
 make pipeline-dry-run
 
@@ -287,7 +288,10 @@ make show-config
 # Generate full dataset
 make prod-data
 
-# Run complete active learning loop
+# Deploy to JATOS
+make deployment-full
+
+# Run complete active learning loop (with human data)
 make prod-pipeline
 ```
 
@@ -401,7 +405,55 @@ python extract_generic_templates.py
 }
 ```
 
-### 4. Generate Cross-Product Items
+### 4. Fill Templates
+
+```bash
+# Dry run (fills 1 template with 5 verbs)
+python fill_templates.py --dry-run
+
+# Fill all templates with MLM strategy
+python fill_templates.py
+
+# Test with limited data
+python fill_templates.py --limit 10
+```
+
+**Input:** `templates/generic_frames.jsonl` + lexicons
+**Output:** `filled_templates/generic_frames_filled.jsonl`
+
+This script loads generic templates and lexicons, then creates a TemplateFiller with MixedFillingStrategy using slot_strategies from `config.yaml`. The strategy operates in two phases:
+
+**Phase 1 (Exhaustive):** Generates all combinations of determiners (a, the, some), be forms (am, is, are, was, were), and verb forms, applying cross-slot constraints (e.g., subject-verb agreement). This produces a set of partial templates with Phase 1 slots filled.
+
+**Phase 2 (MLM):** For each Phase 1 combination, uses BERT to predict contextually appropriate fillers for noun, preposition, and adjective slots via beam search. The MLM sees correctly inflected forms (e.g., "the [MASK] is [MASK]" not "the [MASK] be [MASK]"), enabling accurate predictions.
+
+Each template gets filled with all valid combinations of slot fillers, producing fully rendered sentences. The output file contains FilledTemplate objects with slot_fillers, rendered_text, and strategy metadata.
+
+The filling strategy is configured per-slot in `config.yaml`:
+```yaml
+template:
+  filling_strategy: "mixed"
+  mlm:
+    model_name: "bert-base-uncased"
+    beam_size: 5
+    top_k: 10
+  slot_strategies:
+    # Phase 1: Exhaustive filling
+    det_subj: {strategy: "exhaustive"}
+    det_dobj: {strategy: "exhaustive"}
+    det_pobj: {strategy: "exhaustive"}
+    be: {strategy: "exhaustive"}
+    verb: {strategy: "exhaustive"}
+
+    # Phase 2: MLM filling
+    noun_subj: {strategy: "mlm", max_fills: 5}
+    noun_dobj: {strategy: "mlm", max_fills: 5}
+    noun_pobj: {strategy: "mlm", max_fills: 5}
+    prep: {strategy: "mlm", max_fills: 5}
+    adjective: {strategy: "mlm", max_fills: 3}
+```
+
+### 5. Generate Cross-Product Items
 
 ```bash
 # Full dataset (all ~4,789 verbs × 26 frames = ~124,514 items)
@@ -441,36 +493,20 @@ python generate_cross_product.py --limit 1000
 }
 ```
 
-### 5. Create 2AFC Pairs
+### 6. Create 2AFC Pairs
 
 ```bash
-# Full dataset (processes all cross-product items)
+# Full dataset (processes all filled templates)
 python create_2afc_pairs.py
 
 # Test with limited data
 python create_2afc_pairs.py --limit 200
 ```
 
+**Input:** `filled_templates/generic_frames_filled.jsonl`
 **Output:** `items/2afc_pairs.jsonl`
 
-**Pipeline (8 steps):**
-
-1. **Load cross-product items**
-2. **Load templates and lexicons**
-3. **Fill templates** using `MixedFillingStrategy`:
-   - Verb: Exhaustive (test specific target verb)
-   - Nouns: Exhaustive (use all bleached nouns)
-   - Adjectives: MLM (BERT contextual filling)
-4. **Score with GPT-2:**
-   - Compute log probability for each filled sentence
-   - Use `HuggingFaceLanguageModel` adapter
-   - Cache scores for efficiency
-5. **Create minimal pairs:**
-   - **same_verb:** Same verb, different frames
-   - **different_verb:** Different verbs, same frame
-6. **Compute score differences:** `|log_prob1 - log_prob2|`
-7. **Assign quantiles:** Bin pairs into 10 difficulty levels
-8. **Save as Items:** Convert pairs to Item objects with comparison metadata
+This script loads filled templates from the previous step, scores each filled sentence with a language model (GPT-2), and creates forced-choice pairs. The scoring uses `LanguageModelScorer` to compute log probabilities with caching for efficiency. Pairs are created using `create_forced_choice_items_from_groups`, generating both same_verb pairs (same verb in different frames, testing alternations) and different_verb pairs (different verbs in same frame, testing verb licensing). After pairing, score differences are computed and items are stratified into 10 quantiles using `assign_quantiles_by_uuid`, ensuring the model learns across the full difficulty spectrum.
 
 **Example pair:**
 ```json
@@ -497,7 +533,166 @@ python create_2afc_pairs.py --limit 200
 }
 ```
 
-### 6. Configure Pipeline
+### 7. Generate Experiment Lists
+
+```bash
+# Generate balanced experiment lists
+python generate_lists.py
+```
+
+**Input:** `items/2afc_pairs.jsonl` + `config.yaml`
+**Output:** `lists/experiment_lists.jsonl`
+
+**How it works:**
+1. **Load 2AFC pairs:** Read all generated pairs
+2. **Load configuration:** Parse list and batch constraints from `config.yaml`
+3. **Build constraints:**
+   - **List constraints:** Applied to each list individually (balance, uniqueness, diversity)
+   - **Batch constraints:** Applied across all lists (coverage, min occurrence)
+4. **Partition items:** Use `ListPartitioner` with constraint satisfaction
+5. **Create ListCollection:** Package lists with metadata
+6. **Save to JSONL:** One ExperimentList per line
+
+**Example constraints (config.yaml):**
+```yaml
+lists:
+  n_lists: 8
+  items_per_list: 100
+  constraints:
+    - type: "balance"
+      property_expression: "item.metadata.pair_type"
+      target_counts: {same_verb: 50, different_verb: 50}
+    - type: "uniqueness"
+      property_expression: "item.metadata.verb_lemma"
+    - type: "grouped_quantile"
+      property_expression: "item.metadata.lm_score_diff"
+      group_by_expression: "item.metadata.pair_type"
+      n_quantiles: 10
+  batch_constraints:
+    - type: "coverage"
+      property_expression: "item.metadata.template_id"
+      target_values: [all 26 template UUIDs]
+      min_coverage: 1.0
+```
+
+**Output format:**
+```json
+{
+  "id": "uuid",
+  "name": "list_01",
+  "item_refs": ["item_uuid_1", "item_uuid_2", ...],
+  "metadata": {
+    "n_items": 100,
+    "constraints_satisfied": true
+  }
+}
+```
+
+### 8. Generate Deployment
+
+```bash
+# Generate deployment for 2 lists (testing)
+python generate_deployment.py --n-lists 2
+
+# Generate deployment for all lists
+python generate_deployment.py --n-lists 20
+
+# Generate without JATOS export
+python generate_deployment.py --n-lists 2 --no-jatos
+```
+
+**Input:** `lists/experiment_lists.jsonl` + `items/2afc_pairs.jsonl`
+**Output:** `deployment/list_*/` directories + `.jzip` files
+
+**How it works:**
+1. **Load experiment lists:** Read lists and randomly select subset
+2. **Load 2AFC pairs:** Index all items by UUID for lookup
+3. **Create ItemTemplate:** Minimal template for 2AFC forced choice
+4. **Generate jsPsych experiments:**
+   - One experiment per list
+   - Material Design UI components
+   - Randomization of trial and choice order
+   - Progress bar and instructions
+5. **Export to JATOS:** Create `.jzip` packages for upload
+6. **Save output:** HTML/CSS/JS files in deployment/ directory
+
+**Output structure:**
+```
+deployment/
+├── list_01/
+│   ├── index.html          # jsPsych experiment
+│   ├── css/experiment.css  # Material Design styles
+│   ├── js/experiment.js    # Trial configuration
+│   └── data/config.json    # Experiment metadata
+├── list_02/
+│   └── ...
+├── list_01.jzip           # JATOS package
+└── list_02.jzip           # JATOS package
+```
+
+**Deployment:**
+1. Upload `.jzip` files to your JATOS server
+2. Distribute experiment URLs to participants
+3. Collect results from JATOS data export
+
+### 9. Simulate Pipeline (Testing)
+
+```bash
+# Quick simulation (50 items, 3 iterations)
+python simulate_pipeline.py \
+  --initial-size 30 \
+  --budget 10 \
+  --max-iterations 3 \
+  --temperature 1.0 \
+  --seed 42 \
+  --max-items 50
+
+# Or use Makefile
+make simulate-quick    # ~2 minutes
+make simulate-medium   # ~10 minutes
+make simulate-full     # ~30 minutes
+```
+
+**Purpose:** Test the complete active learning pipeline with simulated human judgments before deploying to real participants.
+
+**How it works:**
+1. **Load 2AFC pairs:** Sample subset for testing
+2. **Create simulated annotator:**
+   - Uses LM scores from items to generate probabilistic judgments
+   - Adds temperature-based noise to simulate human variability
+   - Configurable noise levels (temperature parameter)
+3. **Generate initial annotations:** Simulate human ratings for initial set
+4. **Run active learning loop:**
+   - Train ForcedChoiceModel on labeled data
+   - Compute uncertainty (entropy) for unlabeled items
+   - Select most uncertain items
+   - Simulate human annotations for selected items
+   - Repeat until convergence or max iterations
+5. **Monitor convergence:** Check if model accuracy approaches simulated human agreement
+6. **Save results:** JSON file with iteration metrics
+
+**Example output:**
+```json
+{
+  "config": {
+    "initial_size": 50,
+    "budget_per_iteration": 20,
+    "temperature": 1.0
+  },
+  "human_agreement": 0.782,
+  "iterations": [
+    {"iteration": 1, "train_accuracy": 0.652, "test_accuracy": 0.640},
+    {"iteration": 2, "train_accuracy": 0.701, "test_accuracy": 0.685},
+    ...
+  ],
+  "converged": true,
+  "total_annotations": 150
+}
+```
+
+The temperature parameter controls noise levels: 0.5 produces low noise with clean judgments and faster convergence, 1.0 gives medium noise with realistic judgments, and 2.0 creates high noise with noisier judgments and slower convergence.
+
+### 10. Run Production Pipeline
 
 Edit `config.yaml` to customize:
 
@@ -538,7 +733,7 @@ lists:
       n_quantiles: 10
 ```
 
-### 7. Run Pipeline
+### 11. Run Production Pipeline
 
 ```bash
 # Dry run (test configuration without training)
@@ -650,10 +845,13 @@ make clean               # Remove generated files
 ### Data Generation
 ```bash
 make lexicons            # Generate lexicon files
-make templates           # Generate verb-specific templates
-make generic-templates   # Extract generic frame structures
+make verbnet-templates   # Generate verb-specific VerbNet templates
+make templates           # Extract generic frame structures
+make fill-templates      # Fill templates with MLM strategy (optional)
 make cross-product       # Generate verb × frame cross-product
 make 2afc-pairs          # Create 2AFC pairs with LM scoring
+make lists               # Partition pairs into experiment lists
+make deployment          # Generate jsPsych/JATOS deployment
 ```
 
 ### Pipeline Execution
@@ -745,12 +943,7 @@ if result.has_converged:
 
 ### Stopping Criteria
 
-The pipeline stops when **any** of these conditions is met:
-
-1. **Convergence:** `|α_model - α_human| < 0.05` for ≥3 consecutive iterations
-2. **Max iterations:** Reached `max_iterations` (default: 20)
-3. **Performance threshold:** Model accuracy exceeds threshold (optional)
-4. **Budget exhausted:** No more unlabeled items available
+The pipeline stops when any of these conditions is met: convergence (`|α_model - α_human| < 0.05` for ≥3 consecutive iterations), reaching max_iterations (default: 20), exceeding an optional performance threshold, or exhausting the budget of unlabeled items.
 
 ## Replication Instructions
 
@@ -775,15 +968,24 @@ python create_2afc_pairs.py
 
 **2. Partition into experimental lists:**
 
-Lists are automatically created by `run_pipeline.py` using constraints from `config.yaml`.
+```bash
+# Generate balanced experiment lists
+python generate_lists.py
+```
+
+This creates `lists/experiment_lists.jsonl` with balanced lists according to constraints in `config.yaml`.
 
 **3. Deploy to JATOS:**
 
 ```bash
-# (Future phase - deployment integration)
-# Will generate jsPsych experiments for each list
+# Generate jsPsych experiments and JATOS packages
+python generate_deployment.py --n-lists 20
+
 # Upload to JATOS server
-# Distribute links to participants
+# 1. Go to your JATOS server admin panel
+# 2. Click "Import Study"
+# 3. Upload deployment/*.jzip files
+# 4. Distribute experiment URLs to participants
 ```
 
 **4. Collect human ratings:**
@@ -897,82 +1099,98 @@ The pipeline will:
 
 ```
 gallery/eng/argument_structure/
-├── README.md                      # This file
-├── PROGRESS.md                    # Development log (598 lines)
-├── Makefile                       # Build automation (380+ lines, 30+ targets)
-├── config.yaml                    # Pipeline configuration (399 lines)
+├── README.md                       # This file
+├── PROGRESS.md                     # Development log
+├── Makefile                        # Build automation (500+ lines, 40+ targets)
+├── config.yaml                     # Pipeline configuration
 │
-├── generate_lexicons.py           # Extract VerbNet verbs + bleached lexicons
-├── generate_templates.py          # Generate verb-specific VerbNet templates
-├── extract_generic_templates.py   # Extract 26 generic frame structures
-├── generate_cross_product.py      # Generate verb × frame items
-├── create_2afc_pairs.py           # Create 2AFC pairs with LM scoring
-├── run_pipeline.py                # Active learning orchestration (498 lines)
+├── generate_lexicons.py            # [1] Extract VerbNet verbs + bleached lexicons
+├── generate_templates.py           # [2] Generate verb-specific VerbNet templates
+├── extract_generic_templates.py    # [3] Extract 26 generic frame structures
+├── fill_templates.py               # [4] Fill templates with MLM strategy (optional)
+├── generate_cross_product.py       # [5] Generate verb × frame cross-product
+├── create_2afc_pairs.py            # [6] Create 2AFC pairs with LM scoring
+├── generate_lists.py               # [7] Partition pairs into experiment lists
+├── generate_deployment.py          # [8] Generate jsPsych/JATOS deployment
+├── simulate_pipeline.py            # [9] Simulate active learning (testing)
+├── run_pipeline.py                 # [10] Run production active learning pipeline
 │
-├── utils/                         # Utility modules (63KB total)
-│   ├── __init__.py                # Package initialization
-│   ├── verbnet_parser.py          # VerbNet extraction (9KB)
-│   ├── morphology.py              # Morphological paradigms (9KB)
-│   ├── template_generator.py     # Template generation (21KB)
-│   ├── constraint_builder.py     # DSL constraint helpers (9KB)
-│   └── clausal_frames.py         # MegaAttitude frame mapping (13KB)
+├── utils/                          # Utility modules
+│   ├── __init__.py                 # Package initialization
+│   ├── verbnet_parser.py           # VerbNet extraction via GlazingAdapter
+│   ├── morphology.py               # Morphological paradigms via UniMorphAdapter
+│   ├── template_generator.py      # Template generation with DSL constraints
+│   ├── constraint_builder.py      # DSL constraint helpers
+│   └── clausal_frames.py          # MegaAttitude frame mapping
 │
-├── resources/                     # Reference data
-│   ├── README.md                  # Resource documentation
-│   ├── bleached_nouns.csv         # 42 controlled nouns
-│   ├── bleached_verbs.csv         # 8 controlled verbs
-│   └── bleached_adjectives.csv    # 11 controlled adjectives
+├── tests/                          # Test suite
+│   ├── __init__.py
+│   └── test_simulation.py         # Simulation tests
 │
-├── lexicons/                      # Generated lexical resources (8.5MB)
-│   ├── verbnet_verbs.jsonl        # 19,160 verb forms
-│   ├── bleached_nouns.jsonl       # 42 generic nouns
-│   ├── bleached_verbs.jsonl       # 8 generic verbs
-│   ├── bleached_adjectives.jsonl  # 11 generic adjectives
-│   ├── determiners.jsonl          # 3 determiners
-│   └── prepositions.jsonl         # 53 prepositions
+├── resources/                      # Reference data
+│   ├── README.md                   # Resource documentation
+│   ├── bleached_nouns.csv          # 42 controlled nouns
+│   ├── bleached_verbs.csv          # 8 controlled verbs
+│   └── bleached_adjectives.csv     # 11 controlled adjectives
 │
-├── templates/                     # Frame templates (52MB)
-│   ├── verbnet_frames.jsonl       # 21,453 verb-specific templates
-│   └── generic_frames.jsonl       # 26 generic frame structures
+├── lexicons/                       # Generated lexical resources
+│   ├── verbnet_verbs.jsonl         # 19,160 verb forms
+│   ├── bleached_nouns.jsonl        # 42 generic nouns
+│   ├── bleached_verbs.jsonl        # 8 generic verbs
+│   ├── bleached_adjectives.jsonl   # 11 generic adjectives
+│   ├── determiners.jsonl           # 3 determiners
+│   ├── prepositions.jsonl          # 53 prepositions
+│   └── be_forms.jsonl              # Auxiliary "be" forms
 │
-├── items/                         # Generated experimental items (15MB)
-│   ├── cross_product_items.jsonl  # Verb × frame combinations
-│   └── 2afc_pairs.jsonl           # Paired comparisons
+├── templates/                      # Frame templates
+│   ├── verbnet_frames.jsonl        # 21,453 verb-specific templates (gitignored)
+│   └── generic_frames.jsonl        # 26 generic frame structures (checked in)
 │
-├── lists/                         # Experimental list partitions (TBD)
-├── data/                          # Human ratings (TBD)
-└── .cache/                        # Model output cache (200+ files)
+├── filled_templates/               # Filled templates
+│   └── generic_frames_filled.jsonl # Templates with slot fillers (required for 2AFC)
+│
+├── items/                          # Generated experimental items
+│   ├── cross_product_items.jsonl   # Verb × frame combinations (~74,880 items)
+│   └── 2afc_pairs.jsonl            # Paired comparisons for judgments
+│
+├── lists/                          # Experimental list partitions
+│   └── experiment_lists.jsonl      # Balanced lists with constraints
+│
+├── deployment/                     # jsPsych/JATOS deployment
+│   ├── list_01/                    # Experiment for list 1
+│   │   ├── index.html              # jsPsych experiment
+│   │   ├── css/experiment.css      # Material Design styles
+│   │   ├── js/experiment.js        # Trial configuration
+│   │   └── data/config.json        # Metadata
+│   ├── list_02/                    # Experiment for list 2
+│   │   └── ...
+│   ├── list_01.jzip                # JATOS package for list 1
+│   └── list_02.jzip                # JATOS package for list 2
+│
+├── simulation_output/              # Simulation results
+│   └── simulation_results.json     # Convergence metrics
+│
+├── results/                        # Pipeline results
+│   └── pipeline_results.json       # Active learning metrics
+│
+├── data/                           # Human ratings (from JATOS)
+│   └── human_ratings.jsonl         # Participant responses
+│
+└── .cache/                         # Model output cache
+    └── ...                         # Cached LM scores
 ```
 
 ## Dependencies
 
-**Core:**
-- Python ≥3.10
-- bead (parent library)
-  - `sash.resources.adapters.glazing` - VerbNet access
-  - `sash.resources.adapters.unimorph` - Morphology access
-  - `sash.resources.lexicon` - Lexicon management
-  - `sash.resources.structures` - Template/Slot/Constraint models
-  - `sash.items.models` - Item models
-  - `sash.items.adapters.huggingface` - Language model scoring
-  - `sash.evaluation.convergence` - Convergence detection
-  - `sash.training.active_learning` - Active learning loop
-- transformers (Hugging Face)
-- torch (PyTorch)
-- pydantic (data validation)
-- pyyaml (configuration)
+The pipeline requires Python ≥3.13 and the bead framework. Core bead modules include adapters for external resources (`bead.resources.adapters.glazing` for VerbNet, `bead.resources.adapters.unimorph` for morphology), data models for lexicons, templates, slots, and items, and functionality for template filling, list partitioning with constraints, and deployment (jsPsych experiments and JATOS export).
 
-**Optional:**
-- anthropic (Claude API)
-- google-generativeai (Gemini API)
-- openai (GPT-4 API)
-- pytorch-lightning (training)
-- tensorboard (monitoring)
+For active learning, we use modules in `bead.evaluation.convergence` to detect convergence, `bead.active_learning.loop` for orchestration, and `bead.simulation.annotators` for testing with simulated judgments. Language model scoring uses `bead.items.adapters.huggingface`.
 
-**Development:**
-- pytest (testing)
-- ruff (linting)
-- pyright (type checking)
+Additional core dependencies include transformers (Hugging Face), torch (PyTorch), pydantic for data validation, pyyaml for configuration, and rich for CLI output.
+
+Optional dependencies for alternative LM backends include anthropic, google-generativeai, and openai. For model training and monitoring, pytorch-lightning and tensorboard are available but not required.
+
+Development requires pytest, ruff, and pyright.
 
 ## Citation
 
@@ -1029,6 +1247,6 @@ This project builds on:
 
 **Status:** ✅ Ready for production deployment
 
-**Last Updated:** October 28, 2025
+**Last Updated:** November 12, 2025
 
-**Current Data:** 21,453 verb-specific templates, 26 generic frames, 19,160 verb forms, test dataset with 500 cross-product items and 19,900 2AFC pairs
+**Current Data:** 21,453 verb-specific templates, 26 generic frames, 19,160 verb forms. The workflow requires running fill_templates.py before create_2afc_pairs.py to generate filled templates.

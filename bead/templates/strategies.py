@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import random
+import re
 import time
 from abc import ABC, abstractmethod
 from collections.abc import Iterator
@@ -1140,22 +1141,28 @@ class StrategyFiller(TemplateFiller):
 
             # Apply slot constraints
             if slot.constraints:
-                for constraint in slot.constraints:
-                    filtered: list[LexicalItem] = []
-                    for item in candidates:
-                        eval_context: dict[
-                            str, ContextValue | LexicalItem | FilledTemplate | Item
-                        ] = {"self": item}
+                filtered: list[LexicalItem] = []
+                for item in candidates:
+                    eval_context: dict[
+                        str, ContextValue | LexicalItem | FilledTemplate | Item
+                    ] = {"self": item}
+
+                    # Check all constraints
+                    passes_all_constraints = True
+                    for constraint in slot.constraints:
                         if constraint.context:
                             eval_context.update(constraint.context)
 
                         evaluator = DSLEvaluator()
-                        try:
-                            if evaluator.evaluate(constraint.expression, eval_context):
-                                filtered.append(item)
-                        except Exception:
-                            continue
-                    candidates = filtered
+                        if not evaluator.evaluate(constraint.expression, eval_context):
+                            passes_all_constraints = False
+                            break
+
+                    # Only add if passed ALL constraints
+                    if passes_all_constraints:
+                        filtered.append(item)
+
+                candidates = filtered
 
             slot_items[slot_name] = candidates
 
@@ -1469,9 +1476,11 @@ class MixedFillingStrategy(FillingStrategy):
                 for filled in self._fill_mlm_slots(
                     template, partial_combo, lexicons, language_code
                 ):
-                    n_yielded_for_combo += 1
-                    total_yielded += 1
-                    yield filled
+                    # Filter by template-level constraints
+                    if self._check_template_constraints(template, filled):
+                        n_yielded_for_combo += 1
+                        total_yielded += 1
+                        yield filled
                 combo_elapsed = time.time() - combo_start
                 logger.info(
                     f"[MixedFillingStrategy] Combo {i + 1} yielded "
@@ -1528,30 +1537,31 @@ class MixedFillingStrategy(FillingStrategy):
                         eval_context: dict[str, ContextValue | LexicalItem] = {
                             "self": item
                         }
-                        # Add constraint context
+                        # Check ALL constraints - item must pass every one
+                        passes_all_constraints = True
                         for constraint in slot.constraints:
                             if constraint.context:
                                 eval_context.update(constraint.context)
                             # Evaluate
                             evaluator = DSLEvaluator()
-                            try:
-                                # Cast to expected context type
-                                typed_context = cast(
-                                    dict[
-                                        str,
-                                        ContextValue
-                                        | LexicalItem
-                                        | FilledTemplate
-                                        | Item,
-                                    ],
-                                    eval_context,
-                                )
-                                if not evaluator.evaluate(
-                                    constraint.expression, typed_context
-                                ):
-                                    continue
-                            except Exception:
-                                continue
+                            # Cast to expected context type
+                            typed_context = cast(
+                                dict[
+                                    str,
+                                    ContextValue | LexicalItem | FilledTemplate | Item,
+                                ],
+                                eval_context,
+                            )
+                            if not evaluator.evaluate(
+                                constraint.expression, typed_context
+                            ):
+                                passes_all_constraints = False
+                                break
+
+                        # Only add item if it passed ALL constraints
+                        if not passes_all_constraints:
+                            continue
+
                     candidates.append(item)
 
             slot_items[slot_name] = candidates
@@ -1584,7 +1594,9 @@ class MixedFillingStrategy(FillingStrategy):
         combinations: list[dict[str, LexicalItem]] = []
         for combo_tuple in cartesian_product(*item_lists):
             combo_dict = dict(zip(slot_names, combo_tuple, strict=True))
-            combinations.append(combo_dict)
+            # Filter by template-level constraints
+            if self._check_template_constraints(template, combo_dict):
+                combinations.append(combo_dict)
 
         return combinations
 
@@ -1678,6 +1690,78 @@ class MixedFillingStrategy(FillingStrategy):
             complete.update(mlm_filling)
             yield complete
 
+    def _check_template_constraints(
+        self,
+        template: Template,
+        slot_fillers: dict[str, LexicalItem],
+    ) -> bool:
+        """Check if slot fillers satisfy template-level constraints.
+
+        Only evaluates constraints where all referenced slots are present.
+        Constraints referencing missing slots are skipped (deferred).
+
+        Parameters
+        ----------
+        template : Template
+            Template with multi-slot constraints
+        slot_fillers : dict[str, LexicalItem]
+            Complete or partial slot fillings
+
+        Returns
+        -------
+        bool
+            True if all evaluable template constraints are satisfied
+        """
+        logger.info(
+            f"[TemplateConstraints] Called with template '{template.name}', "
+            f"{len(template.constraints)} constraints, {len(slot_fillers)} fillers"
+        )
+        if not template.constraints:
+            logger.info("[TemplateConstraints] No constraints, returning True")
+            return True
+
+        # Extract slot names referenced in each constraint
+        # Pattern matches "slot_name." but NOT "something.property." (no dot before)
+        slot_pattern = re.compile(r"(?<![.])\b([a-zA-Z_][a-zA-Z0-9_]*)\.")
+        filled_slots = set(slot_fillers.keys())
+
+        # Filter to only constraints where all referenced slots are filled
+        evaluable_constraints = []
+        for constraint in template.constraints:
+            # Remove string literals before matching to avoid false matches
+            # (e.g., 'V.PTCP' should not match slot 'V')
+            expr_no_strings = re.sub(r"'[^']*'|\"[^\"]*\"", '""', constraint.expression)
+            referenced_slots = set(slot_pattern.findall(expr_no_strings))
+            if referenced_slots.issubset(filled_slots):
+                evaluable_constraints.append(constraint)
+                logger.info(
+                    f"[TemplateConstraints] Will evaluate: {constraint.description}"
+                )
+            else:
+                missing = referenced_slots - filled_slots
+                logger.info(
+                    f"[TemplateConstraints] Deferring (missing {missing}): "
+                    f"{constraint.description}"
+                )
+
+        if not evaluable_constraints:
+            return True  # No constraints can be evaluated yet
+
+        # Use ConstraintResolver to evaluate constraints properly
+        n_constraints = len(evaluable_constraints)
+        n_slots = len(filled_slots)
+        logger.info(
+            f"[TemplateConstraints] Evaluating {n_constraints} constraints "
+            f"with {n_slots} filled slots"
+        )
+        resolver = ConstraintResolver()
+        result = resolver.evaluate_template_constraints(
+            slot_fillers, evaluable_constraints
+        )
+        if not result:
+            logger.info("[TemplateConstraints] Combination REJECTED by constraints")
+        return result
+
     def _create_mlm_template(
         self, template: Template, partial_filling: dict[str, LexicalItem]
     ) -> Template:
@@ -1699,7 +1783,9 @@ class MixedFillingStrategy(FillingStrategy):
         modified_string = template.template_string
         for slot_name, item in partial_filling.items():
             placeholder = f"{{{slot_name}}}"
-            modified_string = modified_string.replace(placeholder, item.lemma)
+            # Use actual form if available (e.g., "is" not "be"), otherwise lemma
+            surface_form = item.form if item.form is not None else item.lemma
+            modified_string = modified_string.replace(placeholder, surface_form)
 
         # Create new template with only phase 2 (MLM) slots
         mlm_slots = {

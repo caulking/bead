@@ -72,6 +72,10 @@ resources:
       name: "determiners"
       description: "Determiners for NP arguments"
 
+    - path: "lexicons/be_forms.jsonl"
+      name: "be_forms"
+      description: "Forms of auxiliary 'be' for progressive aspect"
+
   # Templates
   templates:
     - path: "templates/generic_frames.jsonl"

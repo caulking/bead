@@ -35,9 +35,3 @@ amount,quantity,singular,count
 amounts,quantity,plural,count
 part,quantity,singular,count
 parts,quantity,plural,count
-other person,animate,singular,count
-other people,animate,plural,count/mass
-other thing,inanimate_object,singular,count
-other things,inanimate_object,plural,count
-other place,location,singular,count
-other places,location,plural,count

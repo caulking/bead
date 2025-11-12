@@ -20,7 +20,9 @@ from bead.resources.template import Slot, Template
 
 from .clausal_frames import ClausalTemplate, map_verbnet_to_clausal_templates
 from .constraint_builder import (
+    build_be_participle_constraint,
     build_determiner_constraint,
+    build_subject_verb_agreement_constraint,
 )
 
 
@@ -269,7 +271,8 @@ class TemplateGenerator:
                 ]
             elif slot_type.startswith("verb"):
                 constraints = [
-                    Constraint(expression="self.features.get('pos') == 'VERB'")
+                    Constraint(expression="self.features.get('pos') == 'V'"),
+                    Constraint(expression="self.features.get('verb_form') != 'V.PTCP'")
                 ]
                 # Add form constraints for specific verb forms
                 if slot_type == "verb_past":
@@ -352,20 +355,30 @@ class TemplateGenerator:
             Multi-slot constraints
         """
         constraints = []
-
-        # Check for determiner-noun pairs
         slot_names = list(slots.keys())
 
-        for i, slot_name in enumerate(slot_names):
-            if "det" in slot_name:
-                # Find corresponding noun
-                for noun_slot in slot_names:
-                    if "noun" in noun_slot and "det" not in noun_slot:
-                        det_constraint = build_determiner_constraint(
-                            slot_name, noun_slot
-                        )
-                        constraints.append(det_constraint)
-                        break
+        # Add determiner-noun agreement for all det+noun pairs
+        for slot_name in slot_names:
+            if slot_name.startswith("det_"):
+                # Extract suffix (e.g., "subj" from "det_subj")
+                suffix = slot_name[4:]  # Remove "det_" prefix
+                noun_slot = f"noun_{suffix}"
+                # Only add constraint if matching noun slot exists
+                if noun_slot in slot_names:
+                    det_constraint = build_determiner_constraint(
+                        slot_name, noun_slot
+                    )
+                    constraints.append(det_constraint)
+
+        # Add subject-verb agreement if we have subject and verb
+        if "noun_subj" in slot_names and "verb" in slot_names:
+            # Find subject determiner
+            det_subj = "det_subj" if "det_subj" in slot_names else None
+            if det_subj:
+                agreement_constraint = build_subject_verb_agreement_constraint(
+                    det_subj, "noun_subj", "verb"
+                )
+                constraints.append(agreement_constraint)
 
         return constraints
 
@@ -467,7 +480,8 @@ class TemplateGenerator:
                     name=slot_name,
                     description="Main verb",
                     constraints=[
-                        Constraint(expression="self.features.get('pos') == 'VERB'")
+                        Constraint(expression="self.features.get('pos') == 'V'"),
+                        Constraint(expression="self.features.get('verb_form') != 'V.PTCP'")
                     ],
                     required=True,
                 )

@@ -325,6 +325,91 @@ def build_preposition_constraint(slot: str) -> Constraint:
     )
 
 
+def build_subject_verb_agreement_constraint(
+    det_slot: str, noun_slot: str, verb_slot: str
+) -> Constraint:
+    """Build subject-verb number agreement constraint for English.
+
+    Rules:
+    - Singular noun → verb must be 3SG (3rd person singular)
+    - Plural noun → verb must NOT be 3SG
+
+    Note: Lexicons use "singular"/"plural" for noun number, "SG"/"PL" for verb number.
+
+    Parameters
+    ----------
+    det_slot : str
+        Name of the subject determiner slot
+    noun_slot : str
+        Name of the subject noun slot
+    verb_slot : str
+        Name of the verb slot
+
+    Returns
+    -------
+    Constraint
+        DSL constraint enforcing subject-verb agreement
+
+    Examples
+    --------
+    >>> constraint = build_subject_verb_agreement_constraint("det_subj", "noun_subj", "verb")
+    >>> "singular" in constraint.expression
+    True
+    """
+    # Agreement logic:
+    # If noun is singular → verb should have person=3 and number=SG
+    # If noun is plural → verb should NOT have person=3 and number=SG
+    expression = (
+        f"("
+        f"  ({noun_slot}.features.get('number') != 'singular') or "
+        f"  ({verb_slot}.features.get('person') == '3' and {verb_slot}.features.get('number') == 'SG')"
+        f") and ("
+        f"  ({noun_slot}.features.get('number') != 'plural') or "
+        f"  (not ({verb_slot}.features.get('person') == '3' and {verb_slot}.features.get('number') == 'SG')))"
+    )
+
+    return Constraint(
+        expression=expression,
+        description=f"Subject-verb number agreement between {noun_slot} and {verb_slot}",
+    )
+
+
+def build_be_participle_constraint(be_slot: str, verb_slot: str) -> Constraint:
+    """Build be + participle agreement constraint for progressive aspect.
+
+    Ensures that progressive templates (e.g., "is running") have:
+    1. The verb is a present participle (V.PTCP with PRS tense)
+    2. The "be" form agrees with the subject (handled separately)
+
+    Parameters
+    ----------
+    be_slot : str
+        Name of the "be" slot
+    verb_slot : str
+        Name of the verb slot (must be participle)
+
+    Returns
+    -------
+    Constraint
+        DSL constraint enforcing be + participle structure
+
+    Examples
+    --------
+    >>> constraint = build_be_participle_constraint("be", "verb")
+    >>> "V.PTCP" in constraint.expression
+    True
+    """
+    expression = (
+        f"{verb_slot}.features.get('verb_form') == 'V.PTCP' and "
+        f"{verb_slot}.features.get('tense') == 'PRS'"
+    )
+
+    return Constraint(
+        expression=expression,
+        description=f"Progressive aspect: {verb_slot} must be present participle when used with {be_slot}",
+    )
+
+
 def build_combined_constraint(*constraints: Constraint) -> Constraint:
     """Combine multiple constraints with AND logic.
 

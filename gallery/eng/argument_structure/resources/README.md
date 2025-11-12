@@ -5,26 +5,20 @@ This directory contains reference CSV files used to generate the controlled lexi
 ## Files
 
 ### bleached_nouns.csv
-Controlled noun inventory covering key semantic classes with minimal semantic content:
-- **Columns**: `word`, `semantic_class`, `number`, `countability`
-- **Purpose**: Fill NP slots in templates with semantically light nouns
-- **Examples**: person, people, thing, stuff, place
+
+This file contains a controlled noun inventory (41 nouns) covering key semantic classes with minimal semantic content. The CSV has columns for `word`, `semantic_class`, `number`, and `countability`. Semantic classes include animates (person, people, group, organization), inanimate objects (thing, stuff), locations (place, area), temporals (time), abstracts (information, idea, reason, matter, situation, way, level, event, activity, amount, part), and other-marked variants. These fill NP slots in templates.
 
 ### bleached_verbs.csv
-Controlled verb inventory for filling clausal complement heads:
-- **Columns**: `word`, `semantic_class`, `aspect`, `valency`, etc.
-- **Purpose**: Fill heads of embedded clauses (finite, infinitival)
-- **Examples**: do, be, have, go, get, make
+
+The verb inventory includes columns for `word`, `semantic_class`, `aspect`, `valency`, and other morphological features. These 8 verbs (do, be, have, go, get, make, happen, come) are used to fill the heads of embedded clauses, both finite and infinitival.
 
 ### bleached_adjectives.csv
-Controlled adjective inventory for small clause predicates:
-- **Columns**: `word`, `semantic_class`, `gradability`, `stage_vs_individual`, `notes`
-- **Purpose**: Fill ADJ slots (will use MLM filling after exhaustive noun/verb filling)
-- **Examples**: good, bad, right, wrong, certain, ready
+
+This inventory has 11 adjectives with columns for semantic class, gradability, and stage/individual-level distinctions. After exhaustive noun and verb filling, these adjectives (good, bad, right, wrong, okay, certain, ready, done, different, same, other) fill ADJ slots using MLM filling strategies.
 
 ## Usage
 
-These CSV files are read by `generate_lexicons.py` to create the JSONLines lexicon files used in the bead pipeline:
+These CSV files are read by `generate_lexicons.py` to create the JSONLines lexicon files used throughout the bead pipeline:
 
 ```python
 import csv
@@ -40,6 +34,16 @@ with open("resources/bleached_nouns.csv") as f:
             attributes={"semantic_class": row["semantic_class"]}
         )
 ```
+
+### Pipeline Integration
+
+The generated lexicons appear throughout the pipeline. During template filling, `bleached_nouns.jsonl` fills NP slots exhaustively, while `bleached_verbs.jsonl` handles embedded clause verbs and `bleached_adjectives.jsonl` uses MLM strategies for ADJ slots. Additional lexicons for determiners and prepositions complete the syntactic frames.
+
+When creating 2AFC pairs, the `create_2afc_pairs.py` script uses these lexicons for inline template filling, with an exhaustive strategy ensuring all noun-verb combinations get tested. The deployment stage references lexicons in metadata for provenance tracking and validates item generation for reproducibility.
+
+### Design Rationale
+
+The bleached lexicon approach minimizes semantic confounds in acceptability judgments. By using generic words with broad meanings (person, thing, do, be), we avoid unusual or domain-specific vocabulary that might trigger pragmatic effects. All items are high-frequency and common in everyday language. This design ensures that judgments reflect syntactic acceptability rather than semantic plausibility or world knowledge, and similar inventories can be created for other languages.
 
 ## Source
 

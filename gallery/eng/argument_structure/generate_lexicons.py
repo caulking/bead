@@ -127,7 +127,7 @@ def main(verb_limit: int | None = None):
         feature_columns=["tense", "semantic_class"],
         language_code="eng",
         description="Controlled verb inventory for templates",
-        pos="VERB",
+        pos="V",
     )
 
     print(f"Loaded {len(bleached_verb_lexicon.items)} bleached verbs from {csv_path}")
@@ -305,7 +305,7 @@ def main(verb_limit: int | None = None):
     be_items: dict[str, LexicalItem] = {}
     for be_data in be_forms_data:
         form = be_data.pop("form")
-        features = {"pos": "VERB", **be_data}
+        features = {"pos": "V", **be_data}
         item = LexicalItem(
             lemma="be",
             form=form,

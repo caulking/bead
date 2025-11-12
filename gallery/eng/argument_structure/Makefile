@@ -54,7 +54,7 @@ help: ## Show this help message
 	@echo "$(GREEN)Data Generation:$(NC)"
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
 		awk 'BEGIN {FS = ":.*?## "}; {printf "  $(YELLOW)%-25s$(NC) %s\n", $$1, $$2}' | \
-		grep -E "(lexicons|templates|cross-product|2afc)"
+		grep -E "(lexicons|templates|fill-templates|cross-product|2afc|lists|deployment)"
 	@echo ""
 	@echo "$(GREEN)Pipeline Execution:$(NC)"
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -88,7 +88,7 @@ all: data pipeline-dry-run ## Run complete pipeline with test data
 	@echo "$(GREEN)✓ Complete pipeline executed successfully$(NC)"
 
 .PHONY: data
-data: lexicons templates cross-product 2afc-pairs ## Generate all data files
+data: lexicons templates fill-templates cross-product 2afc-pairs ## Generate all data files
 	@echo "$(GREEN)✓ All data files generated$(NC)"
 
 # ============================================================================
@@ -97,39 +97,75 @@ data: lexicons templates cross-product 2afc-pairs ## Generate all data files
 
 .PHONY: lexicons
 lexicons: ## Generate lexicons from VerbNet and bleached resources
-	@echo "$(BLUE)[1/4] Generating lexicons...$(NC)"
+	@echo "$(BLUE)[1/7] Generating lexicons...$(NC)"
 	$(PYTHON) generate_lexicons.py
 	@echo "$(GREEN)✓ Lexicons generated$(NC)"
 
+.PHONY: verbnet-templates
+verbnet-templates: ## Generate verb-specific VerbNet templates
+	@echo "$(BLUE)[2/7] Generating verb-specific templates...$(NC)"
+	$(PYTHON) generate_templates.py
+	@echo "$(GREEN)✓ Verb-specific templates generated$(NC)"
+
 .PHONY: templates
-templates: ## Extract generic frame templates
-	@echo "$(BLUE)[2/4] Extracting generic templates...$(NC)"
+templates: verbnet-templates ## Extract generic frame templates from verb-specific templates
+	@echo "$(BLUE)[3/7] Extracting generic templates...$(NC)"
 	$(PYTHON) extract_generic_templates.py
 	@echo "$(GREEN)✓ Generic templates extracted$(NC)"
 
+.PHONY: fill-templates
+fill-templates: ## Fill templates using MLM strategy
+	@echo "$(BLUE)[4/7] Filling templates with MLM strategy...$(NC)"
+	$(PYTHON) fill_templates.py --dry-run
+	@echo "$(GREEN)✓ Templates filled$(NC)"
+
+.PHONY: fill-templates-full
+fill-templates-full: ## Fill all templates (no limit)
+	@echo "$(BLUE)[4/7] Filling all templates (this may take a while)...$(NC)"
+	$(PYTHON) fill_templates.py
+	@echo "$(GREEN)✓ All templates filled$(NC)"
+
 .PHONY: cross-product
 cross-product: ## Generate cross-product items (verb × template)
-	@echo "$(BLUE)[3/4] Generating cross-product items (limit=$(DEFAULT_CROSS_PRODUCT_LIMIT))...$(NC)"
+	@echo "$(BLUE)[5/7] Generating cross-product items (limit=$(DEFAULT_CROSS_PRODUCT_LIMIT))...$(NC)"
 	$(PYTHON) generate_cross_product.py --limit $(DEFAULT_CROSS_PRODUCT_LIMIT)
 	@echo "$(GREEN)✓ Cross-product items generated$(NC)"
 
 .PHONY: cross-product-full
 cross-product-full: ## Generate full cross-product (all 74,880 combinations)
-	@echo "$(BLUE)[3/4] Generating FULL cross-product items (this may take a while)...$(NC)"
+	@echo "$(BLUE)[5/7] Generating FULL cross-product items (this may take a while)...$(NC)"
 	$(PYTHON) generate_cross_product.py
 	@echo "$(GREEN)✓ Full cross-product items generated$(NC)"
 
 .PHONY: 2afc-pairs
 2afc-pairs: ## Generate 2AFC pairs from cross-product items
-	@echo "$(BLUE)[4/4] Generating 2AFC pairs (limit=$(DEFAULT_2AFC_LIMIT))...$(NC)"
+	@echo "$(BLUE)[6/7] Generating 2AFC pairs (limit=$(DEFAULT_2AFC_LIMIT))...$(NC)"
 	$(PYTHON) create_2afc_pairs.py --limit $(DEFAULT_2AFC_LIMIT)
 	@echo "$(GREEN)✓ 2AFC pairs generated$(NC)"
 
 .PHONY: 2afc-pairs-full
 2afc-pairs-full: ## Generate 2AFC pairs from all cross-product items
-	@echo "$(BLUE)[4/4] Generating 2AFC pairs (no limit)...$(NC)"
+	@echo "$(BLUE)[6/7] Generating 2AFC pairs (no limit)...$(NC)"
 	$(PYTHON) create_2afc_pairs.py
 	@echo "$(GREEN)✓ All 2AFC pairs generated$(NC)"
+
+.PHONY: lists
+lists: ## Partition 2AFC pairs into experiment lists
+	@echo "$(BLUE)[7/7] Generating experiment lists...$(NC)"
+	$(PYTHON) generate_lists.py
+	@echo "$(GREEN)✓ Experiment lists generated$(NC)"
+
+.PHONY: deployment
+deployment: ## Generate jsPsych/JATOS deployment files
+	@echo "$(BLUE)Generating jsPsych/JATOS deployment...$(NC)"
+	$(PYTHON) generate_deployment.py --n-lists 2
+	@echo "$(GREEN)✓ Deployment files generated$(NC)"
+
+.PHONY: deployment-full
+deployment-full: ## Generate deployment for all lists
+	@echo "$(BLUE)Generating full deployment (20 lists)...$(NC)"
+	$(PYTHON) generate_deployment.py --n-lists 20
+	@echo "$(GREEN)✓ Full deployment generated$(NC)"
 
 # ============================================================================
 # Pipeline Execution Targets
@@ -180,10 +216,16 @@ test-unit: ## Run unit tests for evaluation module
 test-lint: ## Run linting checks on pipeline scripts
 	@echo "$(BLUE)Running linting checks...$(NC)"
 	$(PYTHON) -m ruff check \
-		create_2afc_pairs.py \
-		run_pipeline.py \
+		generate_lexicons.py \
+		generate_templates.py \
+		extract_generic_templates.py \
+		fill_templates.py \
 		generate_cross_product.py \
-		extract_generic_templates.py
+		create_2afc_pairs.py \
+		generate_lists.py \
+		generate_deployment.py \
+		run_pipeline.py \
+		simulate_pipeline.py
 	@echo "$(GREEN)✓ Linting checks passed$(NC)"
 
 .PHONY: test-types
@@ -323,8 +365,28 @@ clean-lexicons: ## Clean generated lexicons
 .PHONY: clean-templates
 clean-templates: ## Clean extracted templates
 	@echo "$(BLUE)Cleaning templates...$(NC)"
+	@rm -f $(TEMPLATES_DIR)/verbnet_frames.jsonl
 	@rm -f $(TEMPLATES_DIR)/generic_frames.jsonl
 	@echo "$(GREEN)✓ Templates cleaned$(NC)"
+
+.PHONY: clean-filled-templates
+clean-filled-templates: ## Clean filled templates
+	@echo "$(BLUE)Cleaning filled templates...$(NC)"
+	@rm -f filled_templates/*.jsonl
+	@echo "$(GREEN)✓ Filled templates cleaned$(NC)"
+
+.PHONY: clean-lists
+clean-lists: ## Clean experiment lists
+	@echo "$(BLUE)Cleaning experiment lists...$(NC)"
+	@rm -f lists/*.jsonl
+	@echo "$(GREEN)✓ Experiment lists cleaned$(NC)"
+
+.PHONY: clean-deployment
+clean-deployment: ## Clean deployment files
+	@echo "$(BLUE)Cleaning deployment files...$(NC)"
+	@rm -rf deployment/list_*
+	@rm -f deployment/*.jzip
+	@echo "$(GREEN)✓ Deployment files cleaned$(NC)"
 
 # ============================================================================
 # Development Targets

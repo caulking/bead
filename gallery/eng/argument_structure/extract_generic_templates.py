@@ -19,6 +19,11 @@ from rich.console import Console
 from bead.resources.constraints import Constraint
 from bead.resources.template import Slot, Template
 
+from utils.constraint_builder import (
+    build_be_participle_constraint,
+    build_subject_verb_agreement_constraint,
+)
+
 console = Console()
 
 
@@ -49,11 +54,11 @@ def create_progressive_variant(base_template: Template, tense: str) -> Template:
 
     # Add be slot with tense constraint
     if tense == "present":
-        be_constraint_expr = "self.lemma == 'be' and self.features.tense == 'PRS'"
+        be_constraint_expr = "self.lemma == 'be' and self.features.get('tense') == 'PRS'"
         variant_name = "present_progressive"
         description_tense = "present progressive"
     else:  # past
-        be_constraint_expr = "self.lemma == 'be' and self.features.tense == 'PST'"
+        be_constraint_expr = "self.lemma == 'be' and self.features.get('tense') == 'PST'"
         variant_name = "past_progressive"
         description_tense = "past progressive"
 
@@ -77,12 +82,46 @@ def create_progressive_variant(base_template: Template, tense: str) -> Template:
         default_value=verb_slot.default_value,
     )
 
+    # Add be-participle constraint to ensure proper progressive structure
+    progressive_constraints = []
+
+    # Copy base constraints, but replace subject-verb agreement constraint
+    # For progressive: check {be} agreement with {noun_subj}, not {verb} agreement
+    has_subject_verb_agreement = False
+    for constraint in base_template.constraints:
+        # Identify subject-verb agreement constraint by checking description
+        if (
+            constraint.description
+            and "Subject-verb" in constraint.description
+            and "noun_subj" in constraint.description
+            and "verb" in constraint.description
+        ):
+            has_subject_verb_agreement = True
+            # Skip this constraint - we'll replace it with be agreement
+            continue
+        else:
+            # Keep other constraints
+            progressive_constraints.append(constraint)
+
+    # Add be-participle constraint
+    be_participle_constraint = build_be_participle_constraint("be", "verb")
+    progressive_constraints.append(be_participle_constraint)
+
+    # Add subject-verb agreement for {be} with {noun_subj} if needed
+    if has_subject_verb_agreement and "noun_subj" in new_slots:
+        det_subj = "det_subj" if "det_subj" in new_slots else None
+        if det_subj:
+            be_agreement_constraint = build_subject_verb_agreement_constraint(
+                det_subj, "noun_subj", "be"
+            )
+            progressive_constraints.append(be_agreement_constraint)
+
     # Create new template
     progressive_template = Template(
         name=f"{base_template.name}_{variant_name}",
         template_string=new_template_string,
         slots=new_slots,
-        constraints=base_template.constraints,
+        constraints=progressive_constraints,
         description=f"{base_template.description} ({description_tense})",
         language_code=base_template.language_code,
         tags=base_template.tags + [variant_name, "progressive"],
@@ -155,12 +194,13 @@ def main(input_file: str = "templates/verbnet_frames.jsonl") -> None:
         name_parts = template_string.replace("{", "").replace("}", "").split()[:5]
         template_name = "_".join(name_parts[:3])  # Use first 3 slots
 
-        # Create generic template (without verb-specific constraints)
+        # Create generic template (reusing constraints from prototype)
+        # Constraints are generic (reference slot names, not verb-specific items)
         generic_template = Template(
             name=template_name,
             template_string=template_string,
             slots=prototype["slots"],  # Reuse slots structure
-            constraints=[],  # Generic templates have no multi-slot constraints yet
+            constraints=prototype.get("constraints", []),  # Reuse multi-slot constraints
             description=f"Generic frame structure: {template_string}",
             language_code="eng",
             tags=["verbnet", "generic_frame"],
