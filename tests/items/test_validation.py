@@ -1,4 +1,5 @@
 """Tests for item validation utilities."""
+# ruff: noqa: PLC0415
 
 from __future__ import annotations
 
@@ -15,9 +16,13 @@ from bead.items.item_template import (
     TaskSpec,
 )
 from bead.items.validation import (
+    _check_option_keys,
+    get_task_type_requirements,
+    infer_task_type_from_item,
     item_passes_all_constraints,
     validate_constraint_satisfaction,
     validate_item,
+    validate_item_for_task_type,
     validate_metadata_completeness,
     validate_model_output,
 )
@@ -331,3 +336,354 @@ class TestItemPassesAllConstraints:
         simple_item.constraint_satisfaction[simple_template.constraints[0]] = True
         simple_item.constraint_satisfaction[simple_template.constraints[1]] = False
         assert item_passes_all_constraints(simple_item) is False
+
+
+class TestCheckOptionKeys:
+    """Tests for _check_option_keys helper function."""
+
+    def test_valid_two_options(self) -> None:
+        """Test with valid two options."""
+        rendered = {"option_a": "A", "option_b": "B"}
+        has_options, n_options = _check_option_keys(rendered)
+        assert has_options is True
+        assert n_options == 2
+
+    def test_valid_three_options(self) -> None:
+        """Test with valid three options."""
+        rendered = {"option_a": "A", "option_b": "B", "option_c": "C"}
+        has_options, n_options = _check_option_keys(rendered)
+        assert has_options is True
+        assert n_options == 3
+
+    def test_no_options(self) -> None:
+        """Test with no option keys."""
+        rendered = {"text": "Hello"}
+        has_options, n_options = _check_option_keys(rendered)
+        assert has_options is False
+        assert n_options == 0
+
+    def test_only_option_a(self) -> None:
+        """Test with only option_a (not enough)."""
+        rendered = {"option_a": "A"}
+        has_options, n_options = _check_option_keys(rendered)
+        assert has_options is False
+        assert n_options == 1
+
+    def test_non_consecutive_options(self) -> None:
+        """Test with non-consecutive option keys."""
+        rendered = {"option_a": "A", "option_c": "C"}
+        has_options, n_options = _check_option_keys(rendered)
+        assert has_options is False
+        assert n_options == 1  # Only option_a is consecutive
+
+
+class TestGetTaskTypeRequirements:
+    """Tests for get_task_type_requirements function."""
+
+    def test_forced_choice_requirements(self) -> None:
+        """Test requirements for forced_choice."""
+        reqs = get_task_type_requirements("forced_choice")
+        assert "option_a" in reqs["required_rendered_keys"]
+        assert "option_b" in reqs["required_rendered_keys"]
+        assert reqs["required_metadata_keys"] == []  # n_options not auto-set
+        assert "n_options" in reqs["optional_metadata_keys"]
+        assert reqs["special_fields"] == []
+
+    def test_multi_select_requirements(self) -> None:
+        """Test requirements for multi_select."""
+        reqs = get_task_type_requirements("multi_select")
+        assert "option_a" in reqs["required_rendered_keys"]
+        assert "min_selections" in reqs["required_metadata_keys"]
+        assert "max_selections" in reqs["required_metadata_keys"]
+
+    def test_ordinal_scale_requirements(self) -> None:
+        """Test requirements for ordinal_scale."""
+        reqs = get_task_type_requirements("ordinal_scale")
+        assert "text" in reqs["required_rendered_keys"]
+        assert "prompt" in reqs["required_rendered_keys"]
+        assert "scale_min" in reqs["required_metadata_keys"]
+        assert "scale_max" in reqs["required_metadata_keys"]
+
+    def test_magnitude_requirements(self) -> None:
+        """Test requirements for magnitude."""
+        reqs = get_task_type_requirements("magnitude")
+        assert "text" in reqs["required_rendered_keys"]
+        assert "prompt" in reqs["required_rendered_keys"]
+        assert "min_value" in reqs["required_metadata_keys"]
+        assert "max_value" in reqs["required_metadata_keys"]
+        assert "unit" in reqs["optional_metadata_keys"]
+
+    def test_binary_requirements(self) -> None:
+        """Test requirements for binary."""
+        reqs = get_task_type_requirements("binary")
+        assert "text" in reqs["required_rendered_keys"]
+        assert "prompt" in reqs["required_rendered_keys"]
+
+    def test_categorical_requirements(self) -> None:
+        """Test requirements for categorical."""
+        reqs = get_task_type_requirements("categorical")
+        assert "text" in reqs["required_rendered_keys"]
+        assert "prompt" in reqs["required_rendered_keys"]
+        assert "categories" in reqs["required_metadata_keys"]
+
+    def test_free_text_requirements(self) -> None:
+        """Test requirements for free_text."""
+        reqs = get_task_type_requirements("free_text")
+        assert "text" in reqs["required_rendered_keys"]
+        assert "prompt" in reqs["required_rendered_keys"]
+        assert "max_length" in reqs["optional_metadata_keys"]
+
+    def test_cloze_requirements(self) -> None:
+        """Test requirements for cloze."""
+        reqs = get_task_type_requirements("cloze")
+        assert reqs["required_rendered_keys"] == ["text"]
+        assert "n_unfilled_slots" in reqs["required_metadata_keys"]
+        assert "unfilled_slots" in reqs["special_fields"]
+
+    def test_unknown_task_type_raises_error(self) -> None:
+        """Test that unknown task type raises ValueError."""
+        with pytest.raises(ValueError, match="Unknown task type"):
+            get_task_type_requirements("unknown_task")
+
+
+class TestValidateItemForTaskType:
+    """Tests for validate_item_for_task_type function."""
+
+    def test_forced_choice_valid(self) -> None:
+        """Test valid forced_choice item passes validation."""
+        from bead.items.forced_choice import create_forced_choice_item
+
+        item = create_forced_choice_item("A", "B")
+        assert validate_item_for_task_type(item, "forced_choice") is True
+
+    def test_forced_choice_invalid_raises_error(self) -> None:
+        """Test invalid structure for forced_choice raises ValueError."""
+        from bead.items.ordinal_scale import create_ordinal_scale_item
+
+        item = create_ordinal_scale_item("Text", scale_bounds=(1, 5))
+        with pytest.raises(ValueError, match="forced_choice items must have"):
+            validate_item_for_task_type(item, "forced_choice")
+
+    def test_multi_select_valid(self) -> None:
+        """Test valid multi_select item passes validation."""
+        from bead.items.multi_select import create_multi_select_item
+
+        item = create_multi_select_item(
+            "A", "B", "C", min_selections=1, max_selections=3
+        )
+        assert validate_item_for_task_type(item, "multi_select") is True
+
+    def test_multi_select_invalid_min_max(self) -> None:
+        """Test multi_select with min > max raises error."""
+        item = Item(
+            item_template_id=uuid4(),
+            rendered_elements={"option_a": "A", "option_b": "B"},
+            item_metadata={"min_selections": 3, "max_selections": 1},
+        )
+        with pytest.raises(ValueError, match="min_selections <= max_selections"):
+            validate_item_for_task_type(item, "multi_select")
+
+    def test_ordinal_scale_valid(self) -> None:
+        """Test valid ordinal_scale item passes validation."""
+        from bead.items.ordinal_scale import create_ordinal_scale_item
+
+        item = create_ordinal_scale_item("How natural?", scale_bounds=(1, 7))
+        assert validate_item_for_task_type(item, "ordinal_scale") is True
+
+    def test_ordinal_scale_invalid_bounds(self) -> None:
+        """Test ordinal_scale with min >= max raises error."""
+        item = Item(
+            item_template_id=uuid4(),
+            rendered_elements={"text": "Test", "prompt": "Rate this:"},
+            item_metadata={"scale_min": 7, "scale_max": 1},
+        )
+        with pytest.raises(ValueError, match="scale_min < scale_max"):
+            validate_item_for_task_type(item, "ordinal_scale")
+
+    def test_magnitude_valid(self) -> None:
+        """Test valid magnitude item passes validation."""
+        from bead.items.magnitude import create_magnitude_item
+
+        item = create_magnitude_item("Enter reading time", unit="ms")
+        assert validate_item_for_task_type(item, "magnitude") is True
+
+    def test_magnitude_with_bounds_valid(self) -> None:
+        """Test magnitude with valid bounds passes validation."""
+        from bead.items.magnitude import create_magnitude_item
+
+        item = create_magnitude_item("Enter value", bounds=(0.0, 100.0))
+        assert validate_item_for_task_type(item, "magnitude") is True
+
+    def test_magnitude_invalid_bounds(self) -> None:
+        """Test magnitude with min >= max raises error."""
+        item = Item(
+            item_template_id=uuid4(),
+            rendered_elements={"text": "Test", "prompt": "Enter value:"},
+            item_metadata={"min_value": 100, "max_value": 0},
+        )
+        with pytest.raises(ValueError, match="min_value < max_value"):
+            validate_item_for_task_type(item, "magnitude")
+
+    def test_binary_valid(self) -> None:
+        """Test valid binary item passes validation."""
+        from bead.items.binary import create_binary_item
+
+        item = create_binary_item("The cat sat.", prompt="Is this grammatical?")
+        assert validate_item_for_task_type(item, "binary") is True
+
+    def test_binary_empty_prompt_raises_error(self) -> None:
+        """Test binary with empty prompt raises error."""
+        item = Item(
+            item_template_id=uuid4(),
+            rendered_elements={"text": "Test", "prompt": ""},
+            item_metadata={},
+        )
+        with pytest.raises(ValueError, match="non-empty 'prompt'"):
+            validate_item_for_task_type(item, "binary")
+
+    def test_categorical_valid(self) -> None:
+        """Test valid categorical item passes validation."""
+        from bead.items.categorical import create_nli_item
+
+        item = create_nli_item("All dogs bark", "Some dogs bark")
+        assert validate_item_for_task_type(item, "categorical") is True
+
+    def test_categorical_missing_categories_raises_error(self) -> None:
+        """Test categorical without categories raises error."""
+        item = Item(
+            item_template_id=uuid4(),
+            rendered_elements={"text": "Test", "prompt": "Choose"},
+            item_metadata={},
+        )
+        with pytest.raises(
+            ValueError,
+            match="categorical items must have.*categories.*in item_metadata",
+        ):
+            validate_item_for_task_type(item, "categorical")
+
+    def test_free_text_valid(self) -> None:
+        """Test valid free_text item passes validation."""
+        from bead.items.free_text import create_free_text_item
+
+        item = create_free_text_item("The cat sat.", prompt="What is the subject?")
+        assert validate_item_for_task_type(item, "free_text") is True
+
+    def test_cloze_valid(self) -> None:
+        """Test valid cloze item passes validation."""
+        from bead.items.cloze import create_simple_cloze_item
+
+        item = create_simple_cloze_item(
+            text="The quick brown fox",
+            blank_positions=[1],
+            blank_labels=["adjective"],
+        )
+        assert validate_item_for_task_type(item, "cloze") is True
+
+    def test_cloze_without_unfilled_slots_raises_error(self) -> None:
+        """Test cloze validation checks unfilled_slots field."""
+        item = Item(
+            item_template_id=uuid4(),
+            rendered_elements={"text": "Test"},
+            item_metadata={"n_unfilled_slots": 1},
+            unfilled_slots=[],  # Empty!
+        )
+        with pytest.raises(ValueError, match="unfilled_slots field populated"):
+            validate_item_for_task_type(item, "cloze")
+
+
+class TestInferTaskTypeFromItem:
+    """Tests for infer_task_type_from_item function."""
+
+    def test_infer_forced_choice(self) -> None:
+        """Test inference of forced_choice from structure."""
+        from bead.items.forced_choice import create_forced_choice_item
+
+        item = create_forced_choice_item("A", "B")
+        assert infer_task_type_from_item(item) == "forced_choice"
+
+    def test_infer_multi_select(self) -> None:
+        """Test inference of multi_select from structure."""
+        from bead.items.multi_select import create_multi_select_item
+
+        item = create_multi_select_item(
+            "A", "B", "C", min_selections=1, max_selections=2
+        )
+        assert infer_task_type_from_item(item) == "multi_select"
+
+    def test_infer_ordinal_scale(self) -> None:
+        """Test inference of ordinal_scale from structure."""
+        from bead.items.ordinal_scale import create_likert_7_item
+
+        item = create_likert_7_item("How natural is this sentence?")
+        assert infer_task_type_from_item(item) == "ordinal_scale"
+
+    def test_infer_magnitude(self) -> None:
+        """Test inference of magnitude from structure."""
+        from bead.items.magnitude import create_magnitude_item
+
+        item = create_magnitude_item("Enter reading time", unit="ms")
+        assert infer_task_type_from_item(item) == "magnitude"
+
+    def test_infer_binary(self) -> None:
+        """Test inference of binary from structure."""
+        from bead.items.binary import create_binary_item
+
+        item = create_binary_item("The cat sat.", prompt="Is this grammatical?")
+        assert infer_task_type_from_item(item) == "binary"
+
+    def test_infer_categorical(self) -> None:
+        """Test inference of categorical from structure."""
+        from bead.items.categorical import create_nli_item
+
+        item = create_nli_item("All dogs bark", "Some dogs bark")
+        assert infer_task_type_from_item(item) == "categorical"
+
+    def test_infer_free_text(self) -> None:
+        """Test inference of free_text from structure."""
+        from bead.items.free_text import create_free_text_item
+
+        item = create_free_text_item("The cat sat.", prompt="What is the subject?")
+        assert infer_task_type_from_item(item) == "free_text"
+
+    def test_infer_cloze(self) -> None:
+        """Test inference of cloze from structure."""
+        from bead.items.cloze import create_simple_cloze_item
+
+        item = create_simple_cloze_item(
+            text="The quick brown fox",
+            blank_positions=[1],
+            blank_labels=["adjective"],
+        )
+        assert infer_task_type_from_item(item) == "cloze"
+
+    def test_ambiguous_text_only_raises_error(self) -> None:
+        """Test that ambiguous structure raises error."""
+        item = Item(
+            item_template_id=uuid4(),
+            rendered_elements={"text": "Test"},
+            item_metadata={},  # No distinguishing metadata
+        )
+        with pytest.raises(
+            ValueError, match="single 'text' key without unfilled_slots"
+        ):
+            infer_task_type_from_item(item)
+
+    def test_ambiguous_text_prompt_raises_error(self) -> None:
+        """Test that text+prompt without metadata raises error."""
+        item = Item(
+            item_template_id=uuid4(),
+            rendered_elements={"text": "Test", "prompt": "Answer"},
+            item_metadata={},  # No distinguishing metadata
+        )
+        with pytest.raises(ValueError, match="Could be binary or free_text"):
+            infer_task_type_from_item(item)
+
+    def test_no_match_raises_error(self) -> None:
+        """Test that unrecognized structure raises error."""
+        item = Item(
+            item_template_id=uuid4(),
+            rendered_elements={"unknown_key": "value"},
+            item_metadata={},
+        )
+        with pytest.raises(ValueError, match="Could not infer task type"):
+            infer_task_type_from_item(item)
