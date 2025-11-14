@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import warnings
+from collections import Counter
 from pathlib import Path
 
 import numpy as np
@@ -10,7 +12,9 @@ import torch
 import torch.nn as nn
 from transformers import AutoModel, AutoTokenizer
 
+from bead.active_learning.config import MixedEffectsConfig, VarianceComponents
 from bead.active_learning.models.base import ActiveLearningModel, ModelPrediction
+from bead.active_learning.models.random_effects import RandomEffectsManager
 from bead.config.active_learning import ForcedChoiceModelConfig
 from bead.items.item import Item
 from bead.items.item_template import ItemTemplate, TaskType
@@ -39,11 +43,15 @@ class ForcedChoiceModel(ActiveLearningModel):
     encoder : AutoModel
         Transformer encoder model.
     classifier_head : nn.Sequential
-        Classification head.
+        Classification head (fixed effects head).
     num_classes : int | None
         Number of classes (inferred from training data).
     option_names : list[str] | None
         Option names (e.g., ["option_a", "option_b"]).
+    random_effects : RandomEffectsManager
+        Manager for participant-level random effects.
+    variance_history : list[VarianceComponents]
+        Variance component estimates over training (for diagnostics).
     _is_fitted : bool
         Whether model has been trained.
 
@@ -81,6 +89,9 @@ class ForcedChoiceModel(ActiveLearningModel):
         """
         self.config = config or ForcedChoiceModelConfig()
 
+        # Validate mixed_effects configuration
+        super().__init__(self.config)
+
         self.tokenizer = AutoTokenizer.from_pretrained(self.config.model_name)
         self.encoder = AutoModel.from_pretrained(self.config.model_name)
 
@@ -88,6 +99,10 @@ class ForcedChoiceModel(ActiveLearningModel):
         self.option_names: list[str] | None = None
         self.classifier_head: nn.Sequential | None = None
         self._is_fitted = False
+
+        # Initialize random effects manager
+        self.random_effects: RandomEffectsManager | None = None
+        self.variance_history: list[VarianceComponents] = []
 
         self.encoder.to(self.config.device)
 
@@ -290,10 +305,11 @@ class ForcedChoiceModel(ActiveLearningModel):
         self,
         items: list[Item],
         labels: list[str],
+        participant_ids: list[str] | None = None,
         validation_items: list[Item] | None = None,
         validation_labels: list[str] | None = None,
     ) -> dict[str, float]:
-        """Train model on forced choice data.
+        """Train model on forced choice data with participant-level random effects.
 
         Parameters
         ----------
@@ -301,6 +317,10 @@ class ForcedChoiceModel(ActiveLearningModel):
             Training items.
         labels : list[str]
             Training labels (option names like "option_a", "option_b").
+        participant_ids : list[str] | None
+            Participant identifier for each item.
+            - For fixed effects (mode='fixed'): Pass None.
+            - For mixed effects: Must provide list[str] with same length as items.
         validation_items : list[Item] | None
             Optional validation items.
         validation_labels : list[str] | None
@@ -313,20 +333,58 @@ class ForcedChoiceModel(ActiveLearningModel):
             - "train_accuracy": Final training accuracy
             - "train_loss": Final training loss
             - "val_accuracy": Validation accuracy (if validation data provided)
+            - "participant_variance": σ²_u (if estimate_variance_components=True)
+            - "n_participants": Number of unique participants
 
         Raises
         ------
         ValueError
+            If participant_ids is None when mode is 'random_intercepts' or 'random_slopes'.
+        ValueError
             If items and labels have different lengths.
+        ValueError
+            If items and participant_ids have different lengths.
+        ValueError
+            If participant_ids contains empty strings.
         ValueError
             If labels contain invalid values.
         ValueError
             If validation data is incomplete.
         """
+        # Validate and normalize participant_ids
+        if participant_ids is None:
+            if self.config.mixed_effects.mode != "fixed":
+                raise ValueError(
+                    f"participant_ids is required when mode='{self.config.mixed_effects.mode}'. "
+                    f"For fixed effects, set mode='fixed' in config. "
+                    f"For mixed effects, provide participant_ids as list[str]."
+                )
+            participant_ids = ["_fixed_"] * len(items)
+        elif self.config.mixed_effects.mode == "fixed":
+            warnings.warn(
+                f"participant_ids provided but mode='fixed'. Participant IDs will be ignored.",
+                UserWarning,
+                stacklevel=2
+            )
+            participant_ids = ["_fixed_"] * len(items)
+
+        # Validate input lengths
         if len(items) != len(labels):
             raise ValueError(
                 f"Number of items ({len(items)}) must match "
                 f"number of labels ({len(labels)})"
+            )
+
+        if len(items) != len(participant_ids):
+            raise ValueError(
+                f"Length mismatch: {len(items)} items != {len(participant_ids)} "
+                f"participant_ids. participant_ids must have same length as items."
+            )
+
+        if any(not pid for pid in participant_ids):
+            raise ValueError(
+                "participant_ids cannot contain empty strings. "
+                "Ensure all participants have valid identifiers."
             )
 
         if (validation_items is None) != (validation_labels is None):
@@ -342,6 +400,16 @@ class ForcedChoiceModel(ActiveLearningModel):
         self._validate_labels(labels)
         self._initialize_classifier(self.num_classes)
 
+        # Initialize random effects manager
+        self.random_effects = RandomEffectsManager(
+            self.config.mixed_effects, n_classes=self.num_classes
+        )
+
+        # Register participants for adaptive regularization
+        participant_counts = Counter(participant_ids)
+        for pid, count in participant_counts.items():
+            self.random_effects.register_participant(pid, count)
+
         label_to_idx = {label: idx for idx, label in enumerate(self.option_names)}
         y = torch.tensor(
             [label_to_idx[label] for label in labels],
@@ -349,10 +417,19 @@ class ForcedChoiceModel(ActiveLearningModel):
             device=self.config.device,
         )
 
-        optimizer = torch.optim.AdamW(
-            list(self.encoder.parameters()) + list(self.classifier_head.parameters()),
-            lr=self.config.learning_rate,
+        # Build optimizer parameters based on mode
+        params_to_optimize = list(self.encoder.parameters()) + list(
+            self.classifier_head.parameters()
         )
+
+        # Add random effects parameters
+        if self.config.mixed_effects.mode == "random_intercepts":
+            params_to_optimize.extend(self.random_effects.intercepts.values())
+        elif self.config.mixed_effects.mode == "random_slopes":
+            for head in self.random_effects.slopes.values():
+                params_to_optimize.extend(head.parameters())
+
+        optimizer = torch.optim.AdamW(params_to_optimize, lr=self.config.learning_rate)
         criterion = nn.CrossEntropyLoss()
 
         self.encoder.train()
@@ -371,11 +448,41 @@ class ForcedChoiceModel(ActiveLearningModel):
 
                 batch_items = items[start_idx:end_idx]
                 batch_labels = y[start_idx:end_idx]
+                batch_participant_ids = participant_ids[start_idx:end_idx]
 
                 embeddings = self._prepare_inputs(batch_items)
-                logits = self.classifier_head(embeddings)
 
-                loss = criterion(logits, batch_labels)
+                # Forward pass depends on mixed effects mode
+                if self.config.mixed_effects.mode == "fixed":
+                    # Standard forward pass
+                    logits = self.classifier_head(embeddings)
+
+                elif self.config.mixed_effects.mode == "random_intercepts":
+                    # Fixed head + per-participant bias
+                    logits = self.classifier_head(embeddings)
+                    for j, pid in enumerate(batch_participant_ids):
+                        bias = self.random_effects.get_intercepts(
+                            pid, n_classes=self.num_classes, create_if_missing=True
+                        )
+                        logits[j] = logits[j] + bias
+
+                elif self.config.mixed_effects.mode == "random_slopes":
+                    # Per-participant head
+                    logits_list = []
+                    for j, pid in enumerate(batch_participant_ids):
+                        participant_head = self.random_effects.get_slopes(
+                            pid,
+                            fixed_head=self.classifier_head,
+                            create_if_missing=True,
+                        )
+                        logits_j = participant_head(embeddings[j : j + 1])
+                        logits_list.append(logits_j)
+                    logits = torch.cat(logits_list, dim=0)
+
+                # Data loss + prior regularization
+                loss_ce = criterion(logits, batch_labels)
+                loss_prior = self.random_effects.compute_prior_loss()
+                loss = loss_ce + loss_prior
 
                 optimizer.zero_grad()
                 loss.backward()
@@ -395,6 +502,14 @@ class ForcedChoiceModel(ActiveLearningModel):
             "train_loss": epoch_loss,
         }
 
+        # Estimate variance components
+        if self.config.mixed_effects.estimate_variance_components:
+            var_comp = self.random_effects.estimate_variance_components()
+            if var_comp:
+                self.variance_history.append(var_comp)
+                metrics["participant_variance"] = var_comp.variance
+                metrics["n_participants"] = var_comp.n_groups
+
         if validation_items is not None and validation_labels is not None:
             self._validate_labels(validation_labels)
 
@@ -404,7 +519,12 @@ class ForcedChoiceModel(ActiveLearningModel):
                     f"must match number of validation labels ({len(validation_labels)})"
                 )
 
-            val_predictions = self.predict(validation_items)
+            # Validation with placeholder participant_ids for mixed effects
+            if self.config.mixed_effects.mode == "fixed":
+                val_predictions = self.predict(validation_items, participant_ids=None)
+            else:
+                val_participant_ids = ["_validation_"] * len(validation_items)
+                val_predictions = self.predict(validation_items, participant_ids=val_participant_ids)
             val_pred_labels = [p.predicted_class for p in val_predictions]
             val_acc = sum(
                 pred == true
@@ -414,13 +534,19 @@ class ForcedChoiceModel(ActiveLearningModel):
 
         return metrics
 
-    def predict(self, items: list[Item]) -> list[ModelPrediction]:
-        """Predict class labels for items.
+    def predict(
+        self, items: list[Item], participant_ids: list[str] | None = None
+    ) -> list[ModelPrediction]:
+        """Predict class labels for items with participant-specific random effects.
 
         Parameters
         ----------
         items : list[Item]
             Items to predict.
+        participant_ids : list[str] | None
+            Participant identifier for each item.
+            - For fixed effects (mode='fixed'): Pass None.
+            - For mixed effects: Must provide list[str] with same length as items.
 
         Returns
         -------
@@ -431,16 +557,75 @@ class ForcedChoiceModel(ActiveLearningModel):
         ------
         ValueError
             If model has not been trained yet.
+        ValueError
+            If participant_ids is None when mode requires mixed effects.
+        ValueError
+            If items and participant_ids have different lengths.
+        ValueError
+            If participant_ids contains empty strings.
         """
         if not self._is_fitted:
             raise ValueError("Model not trained. Call train() before predict().")
+
+        # Validate and normalize participant_ids
+        if participant_ids is None:
+            if self.config.mixed_effects.mode != "fixed":
+                raise ValueError(
+                    f"participant_ids is required when mode='{self.config.mixed_effects.mode}'. "
+                    f"For fixed effects, set mode='fixed' in config. "
+                    f"For mixed effects, provide participant_ids as list[str]."
+                )
+            participant_ids = ["_fixed_"] * len(items)
+        elif self.config.mixed_effects.mode == "fixed":
+            warnings.warn(
+                f"participant_ids provided but mode='fixed'. Participant IDs will be ignored.",
+                UserWarning,
+                stacklevel=2
+            )
+            participant_ids = ["_fixed_"] * len(items)
+
+        if len(items) != len(participant_ids):
+            raise ValueError(
+                f"Length mismatch: {len(items)} items != {len(participant_ids)} "
+                f"participant_ids"
+            )
+
+        if any(not pid for pid in participant_ids):
+            raise ValueError(
+                "participant_ids cannot contain empty strings. "
+                "Ensure all participants have valid identifiers."
+            )
 
         self.encoder.eval()
         self.classifier_head.eval()
 
         with torch.no_grad():
             embeddings = self._prepare_inputs(items)
-            logits = self.classifier_head(embeddings)
+
+            # Forward pass depends on mixed effects mode
+            if self.config.mixed_effects.mode == "fixed":
+                logits = self.classifier_head(embeddings)
+
+            elif self.config.mixed_effects.mode == "random_intercepts":
+                logits = self.classifier_head(embeddings)
+                for i, pid in enumerate(participant_ids):
+                    # Unknown participants: use prior mean (zero bias)
+                    bias = self.random_effects.get_intercepts(
+                        pid, n_classes=self.num_classes, create_if_missing=False
+                    )
+                    logits[i] = logits[i] + bias
+
+            elif self.config.mixed_effects.mode == "random_slopes":
+                logits_list = []
+                for i, pid in enumerate(participant_ids):
+                    # Unknown participants: use fixed head
+                    participant_head = self.random_effects.get_slopes(
+                        pid, fixed_head=self.classifier_head, create_if_missing=False
+                    )
+                    logits_i = participant_head(embeddings[i : i + 1])
+                    logits_list.append(logits_i)
+                logits = torch.cat(logits_list, dim=0)
+
             proba = torch.softmax(logits, dim=1).cpu().numpy()
             pred_classes = torch.argmax(logits, dim=1).cpu().numpy()
 
@@ -461,13 +646,19 @@ class ForcedChoiceModel(ActiveLearningModel):
 
         return predictions
 
-    def predict_proba(self, items: list[Item]) -> np.ndarray:
-        """Predict class probabilities for items.
+    def predict_proba(
+        self, items: list[Item], participant_ids: list[str] | None = None
+    ) -> np.ndarray:
+        """Predict class probabilities for items with random effects.
 
         Parameters
         ----------
         items : list[Item]
             Items to predict.
+        participant_ids : list[str] | None
+            Participant identifier for each item.
+            - For fixed effects (mode='fixed'): Pass None.
+            - For mixed effects: Must provide list[str] with same length as items.
 
         Returns
         -------
@@ -478,22 +669,79 @@ class ForcedChoiceModel(ActiveLearningModel):
         ------
         ValueError
             If model has not been trained yet.
+        ValueError
+            If participant_ids is None when mode requires mixed effects.
+        ValueError
+            If items and participant_ids have different lengths.
+        ValueError
+            If participant_ids contains empty strings.
         """
         if not self._is_fitted:
             raise ValueError("Model not trained. Call train() before predict_proba().")
+
+        # Validate and normalize participant_ids
+        if participant_ids is None:
+            if self.config.mixed_effects.mode != "fixed":
+                raise ValueError(
+                    f"participant_ids is required when mode='{self.config.mixed_effects.mode}'. "
+                    f"For fixed effects, set mode='fixed' in config. "
+                    f"For mixed effects, provide participant_ids as list[str]."
+                )
+            participant_ids = ["_fixed_"] * len(items)
+        elif self.config.mixed_effects.mode == "fixed":
+            warnings.warn(
+                f"participant_ids provided but mode='fixed'. Participant IDs will be ignored.",
+                UserWarning,
+                stacklevel=2
+            )
+            participant_ids = ["_fixed_"] * len(items)
+
+        if len(items) != len(participant_ids):
+            raise ValueError(
+                f"Length mismatch: {len(items)} items != {len(participant_ids)} "
+                f"participant_ids"
+            )
+
+        if any(not pid for pid in participant_ids):
+            raise ValueError(
+                "participant_ids cannot contain empty strings. "
+                "Ensure all participants have valid identifiers."
+            )
 
         self.encoder.eval()
         self.classifier_head.eval()
 
         with torch.no_grad():
             embeddings = self._prepare_inputs(items)
-            logits = self.classifier_head(embeddings)
+
+            # Forward pass depends on mixed effects mode
+            if self.config.mixed_effects.mode == "fixed":
+                logits = self.classifier_head(embeddings)
+
+            elif self.config.mixed_effects.mode == "random_intercepts":
+                logits = self.classifier_head(embeddings)
+                for i, pid in enumerate(participant_ids):
+                    bias = self.random_effects.get_intercepts(
+                        pid, n_classes=self.num_classes, create_if_missing=False
+                    )
+                    logits[i] = logits[i] + bias
+
+            elif self.config.mixed_effects.mode == "random_slopes":
+                logits_list = []
+                for i, pid in enumerate(participant_ids):
+                    participant_head = self.random_effects.get_slopes(
+                        pid, fixed_head=self.classifier_head, create_if_missing=False
+                    )
+                    logits_i = participant_head(embeddings[i : i + 1])
+                    logits_list.append(logits_i)
+                logits = torch.cat(logits_list, dim=0)
+
             proba = torch.softmax(logits, dim=1).cpu().numpy()
 
         return proba
 
     def save(self, path: str) -> None:
-        """Save model to disk.
+        """Save model to disk including random effects and variance history.
 
         Parameters
         ----------
@@ -519,6 +767,10 @@ class ForcedChoiceModel(ActiveLearningModel):
             save_path / "classifier_head.pt",
         )
 
+        # Save random effects (includes variance history)
+        if self.random_effects is not None:
+            self.random_effects.save(save_path / "random_effects")
+
         # Save both config and training state
         config_dict = self.config.model_dump()
         config_dict["num_classes"] = self.num_classes
@@ -528,7 +780,7 @@ class ForcedChoiceModel(ActiveLearningModel):
             json.dump(config_dict, f, indent=2)
 
     def load(self, path: str) -> None:
-        """Load model from disk.
+        """Load model from disk including random effects and variance history.
 
         Parameters
         ----------
@@ -552,6 +804,14 @@ class ForcedChoiceModel(ActiveLearningModel):
         self.option_names = config_dict.pop("option_names")
 
         # Reconstruct configuration
+        # Handle mixed_effects reconstruction
+        if "mixed_effects" in config_dict and isinstance(
+            config_dict["mixed_effects"], dict
+        ):
+            config_dict["mixed_effects"] = MixedEffectsConfig(
+                **config_dict["mixed_effects"]
+            )
+
         self.config = ForcedChoiceModelConfig(**config_dict)
 
         self.encoder = AutoModel.from_pretrained(load_path / "encoder")
@@ -563,6 +823,19 @@ class ForcedChoiceModel(ActiveLearningModel):
                 load_path / "classifier_head.pt", map_location=self.config.device
             )
         )
+
+        # Initialize and load random effects
+        self.random_effects = RandomEffectsManager(
+            self.config.mixed_effects, n_classes=self.num_classes
+        )
+        random_effects_path = load_path / "random_effects"
+        if random_effects_path.exists():
+            self.random_effects.load(
+                random_effects_path, fixed_head=self.classifier_head
+            )
+            # Restore variance history
+            if self.random_effects.variance_history:
+                self.variance_history = self.random_effects.variance_history.copy()
 
         self.encoder.to(self.config.device)
         self.classifier_head.to(self.config.device)

@@ -220,10 +220,14 @@ class ActiveLearningLoop:
             ]
 
             # Train model
-            train_metrics = current_model.train(items=labeled_items, labels=labels)
+            train_metrics = current_model.train(
+                items=labeled_items, labels=labels
+            )
 
             # Evaluate model on labeled items
-            predictions = current_model.predict(labeled_items)
+            predictions = current_model.predict(
+                labeled_items
+            )
             pred_labels = [p.predicted_class for p in predictions]
 
             # Compute accuracy

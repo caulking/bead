@@ -189,6 +189,7 @@ def test_forced_choice_with_validation(test_items):
     metrics = model.train(
         train_items,
         train_labels,
+        participant_ids=None,
         validation_items=val_items,
         validation_labels=val_labels,
     )
@@ -366,6 +367,7 @@ def test_forced_choice_incomplete_validation_data_raises(test_items):
         model.train(
             train_items,
             train_labels,
+            participant_ids=None,
             validation_items=val_items,
             validation_labels=None,
         )
@@ -385,6 +387,7 @@ def test_forced_choice_validation_mismatch_raises(test_items):
         model.train(
             train_items,
             train_labels,
+            participant_ids=None,
             validation_items=val_items,
             validation_labels=val_labels,
         )

@@ -7,6 +7,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from bead.active_learning.config import MixedEffectsConfig
+
 
 class ForcedChoiceModelConfig(BaseModel):
     """Configuration for forced choice active learning models.
@@ -29,6 +31,8 @@ class ForcedChoiceModelConfig(BaseModel):
         Number of training epochs.
     device : Literal["cpu", "cuda", "mps"]
         Device to train on.
+    mixed_effects : MixedEffectsConfig
+        Mixed effects configuration for participant-level modeling.
 
     Examples
     --------
@@ -37,6 +41,8 @@ class ForcedChoiceModelConfig(BaseModel):
     'bert-base-uncased'
     >>> config.batch_size
     16
+    >>> config.mixed_effects.mode
+    'fixed'
     """
 
     model_name: str = Field(
@@ -74,6 +80,10 @@ class ForcedChoiceModelConfig(BaseModel):
     device: Literal["cpu", "cuda", "mps"] = Field(
         default="cpu",
         description="Device to train on",
+    )
+    mixed_effects: MixedEffectsConfig = Field(
+        default_factory=MixedEffectsConfig,
+        description="Mixed effects configuration for participant-level modeling",
     )
 
 
@@ -215,6 +225,231 @@ class TrainerConfig(BaseModel):
     logging_dir: Path = Field(default=Path("logs"), description="Logging directory")
     use_wandb: bool = Field(default=False, description="Use Weights & Biases")
     wandb_project: str | None = Field(default=None, description="W&B project name")
+
+
+class CategoricalModelConfig(BaseModel):
+    """Configuration for categorical active learning models.
+
+    Parameters
+    ----------
+    model_name : str
+        HuggingFace model identifier.
+    max_length : int
+        Maximum sequence length for tokenization.
+    encoder_mode : Literal["single_encoder", "dual_encoder"]
+        Encoding strategy for categories.
+    include_instructions : bool
+        Whether to include task instructions.
+    learning_rate : float
+        Learning rate for AdamW optimizer.
+    batch_size : int
+        Batch size for training.
+    num_epochs : int
+        Number of training epochs.
+    device : Literal["cpu", "cuda", "mps"]
+        Device to train on.
+    mixed_effects : MixedEffectsConfig
+        Mixed effects configuration for participant-level modeling.
+
+    Examples
+    --------
+    >>> config = CategoricalModelConfig()
+    >>> config.model_name
+    'bert-base-uncased'
+    >>> config.mixed_effects.mode
+    'fixed'
+    """
+
+    model_name: str = Field(
+        default="bert-base-uncased",
+        description="HuggingFace model identifier",
+    )
+    max_length: int = Field(
+        default=128,
+        description="Maximum sequence length for tokenization",
+        gt=0,
+    )
+    encoder_mode: Literal["single_encoder", "dual_encoder"] = Field(
+        default="single_encoder",
+        description="Encoding strategy for categories",
+    )
+    include_instructions: bool = Field(
+        default=False,
+        description="Whether to include task instructions",
+    )
+    learning_rate: float = Field(
+        default=2e-5,
+        description="Learning rate for AdamW optimizer",
+        gt=0,
+    )
+    batch_size: int = Field(
+        default=16,
+        description="Batch size for training",
+        gt=0,
+    )
+    num_epochs: int = Field(
+        default=3,
+        description="Number of training epochs",
+        gt=0,
+    )
+    device: Literal["cpu", "cuda", "mps"] = Field(
+        default="cpu",
+        description="Device to train on",
+    )
+    mixed_effects: MixedEffectsConfig = Field(
+        default_factory=MixedEffectsConfig,
+        description="Mixed effects configuration for participant-level modeling",
+    )
+
+
+class BinaryModelConfig(BaseModel):
+    """Configuration for binary active learning models.
+
+    Parameters
+    ----------
+    model_name : str
+        HuggingFace model identifier.
+    max_length : int
+        Maximum sequence length for tokenization.
+    encoder_mode : Literal["single_encoder", "dual_encoder"]
+        Encoding strategy for binary classification.
+    include_instructions : bool
+        Whether to include task instructions.
+    learning_rate : float
+        Learning rate for AdamW optimizer.
+    batch_size : int
+        Batch size for training.
+    num_epochs : int
+        Number of training epochs.
+    device : Literal["cpu", "cuda", "mps"]
+        Device to train on.
+    mixed_effects : MixedEffectsConfig
+        Mixed effects configuration for participant-level modeling.
+
+    Examples
+    --------
+    >>> config = BinaryModelConfig()
+    >>> config.model_name
+    'bert-base-uncased'
+    >>> config.mixed_effects.mode
+    'fixed'
+    """
+
+    model_name: str = Field(
+        default="bert-base-uncased",
+        description="HuggingFace model identifier",
+    )
+    max_length: int = Field(
+        default=128,
+        description="Maximum sequence length for tokenization",
+        gt=0,
+    )
+    encoder_mode: Literal["single_encoder", "dual_encoder"] = Field(
+        default="single_encoder",
+        description="Encoding strategy for binary classification",
+    )
+    include_instructions: bool = Field(
+        default=False,
+        description="Whether to include task instructions",
+    )
+    learning_rate: float = Field(
+        default=2e-5,
+        description="Learning rate for AdamW optimizer",
+        gt=0,
+    )
+    batch_size: int = Field(
+        default=16,
+        description="Batch size for training",
+        gt=0,
+    )
+    num_epochs: int = Field(
+        default=3,
+        description="Number of training epochs",
+        gt=0,
+    )
+    device: Literal["cpu", "cuda", "mps"] = Field(
+        default="cpu",
+        description="Device to train on",
+    )
+    mixed_effects: MixedEffectsConfig = Field(
+        default_factory=MixedEffectsConfig,
+        description="Mixed effects configuration for participant-level modeling",
+    )
+
+
+class MultiSelectModelConfig(BaseModel):
+    """Configuration for multi-select active learning models.
+
+    Parameters
+    ----------
+    model_name : str
+        HuggingFace model identifier.
+    max_length : int
+        Maximum sequence length for tokenization.
+    encoder_mode : Literal["single_encoder", "dual_encoder"]
+        Encoding strategy for multi-select options.
+    include_instructions : bool
+        Whether to include task instructions.
+    learning_rate : float
+        Learning rate for AdamW optimizer.
+    batch_size : int
+        Batch size for training.
+    num_epochs : int
+        Number of training epochs.
+    device : Literal["cpu", "cuda", "mps"]
+        Device to train on.
+    mixed_effects : MixedEffectsConfig
+        Mixed effects configuration for participant-level modeling.
+
+    Examples
+    --------
+    >>> config = MultiSelectModelConfig()
+    >>> config.model_name
+    'bert-base-uncased'
+    >>> config.mixed_effects.mode
+    'fixed'
+    """
+
+    model_name: str = Field(
+        default="bert-base-uncased",
+        description="HuggingFace model identifier",
+    )
+    max_length: int = Field(
+        default=128,
+        description="Maximum sequence length for tokenization",
+        gt=0,
+    )
+    encoder_mode: Literal["single_encoder", "dual_encoder"] = Field(
+        default="single_encoder",
+        description="Encoding strategy for multi-select options",
+    )
+    include_instructions: bool = Field(
+        default=False,
+        description="Whether to include task instructions",
+    )
+    learning_rate: float = Field(
+        default=2e-5,
+        description="Learning rate for AdamW optimizer",
+        gt=0,
+    )
+    batch_size: int = Field(
+        default=16,
+        description="Batch size for training",
+        gt=0,
+    )
+    num_epochs: int = Field(
+        default=3,
+        description="Number of training epochs",
+        gt=0,
+    )
+    device: Literal["cpu", "cuda", "mps"] = Field(
+        default="cpu",
+        description="Device to train on",
+    )
+    mixed_effects: MixedEffectsConfig = Field(
+        default_factory=MixedEffectsConfig,
+        description="Mixed effects configuration for participant-level modeling",
+    )
 
 
 class ActiveLearningConfig(BaseModel):
