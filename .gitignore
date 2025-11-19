@@ -7,6 +7,7 @@ __pycache__/
 .venv/
 .coverage
 gallery/**/.cache
+gallery/**/lexicons/*.jsonl
 gallery/**/templates/*.jsonl
 gallery/**/filled_templates/*.jsonl
 gallery/**/items/*.jsonl

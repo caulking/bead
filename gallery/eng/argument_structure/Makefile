@@ -384,8 +384,7 @@ clean-lists: ## Clean experiment lists
 .PHONY: clean-deployment
 clean-deployment: ## Clean deployment files
 	@echo "$(BLUE)Cleaning deployment files...$(NC)"
-	@rm -rf deployment/list_*
-	@rm -f deployment/*.jzip
+	@rm -rf deployment/jatos deployment/local
 	@echo "$(GREEN)✓ Deployment files cleaned$(NC)"
 
 # ============================================================================

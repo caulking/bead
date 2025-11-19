@@ -164,82 +164,19 @@ def main(verb_limit: int | None = None):
     print("GENERATING PREPOSITIONS LEXICON")
     print("=" * 80)
 
-    # Comprehensive English preposition list (52 prepositions from constraint_builder.py)
-    prepositions = [
-        "about",
-        "above",
-        "across",
-        "after",
-        "against",
-        "along",
-        "among",
-        "around",
-        "at",
-        "before",
-        "behind",
-        "below",
-        "beneath",
-        "beside",
-        "between",
-        "beyond",
-        "by",
-        "concerning",
-        "despite",
-        "down",
-        "during",
-        "except",
-        "for",
-        "from",
-        "in",
-        "inside",
-        "into",
-        "like",
-        "near",
-        "of",
-        "off",
-        "on",
-        "onto",
-        "out",
-        "outside",
-        "over",
-        "past",
-        "regarding",
-        "round",
-        "since",
-        "through",
-        "throughout",
-        "to",
-        "toward",
-        "towards",
-        "under",
-        "underneath",
-        "until",
-        "up",
-        "upon",
-        "with",
-        "within",
-        "without",
-    ]
+    csv_path = resources_dir / "prepositions.csv"
 
-    prep_items: dict[str, LexicalItem] = {}
-
-    for prep in prepositions:
-        item = LexicalItem(
-            lemma=prep,
-            language_code="eng",
-            features={"pos": "ADP"},
-            source="manual",
-        )
-        prep_items[str(item.id)] = item
-
-    print(f"Created {len(prep_items)} preposition entries")
-
-    prep_lexicon = Lexicon(
+    prep_lexicon = from_csv(
+        path=csv_path,
         name="prepositions",
-        description="Comprehensive English preposition inventory",
+        column_mapping={"lemma": "lemma"},
+        feature_columns=["pos"],
         language_code="eng",
-        items=prep_items,
+        description="Comprehensive English preposition inventory",
+        pos="ADP",
     )
+
+    print(f"Loaded {len(prep_lexicon.items)} prepositions from {csv_path}")
 
     output_path = lexicons_dir / "prepositions.jsonl"
     prep_lexicon.to_jsonl(str(output_path))
@@ -250,26 +187,19 @@ def main(verb_limit: int | None = None):
     print("GENERATING DETERMINERS LEXICON")
     print("=" * 80)
 
-    determiners = ["a", "the", "some"]
-    det_items: dict[str, LexicalItem] = {}
+    csv_path = resources_dir / "determiners.csv"
 
-    for det in determiners:
-        item = LexicalItem(
-            lemma=det,
-            language_code="eng",
-            features={"pos": "DET"},
-            source="manual",
-        )
-        det_items[str(item.id)] = item
-
-    print(f"Created {len(det_items)} determiner entries")
-
-    det_lexicon = Lexicon(
+    det_lexicon = from_csv(
+        path=csv_path,
         name="determiners",
-        description="Basic determiner inventory",
+        column_mapping={"lemma": "lemma"},
+        feature_columns=["pos"],
         language_code="eng",
-        items=det_items,
+        description="Basic determiner inventory",
+        pos="DET",
     )
+
+    print(f"Loaded {len(det_lexicon.items)} determiners from {csv_path}")
 
     output_path = lexicons_dir / "determiners.jsonl"
     det_lexicon.to_jsonl(str(output_path))
@@ -280,42 +210,32 @@ def main(verb_limit: int | None = None):
     print("GENERATING BE VERB LEXICON")
     print("=" * 80)
 
-    # Manually create forms of "be" with proper features
-    # UniMorph doesn't have "be" so we create them manually
-    be_forms_data = [
-        # Present tense forms
-        {"form": "am", "tense": "PRS", "person": "1", "number": "SG"},
-        {"form": "is", "tense": "PRS", "person": "3", "number": "SG"},
-        {"form": "are", "tense": "PRS", "person": "2", "number": "SG"},
-        {"form": "are", "tense": "PRS", "person": "1", "number": "PL"},
-        {"form": "are", "tense": "PRS", "person": "2", "number": "PL"},
-        {"form": "are", "tense": "PRS", "person": "3", "number": "PL"},
-        # Past tense forms
-        {"form": "was", "tense": "PST", "person": "1", "number": "SG"},
-        {"form": "was", "tense": "PST", "person": "3", "number": "SG"},
-        {"form": "were", "tense": "PST", "person": "2", "number": "SG"},
-        {"form": "were", "tense": "PST", "person": "1", "number": "PL"},
-        {"form": "were", "tense": "PST", "person": "2", "number": "PL"},
-        {"form": "were", "tense": "PST", "person": "3", "number": "PL"},
-        # Participles
-        {"form": "being", "verb_form": "V.PTCP", "tense": "PRS"},
-        {"form": "been", "verb_form": "V.PTCP", "tense": "PST"},
-    ]
+    # Load from CSV (with custom handling for form column)
+    csv_path = resources_dir / "be_forms.csv"
+
+    import pandas as pd
+    df = pd.read_csv(csv_path)
 
     be_items: dict[str, LexicalItem] = {}
-    for be_data in be_forms_data:
-        form = be_data.pop("form")
-        features = {"pos": "V", **be_data}
+    for _, row in df.iterrows():
+        # Build features dict from all columns except lemma and form
+        features = {"pos": str(row["pos"])}
+
+        # Add optional feature columns if not empty
+        for col in ["tense", "person", "number", "verb_form"]:
+            if col in df.columns and pd.notna(row[col]) and str(row[col]).strip():
+                features[col] = str(row[col])
+
         item = LexicalItem(
-            lemma="be",
-            form=form,
+            lemma=str(row["lemma"]),
+            form=str(row["form"]),
             language_code="eng",
             features=features,
-            source="manual",
+            source="csv",
         )
         be_items[str(item.id)] = item
 
-    print(f"Created {len(be_items)} forms of 'be'")
+    print(f"Loaded {len(be_items)} forms of 'be' from {csv_path}")
 
     be_lexicon = Lexicon(
         name="be_forms",
@@ -337,8 +257,8 @@ def main(verb_limit: int | None = None):
     print(f"  2. bleached_nouns.jsonl:      {len(noun_lexicon.items)} entries")
     print(f"  3. bleached_verbs.jsonl:      {len(bleached_verb_lexicon.items)} entries")
     print(f"  4. bleached_adjectives.jsonl: {len(adj_lexicon.items)} entries")
-    print(f"  5. prepositions.jsonl:        {len(prep_items)} entries")
-    print(f"  6. determiners.jsonl:         {len(det_items)} entries")
+    print(f"  5. prepositions.jsonl:        {len(prep_lexicon.items)} entries")
+    print(f"  6. determiners.jsonl:         {len(det_lexicon.items)} entries")
     print(f"  7. be_forms.jsonl:            {len(be_items)} entries")
     print(f"\nAll files saved to: {lexicons_dir}/")
 
