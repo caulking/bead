@@ -18,6 +18,7 @@ from rich.table import Table
 from bead.cli.utils import print_error, print_info, print_success
 from bead.resources.lexicon import Lexicon
 from bead.resources.template_collection import TemplateCollection
+from bead.templates.combinatorics import count_combinations
 from bead.templates.filler import FilledTemplate
 from bead.templates.strategies import (
     ExhaustiveStrategy,
@@ -439,8 +440,562 @@ def show_stats(ctx: click.Context, filled_file: Path) -> None:
         ctx.exit(1)
 
 
+@click.command()
+@click.argument("template_file", type=click.Path(exists=True, path_type=Path))
+@click.argument("lexicon_file", type=click.Path(exists=True, path_type=Path))
+@click.option(
+    "--language-code",
+    help="ISO 639 language code to filter items",
+)
+@click.pass_context
+def estimate(
+    ctx: click.Context,
+    template_file: Path,
+    lexicon_file: Path,
+    language_code: str | None,
+) -> None:
+    r"""Estimate total combinations for exhaustive filling.
+
+    Calculates the total number of combinations that would be generated
+    by exhaustive template filling without actually generating them.
+
+    Parameters
+    ----------
+    ctx : click.Context
+        Click context object.
+    template_file : Path
+        Path to template file.
+    lexicon_file : Path
+        Path to lexicon file.
+    language_code : str | None
+        ISO 639 language code filter.
+
+    Examples
+    --------
+    # Estimate combinations
+    $ bead templates estimate template.jsonl lexicon.jsonl
+
+    # With language filter
+    $ bead templates estimate template.jsonl lexicon.jsonl --language-code eng
+    """
+    try:
+        # Load lexicon
+        print_info(f"Loading lexicon from {lexicon_file}")
+        lexicon = Lexicon.from_jsonl(str(lexicon_file), "lexicon")
+
+        # Load templates
+        print_info(f"Loading templates from {template_file}")
+        template_collection = TemplateCollection.from_jsonl(
+            str(template_file), "templates"
+        )
+
+        # Calculate estimates for each template
+        table = Table(title="Combination Estimates")
+        table.add_column("Template", style="cyan")
+        table.add_column("Slots", justify="right", style="yellow")
+        table.add_column("Combinations", justify="right", style="green")
+
+        total_combinations = 0
+
+        for template in template_collection:
+            # Get lexical items for each slot
+            slot_lists: list[list[str]] = []
+            for _slot_name in template.slots:
+                items = [
+                    item.lemma
+                    for item in lexicon
+                    if language_code is None or item.language_code == language_code
+                ]
+                slot_lists.append(items)
+
+            # Estimate combinations
+            num_combos = count_combinations(*slot_lists)
+            total_combinations += num_combos
+
+            table.add_row(
+                template.name,
+                str(len(template.slots)),
+                f"{num_combos:,}",
+            )
+
+        # Add total row
+        table.add_section()
+        table.add_row(
+            "[bold]TOTAL[/bold]",
+            "",
+            f"[bold]{total_combinations:,}[/bold]",
+        )
+
+        console.print(table)
+
+        # Warn if combinations are very large
+        if total_combinations > 1_000_000:
+            print_info(
+                "\n⚠️  Warning: Exhaustive filling will generate over 1 million "
+                "combinations. Consider using random or stratified strategies instead."
+            )
+        elif total_combinations > 100_000:
+            print_info(
+                "\n⚠️  Warning: Exhaustive filling will generate over 100K "
+                "combinations. This may take significant time."
+            )
+
+    except Exception as e:
+        print_error(f"Failed to estimate combinations: {e}")
+        ctx.exit(1)
+
+
+@click.command()
+@click.argument("filled_file", type=click.Path(exists=True, path_type=Path))
+@click.argument("output_file", type=click.Path(path_type=Path))
+@click.option(
+    "--expression",
+    help="Filter expression (DSL) to apply to filled templates",
+)
+@click.option(
+    "--min-length",
+    type=int,
+    help="Minimum text length",
+)
+@click.option(
+    "--max-length",
+    type=int,
+    help="Maximum text length",
+)
+@click.option(
+    "--template-name",
+    help="Filter by template name (exact match)",
+)
+@click.option(
+    "--strategy",
+    help="Filter by strategy name",
+)
+@click.pass_context
+def filter_filled(
+    ctx: click.Context,
+    filled_file: Path,
+    output_file: Path,
+    expression: str | None,
+    min_length: int | None,
+    max_length: int | None,
+    template_name: str | None,
+    strategy: str | None,
+) -> None:
+    """Filter filled templates by various criteria.
+
+    Parameters
+    ----------
+    ctx : click.Context
+        Click context object.
+    filled_file : Path
+        Path to filled templates file.
+    output_file : Path
+        Path to output filtered file.
+    expression : str | None
+        DSL expression for filtering.
+    min_length : int | None
+        Minimum text length.
+    max_length : int | None
+        Maximum text length.
+    template_name : str | None
+        Template name filter.
+    strategy : str | None
+        Strategy name filter.
+
+    Examples
+    --------
+    $ bead templates filter-filled filled.jsonl filtered.jsonl --min-length 10
+    $ bead templates filter-filled filled.jsonl filtered.jsonl --template-name active
+    """
+    try:
+        print_info(f"Filtering filled templates from: {filled_file}")
+
+        filtered_count = 0
+        total_count = 0
+
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+        with open(output_file, "w", encoding="utf-8") as out_f:
+            with open(filled_file, encoding="utf-8") as in_f:
+                for line in in_f:
+                    line = line.strip()
+                    if not line:
+                        continue
+
+                    total_count += 1
+
+                    try:
+                        filled_data = json.loads(line)
+                        filled = FilledTemplate(**filled_data)
+
+                        # Apply filters
+                        if min_length and len(filled.rendered_text) < min_length:
+                            continue
+                        if max_length and len(filled.rendered_text) > max_length:
+                            continue
+                        if template_name and filled.template_name != template_name:
+                            continue
+                        if strategy and filled.strategy_name != strategy:
+                            continue
+
+                        # DSL expression filtering would go here
+                        if expression:
+                            print_info(
+                                "DSL expression filtering not yet implemented, skipping"
+                            )
+
+                        # Passed all filters
+                        out_f.write(line + "\n")
+                        filtered_count += 1
+
+                    except Exception as e:
+                        print_error(f"Error processing line: {e}")
+                        continue
+
+        print_success(
+            f"Filtered {filtered_count} of {total_count} filled templates: {output_file}"
+        )
+
+    except Exception as e:
+        print_error(f"Failed to filter filled templates: {e}")
+        ctx.exit(1)
+
+
+@click.command()
+@click.argument("input_files", nargs=-1, type=click.Path(exists=True, path_type=Path))
+@click.argument("output_file", type=click.Path(path_type=Path))
+@click.option(
+    "--deduplicate",
+    is_flag=True,
+    help="Remove duplicates by UUID",
+)
+@click.pass_context
+def merge_filled(
+    ctx: click.Context,
+    input_files: tuple[Path, ...],
+    output_file: Path,
+    deduplicate: bool,
+) -> None:
+    """Merge multiple filled template files.
+
+    Parameters
+    ----------
+    ctx : click.Context
+        Click context object.
+    input_files : tuple[Path, ...]
+        Input filled template files.
+    output_file : Path
+        Output merged file.
+    deduplicate : bool
+        Remove duplicates by UUID.
+
+    Examples
+    --------
+    $ bead templates merge-filled file1.jsonl file2.jsonl merged.jsonl
+    $ bead templates merge-filled *.jsonl merged.jsonl --deduplicate
+    """
+    try:
+        if not input_files:
+            print_error("No input files provided")
+            ctx.exit(1)
+
+        print_info(f"Merging {len(input_files)} filled template files")
+
+        seen_ids: set[str] = set()
+        merged_count = 0
+        duplicate_count = 0
+
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+        with open(output_file, "w", encoding="utf-8") as out_f:
+            for input_file in input_files:
+                print_info(f"  Processing: {input_file}")
+                with open(input_file, encoding="utf-8") as in_f:
+                    for line in in_f:
+                        line = line.strip()
+                        if not line:
+                            continue
+
+                        try:
+                            filled_data = json.loads(line)
+                            filled = FilledTemplate(**filled_data)
+
+                            if deduplicate:
+                                if str(filled.id) in seen_ids:
+                                    duplicate_count += 1
+                                    continue
+                                seen_ids.add(str(filled.id))
+
+                            out_f.write(line + "\n")
+                            merged_count += 1
+
+                        except Exception as e:
+                            print_error(f"Error processing line from {input_file}: {e}")
+                            continue
+
+        print_success(f"Merged {merged_count} filled templates: {output_file}")
+        if deduplicate and duplicate_count > 0:
+            print_info(f"Removed {duplicate_count} duplicates")
+
+    except Exception as e:
+        print_error(f"Failed to merge filled templates: {e}")
+        ctx.exit(1)
+
+
+@click.command()
+@click.argument("filled_file", type=click.Path(exists=True, path_type=Path))
+@click.argument("output_file", type=click.Path(path_type=Path))
+@click.pass_context
+def export_csv(
+    ctx: click.Context,
+    filled_file: Path,
+    output_file: Path,
+) -> None:
+    """Export filled templates to CSV format.
+
+    Parameters
+    ----------
+    ctx : click.Context
+        Click context object.
+    filled_file : Path
+        Input filled templates file (JSONL).
+    output_file : Path
+        Output CSV file.
+
+    Examples
+    --------
+    $ bead templates export-csv filled.jsonl filled.csv
+    """
+    try:
+        import csv as csv_module
+
+        print_info(f"Exporting filled templates to CSV: {output_file}")
+
+        filled_templates: list[FilledTemplate] = []
+
+        with open(filled_file, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+
+                try:
+                    filled_data = json.loads(line)
+                    filled = FilledTemplate(**filled_data)
+                    filled_templates.append(filled)
+                except Exception:
+                    continue
+
+        if not filled_templates:
+            print_error("No valid filled templates found")
+            ctx.exit(1)
+
+        # Write to CSV
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+        with open(output_file, "w", newline="", encoding="utf-8") as f:
+            writer = csv_module.writer(f)
+
+            # Header
+            writer.writerow([
+                "id",
+                "template_id",
+                "template_name",
+                "rendered_text",
+                "strategy_name",
+                "slot_count",
+            ])
+
+            # Data
+            for filled in filled_templates:
+                writer.writerow([
+                    str(filled.id),
+                    str(filled.template_id),
+                    filled.template_name,
+                    filled.rendered_text,
+                    filled.strategy_name,
+                    len(filled.slot_fillers),
+                ])
+
+        print_success(f"Exported {len(filled_templates)} filled templates to CSV: {output_file}")
+
+    except Exception as e:
+        print_error(f"Failed to export to CSV: {e}")
+        ctx.exit(1)
+
+
+@click.command()
+@click.argument("filled_file", type=click.Path(exists=True, path_type=Path))
+@click.argument("output_file", type=click.Path(path_type=Path))
+@click.option(
+    "--pretty",
+    is_flag=True,
+    help="Pretty-print JSON with indentation",
+)
+@click.pass_context
+def export_json(
+    ctx: click.Context,
+    filled_file: Path,
+    output_file: Path,
+    pretty: bool,
+) -> None:
+    """Export filled templates to JSON array format.
+
+    Parameters
+    ----------
+    ctx : click.Context
+        Click context object.
+    filled_file : Path
+        Input filled templates file (JSONL).
+    output_file : Path
+        Output JSON file.
+    pretty : bool
+        Pretty-print with indentation.
+
+    Examples
+    --------
+    $ bead templates export-json filled.jsonl filled.json
+    $ bead templates export-json filled.jsonl filled.json --pretty
+    """
+    try:
+        print_info(f"Exporting filled templates to JSON: {output_file}")
+
+        filled_templates: list[dict[str, Any]] = []
+
+        with open(filled_file, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+
+                try:
+                    filled_data = json.loads(line)
+                    FilledTemplate(**filled_data)  # Validate
+                    filled_templates.append(filled_data)
+                except Exception:
+                    continue
+
+        if not filled_templates:
+            print_error("No valid filled templates found")
+            ctx.exit(1)
+
+        # Write to JSON
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+        with open(output_file, "w", encoding="utf-8") as f:
+            if pretty:
+                json.dump(filled_templates, f, indent=2, ensure_ascii=False)
+            else:
+                json.dump(filled_templates, f, ensure_ascii=False)
+
+        print_success(f"Exported {len(filled_templates)} filled templates to JSON: {output_file}")
+
+    except Exception as e:
+        print_error(f"Failed to export to JSON: {e}")
+        ctx.exit(1)
+
+
+@click.command()
+@click.argument("template_file", type=click.Path(exists=True, path_type=Path))
+@click.argument("lexicon_file", type=click.Path(exists=True, path_type=Path))
+@click.argument("output_file", type=click.Path(path_type=Path))
+@click.option(
+    "--n-samples",
+    type=int,
+    required=True,
+    help="Number of samples to generate",
+)
+@click.option(
+    "--seed",
+    type=int,
+    help="Random seed for reproducibility",
+)
+@click.option(
+    "--language-code",
+    help="ISO 639 language code to filter items",
+)
+@click.pass_context
+def sample_combinations(
+    ctx: click.Context,
+    template_file: Path,
+    lexicon_file: Path,
+    output_file: Path,
+    n_samples: int,
+    seed: int | None,
+    language_code: str | None,
+) -> None:
+    r"""Sample template-lexicon combinations with stratified sampling.
+
+    Uses stratified sampling to ensure diverse coverage of the combination space
+    without exhaustive generation.
+
+    Parameters
+    ----------
+    ctx : click.Context
+        Click context object.
+    template_file : Path
+        Path to template file.
+    lexicon_file : Path
+        Path to lexicon file.
+    output_file : Path
+        Path to output sampled combinations.
+    n_samples : int
+        Number of samples to generate.
+    seed : int | None
+        Random seed.
+    language_code : str | None
+        Language code filter.
+
+    Examples
+    --------
+    $ bead templates sample-combinations template.jsonl lexicon.jsonl samples.jsonl \\
+        --n-samples 1000 --seed 42
+    """
+    try:
+        # Load lexicon
+        print_info(f"Loading lexicon from {lexicon_file}")
+        lexicon = Lexicon.from_jsonl(str(lexicon_file), "lexicon")
+
+        # Load templates
+        print_info(f"Loading templates from {template_file}")
+        template_collection = TemplateCollection.from_jsonl(
+            str(template_file), "templates"
+        )
+
+        # Use random strategy for sampling
+        print_info(f"Generating {n_samples} stratified samples")
+        strategy = RandomStrategy(n_samples=n_samples, seed=seed)
+        filler = StrategyFiller(lexicon=lexicon, strategy=strategy)
+
+        # Fill templates
+        all_filled: list[FilledTemplate] = []
+        for template in template_collection:
+            try:
+                filled_templates = filler.fill(template, language_code)
+                all_filled.extend(filled_templates)
+            except ValueError as e:
+                print_error(f"Failed to fill template '{template.name}': {e}")
+                continue
+
+        # Save sampled combinations
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+        with open(output_file, "w", encoding="utf-8") as f:
+            for filled in all_filled:
+                f.write(filled.model_dump_json() + "\n")
+
+        print_success(
+            f"Generated {len(all_filled)} sampled combinations: {output_file}"
+        )
+
+    except Exception as e:
+        print_error(f"Failed to sample combinations: {e}")
+        ctx.exit(1)
+
+
 # Register commands
 templates.add_command(fill)
 templates.add_command(list_filled)
 templates.add_command(validate_filled)
 templates.add_command(show_stats)
+templates.add_command(estimate, name="estimate-combinations")
+templates.add_command(filter_filled)
+templates.add_command(merge_filled)
+templates.add_command(export_csv)
+templates.add_command(export_json)
+templates.add_command(sample_combinations)

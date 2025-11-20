@@ -81,10 +81,17 @@ def create_forced_choice_item(
         option_name = f"{option_prefix}_{letters[i]}"
         rendered_elements[option_name] = option_text
 
+    # Build item metadata with n_options (consistent with other task types)
+    item_metadata: dict[str, MetadataValue] = {
+        "n_options": len(options),
+    }
+    if metadata:
+        item_metadata.update(metadata)
+
     return Item(
         item_template_id=item_template_id,
         rendered_elements=rendered_elements,
-        item_metadata=metadata or {},
+        item_metadata=item_metadata,
     )
 
 

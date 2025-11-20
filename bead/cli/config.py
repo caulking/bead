@@ -16,12 +16,12 @@ from bead.cli.utils import (
     format_output,
     get_nested_value,
     load_config_for_cli,
+    merge_config_dicts,
     print_error,
     print_info,
     print_success,
     redact_sensitive_values,
 )
-from bead.config import list_profiles, validate_config
 
 
 @click.group()
@@ -155,6 +155,9 @@ def validate(ctx: click.Context, config_file: Path | None) -> None:
     verbose = ctx.obj.get("verbose", False)
 
     try:
+        # Lazy import to avoid circular import
+        from bead.config import validate_config
+
         # Load and validate
         cfg = load_config_for_cli(
             config_file=str(config_file),
@@ -275,6 +278,9 @@ def profiles() -> None:
     Examples:
         $ bead config profiles
     """
+    # Lazy import to avoid circular import
+    from bead.config import list_profiles
+
     available_profiles = list_profiles()
 
     print_info("Available configuration profiles:")
@@ -329,3 +335,295 @@ def _generate_yaml_with_comments(config_dict: dict[str, Any]) -> str:
             lines.append("")
 
     return "\n".join(lines)
+
+
+@config.command()
+@click.option(
+    "--output",
+    "-o",
+    type=click.Path(dir_okay=False, path_type=Path),
+    required=True,
+    help="Output configuration file path",
+)
+@click.option(
+    "--selection-strategy",
+    type=click.Choice(["uncertainty", "diversity", "hybrid"], case_sensitive=False),
+    default="uncertainty",
+    help="Selection strategy for active learning",
+)
+@click.option(
+    "--budget",
+    type=int,
+    default=1000,
+    help="Annotation budget (default: 1000)",
+)
+@click.option(
+    "--convergence-threshold",
+    type=float,
+    default=0.85,
+    help="Convergence threshold (default: 0.85)",
+)
+@click.option(
+    "--checkpoint-interval",
+    type=int,
+    default=100,
+    help="Checkpoint interval (default: 100)",
+)
+def create_active_learning(
+    output: Path,
+    selection_strategy: str,
+    budget: int,
+    convergence_threshold: float,
+    checkpoint_interval: int,
+) -> None:
+    r"""Create active learning configuration file.
+
+    Examples
+    --------
+    $ bead config create-active-learning --output al_config.yaml
+    $ bead config create-active-learning --output al_config.yaml \
+        --selection-strategy hybrid --budget 2000
+    """
+    config_dict = {
+        "active_learning": {
+            "selection_strategy": selection_strategy,
+            "budget": budget,
+            "convergence_threshold": convergence_threshold,
+            "checkpoint_interval": checkpoint_interval,
+            "min_iterations": 10,
+        }
+    }
+
+    with open(output, "w") as f:
+        yaml.dump(config_dict, f, default_flow_style=False, sort_keys=False)
+
+    print_success(f"Created active learning configuration: {output}")
+
+
+@config.command()
+@click.option(
+    "--output",
+    "-o",
+    type=click.Path(dir_okay=False, path_type=Path),
+    required=True,
+    help="Output configuration file path",
+)
+@click.option(
+    "--task-type",
+    type=click.Choice(
+        [
+            "forced_choice",
+            "ordinal_scale",
+            "categorical",
+            "binary",
+            "multi_select",
+            "magnitude",
+            "free_text",
+            "cloze",
+        ],
+        case_sensitive=False,
+    ),
+    required=True,
+    help="Task type for model",
+)
+@click.option(
+    "--base-model",
+    type=str,
+    default="bert-base-uncased",
+    help="Base model name (default: bert-base-uncased)",
+)
+@click.option(
+    "--mixed-effects-mode",
+    type=click.Choice(
+        ["fixed-only", "random-intercepts", "random-slopes"],
+        case_sensitive=False,
+    ),
+    default="fixed-only",
+    help="Mixed effects mode (default: fixed-only)",
+)
+@click.option(
+    "--use-lora",
+    is_flag=True,
+    help="Use LoRA parameter-efficient fine-tuning",
+)
+def create_model(
+    output: Path,
+    task_type: str,
+    base_model: str,
+    mixed_effects_mode: str,
+    use_lora: bool,
+) -> None:
+    r"""Create model configuration file.
+
+    Examples
+    --------
+    $ bead config create-model --output model_config.yaml \
+        --task-type forced_choice
+    $ bead config create-model --output model_config.yaml \
+        --task-type ordinal_scale --mixed-effects-mode random-intercepts
+    """
+    config_dict: dict[str, Any] = {
+        "model": {
+            "task_type": task_type,
+            "base_model": base_model,
+            "mixed_effects_mode": mixed_effects_mode,
+        }
+    }
+
+    if use_lora:
+        config_dict["model"]["lora"] = {
+            "enabled": True,
+            "rank": 8,
+            "alpha": 16,
+            "dropout": 0.1,
+        }
+
+    if mixed_effects_mode in ("random-intercepts", "random-slopes"):
+        config_dict["model"]["mixed_effects_config"] = {
+            "participant_intercept": True,
+            "item_intercept": True,
+            "interaction": mixed_effects_mode == "random-slopes",
+            "variance_components": {
+                "participant_variance": 1.0,
+                "item_variance": 1.0,
+                "interaction_variance": (
+                    0.5 if mixed_effects_mode == "random-slopes" else 0.0
+                ),
+            },
+        }
+
+    with open(output, "w") as f:
+        yaml.dump(config_dict, f, default_flow_style=False, sort_keys=False)
+
+    print_success(f"Created model configuration: {output}")
+
+
+@config.command()
+@click.option(
+    "--output",
+    "-o",
+    type=click.Path(dir_okay=False, path_type=Path),
+    required=True,
+    help="Output configuration file path",
+)
+@click.option(
+    "--annotator-type",
+    type=click.Choice(
+        ["oracle", "random", "lm-based", "distance-based"],
+        case_sensitive=False,
+    ),
+    default="oracle",
+    help="Annotator type (default: oracle)",
+)
+@click.option(
+    "--model-name",
+    type=str,
+    help="Model name for lm-based annotator",
+)
+@click.option(
+    "--noise-model",
+    type=click.Choice(["random", "systematic", "temperature"], case_sensitive=False),
+    help="Noise model type",
+)
+@click.option(
+    "--noise-level",
+    type=float,
+    default=0.05,
+    help="Noise level (default: 0.05)",
+)
+@click.option(
+    "--n-annotators",
+    type=int,
+    default=20,
+    help="Number of simulated annotators (default: 20)",
+)
+def create_simulation(
+    output: Path,
+    annotator_type: str,
+    model_name: str | None,
+    noise_model: str | None,
+    noise_level: float,
+    n_annotators: int,
+) -> None:
+    r"""Create simulation configuration file.
+
+    Examples
+    --------
+    $ bead config create-simulation --output sim_config.yaml
+    $ bead config create-simulation --output sim_config.yaml \
+        --annotator-type lm-based --model-name gpt-4
+    $ bead config create-simulation --output sim_config.yaml \
+        --noise-model random --noise-level 0.1
+    """
+    config_dict: dict[str, Any] = {
+        "simulation": {
+            "annotator_type": annotator_type,
+            "n_annotators": n_annotators,
+        }
+    }
+
+    if annotator_type == "lm-based" and model_name:
+        config_dict["simulation"]["model_name"] = model_name
+
+    if noise_model:
+        config_dict["simulation"]["noise_model"] = {
+            "type": noise_model,
+            "level": noise_level,
+        }
+
+    with open(output, "w") as f:
+        yaml.dump(config_dict, f, default_flow_style=False, sort_keys=False)
+
+    print_success(f"Created simulation configuration: {output}")
+
+
+@config.command()
+@click.option(
+    "--base",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    required=True,
+    help="Base configuration file",
+)
+@click.option(
+    "--override",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    required=True,
+    help="Override configuration file",
+)
+@click.option(
+    "--output",
+    "-o",
+    type=click.Path(dir_okay=False, path_type=Path),
+    required=True,
+    help="Output merged configuration file",
+)
+def merge(
+    base: Path,
+    override: Path,
+    output: Path,
+) -> None:
+    """Merge two configuration files.
+
+    Examples
+    --------
+    $ bead config merge --base base.yaml --override custom.yaml --output merged.yaml
+    """
+    try:
+        # Load both files
+        with open(base) as f:
+            base_config = yaml.safe_load(f)
+
+        with open(override) as f:
+            override_config = yaml.safe_load(f)
+
+        # Merge recursively
+        merged = merge_config_dicts(base_config, override_config)
+
+        # Write merged config
+        with open(output, "w") as f:
+            yaml.dump(merged, f, default_flow_style=False, sort_keys=False)
+
+        print_success(f"Merged configurations: {output}")
+
+    except Exception as e:
+        print_error(f"Failed to merge configurations: {e}")

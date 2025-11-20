@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import cast
 from uuid import UUID
 
 import click
@@ -29,7 +30,12 @@ from bead.items.adapters.registry import default_registry
 from bead.items.cache import ModelOutputCache
 from bead.items.constructor import ItemConstructor
 from bead.items.item import Item
-from bead.items.item_template import ItemTemplate
+from bead.items.item_template import ItemTemplate, TaskType
+from bead.items.validation import (
+    get_task_type_requirements,
+    infer_task_type_from_item,
+    validate_item_for_task_type,
+)
 from bead.resources.constraints import Constraint
 from bead.templates.filler import FilledTemplate
 
@@ -674,8 +680,283 @@ def show_stats(ctx: click.Context, items_file: Path) -> None:
         ctx.exit(1)
 
 
-# Register commands
+# Import task-type factory commands
+from bead.cli.items_factories import (  # noqa: E402
+    create_binary_from_texts,
+    create_categorical,
+    create_forced_choice,
+    create_forced_choice_from_texts,
+    create_free_text_from_texts,
+    create_likert_7,
+    create_magnitude_from_texts,
+    create_multi_select_from_texts,
+    create_nli,
+    create_ordinal_scale_from_texts,
+    create_simple_cloze,
+)
+
+# Register core commands
 items.add_command(construct)
 items.add_command(list_items)
 items.add_command(validate)
 items.add_command(show_stats)
+
+# Register task-type factory commands
+items.add_command(create_forced_choice)
+items.add_command(
+    create_forced_choice_from_texts, name="create-forced-choice-from-texts"
+)
+items.add_command(create_likert_7, name="create-likert-7")
+items.add_command(
+    create_ordinal_scale_from_texts, name="create-ordinal-scale-from-texts"
+)
+items.add_command(create_nli)
+items.add_command(create_categorical)
+items.add_command(create_binary_from_texts, name="create-binary-from-texts")
+items.add_command(create_multi_select_from_texts, name="create-multi-select-from-texts")
+items.add_command(create_magnitude_from_texts, name="create-magnitude-from-texts")
+items.add_command(create_free_text_from_texts, name="create-free-text-from-texts")
+items.add_command(create_simple_cloze, name="create-simple-cloze")
+
+
+# ==================== Validation Commands ====================
+
+
+@items.command()
+@click.argument("items_file", type=click.Path(exists=True, path_type=Path))
+@click.option(
+    "--task-type",
+    type=click.Choice(
+        [
+            "forced_choice",
+            "ordinal_scale",
+            "categorical",
+            "binary",
+            "multi_select",
+            "magnitude",
+            "free_text",
+            "cloze",
+        ],
+        case_sensitive=False,
+    ),
+    required=True,
+    help="Task type to validate against",
+)
+@click.option(
+    "--strict",
+    is_flag=True,
+    help="Strict validation mode",
+)
+@click.pass_context
+def validate_for_task_type(
+    ctx: click.Context,
+    items_file: Path,
+    task_type: str,
+    strict: bool,
+) -> None:
+    r"""Validate items for specific task type.
+
+    Examples
+    --------
+    $ bead items validate-for-task-type items.jsonl --task-type forced_choice
+
+    $ bead items validate-for-task-type items.jsonl \\
+        --task-type ordinal_scale --strict
+    """
+    try:
+        print_info(f"Validating items for task type: {task_type}")
+
+        # Cast string to TaskType literal (validated by Click Choice)
+        task_type_lit: TaskType = cast(TaskType, task_type)
+        valid_count: int = 0
+        invalid_count: int = 0
+        errors: list[str] = []
+
+        with open(items_file) as f:
+            for line_num, line in enumerate(f, start=1):
+                line = line.strip()
+                if not line:
+                    continue
+
+                try:
+                    item_data = json.loads(line)
+                    item = Item(**item_data)
+
+                    if validate_item_for_task_type(item, task_type_lit):
+                        valid_count += 1
+                    else:
+                        invalid_count += 1
+                        errors.append(f"Line {line_num}: Invalid for {task_type}")
+
+                except Exception as e:
+                    invalid_count += 1
+                    errors.append(f"Line {line_num}: {e}")
+
+        # Display results
+        table = Table(title="Validation Results")
+        table.add_column("Metric", style="cyan")
+        table.add_column("Count", justify="right", style="green")
+
+        table.add_row("Valid items", str(valid_count))
+        table.add_row(
+            "Invalid items",
+            str(invalid_count),
+            style="red" if invalid_count else "green",
+        )
+        table.add_row("Total", str(valid_count + invalid_count))
+
+        console.print(table)
+
+        # Show errors if any
+        if errors and strict:
+            print_error("Validation errors:")
+            for error in errors[:10]:
+                console.print(f"  [red]✗[/red] {error}")
+            if len(errors) > 10:
+                console.print(f"  ... and {len(errors) - 10} more errors")
+
+        if invalid_count > 0 and strict:
+            ctx.exit(1)
+        else:
+            print_success(f"Validation complete: {valid_count} valid items")
+
+    except Exception as e:
+        print_error(f"Failed to validate items: {e}")
+        ctx.exit(1)
+
+
+@items.command()
+@click.argument("items_file", type=click.Path(exists=True, path_type=Path))
+@click.option(
+    "--output",
+    "-o",
+    type=click.Path(path_type=Path),
+    help="Output file for inferred types (JSONL)",
+)
+@click.pass_context
+def infer_task_type(
+    ctx: click.Context,
+    items_file: Path,
+    output: Path | None,
+) -> None:
+    """Infer task type for each item.
+
+    Examples
+    --------
+    $ bead items infer-task-type items.jsonl
+
+    $ bead items infer-task-type items.jsonl --output types.jsonl
+    """
+    try:
+        print_info("Inferring task types...")
+
+        results: list[dict[str, str]] = []
+        type_counts: dict[str, int] = {}
+
+        with open(items_file) as f:
+            line: str
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+
+                item: Item = Item(**json.loads(line))
+
+                try:
+                    task_type_val: str = infer_task_type_from_item(item)
+                    # task_type is already a string (Literal type), not enum
+                    type_counts[task_type_val] = (
+                        type_counts.get(task_type_val, 0) + 1
+                    )
+                    result_item: dict[str, str] = {
+                        "item_id": str(item.id),
+                        "task_type": task_type_val,
+                    }
+                    results.append(result_item)
+                except ValueError:
+                    result_unknown: dict[str, str] = {
+                        "item_id": str(item.id),
+                        "task_type": "unknown",
+                    }
+                    results.append(result_unknown)
+                    type_counts["unknown"] = type_counts.get("unknown", 0) + 1
+
+        # Display results
+        table = Table(title="Task Type Distribution")
+        table.add_column("Task Type", style="cyan")
+        table.add_column("Count", justify="right", style="green")
+
+        for task_type, count in sorted(type_counts.items()):
+            table.add_row(task_type, str(count))
+
+        console.print(table)
+
+        # Save if output specified
+        if output:
+            output.parent.mkdir(parents=True, exist_ok=True)
+            with open(output, "w") as f:
+                for result in results:
+                    f.write(json.dumps(result) + "\n")
+            print_success(f"Saved task type inference results: {output}")
+
+    except Exception as e:
+        print_error(f"Failed to infer task types: {e}")
+        ctx.exit(1)
+
+
+@items.command()
+@click.option(
+    "--task-type",
+    type=click.Choice(
+        [
+            "forced_choice",
+            "ordinal_scale",
+            "categorical",
+            "binary",
+            "multi_select",
+            "magnitude",
+            "free_text",
+            "cloze",
+        ],
+        case_sensitive=False,
+    ),
+    required=True,
+    help="Task type",
+)
+def get_task_requirements(task_type: str) -> None:
+    """Get requirements for a task type.
+
+    Examples
+    --------
+    $ bead items get-task-requirements --task-type forced_choice
+
+    $ bead items get-task-requirements --task-type ordinal_scale
+    """
+    try:
+        # Cast string to TaskType literal (validated by Click Choice)
+        task_type_lit: TaskType = cast(TaskType, task_type)
+        requirements: dict[str, list[str] | str] = get_task_type_requirements(
+            task_type_lit
+        )
+
+        print_info(f"Requirements for task type: {task_type}")
+        console.print()
+
+        table = Table(show_header=False)
+        table.add_column("Key", style="cyan", no_wrap=True)
+        table.add_column("Value", style="white")
+
+        key: str
+        value: list[str] | str
+        for key, value in requirements.items():
+            if isinstance(value, list):
+                # Requirements lists contain strings
+                value_str: str = ", ".join(value)
+            else:
+                value_str = str(value)
+            table.add_row(key, value_str)
+
+        console.print(table)
+
+    except Exception as e:
+        print_error(f"Failed to get task requirements: {e}")

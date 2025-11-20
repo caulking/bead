@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 from uuid import UUID
 
 import click
@@ -16,12 +17,16 @@ from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from bead.cli.utils import print_error, print_info, print_success
+from bead.deployment.distribution import (
+    DistributionStrategyType,
+    ListDistributionStrategy,
+)
 from bead.deployment.jatos.api import JATOSClient
 from bead.deployment.jatos.exporter import JATOSExporter
 from bead.deployment.jspsych.config import ExperimentConfig
 from bead.deployment.jspsych.generator import JsPsychExperimentGenerator
 from bead.items.item import Item
-from bead.items.item_template import ItemTemplate
+from bead.items.item_template import ItemTemplate, PresentationSpec, TaskSpec
 from bead.lists import ExperimentList
 
 console = Console()
@@ -61,6 +66,59 @@ def deployment() -> None:
 @click.option(
     "--instructions", default="Please complete the task.", help="Instructions text"
 )
+@click.option(
+    "--distribution-strategy",
+    type=click.Choice(
+        [
+            "random",
+            "sequential",
+            "balanced",
+            "latin_square",
+            "stratified",
+            "weighted_random",
+            "quota_based",
+            "metadata_based",
+        ],
+        case_sensitive=False,
+    ),
+    required=True,
+    help="List distribution strategy (REQUIRED, no default). "
+    "random: Random selection. "
+    "sequential: Round-robin. "
+    "balanced: Assign to least-used list. "
+    "latin_square: Counterbalancing. "
+    "stratified: Balance across factors. "
+    "weighted_random: Non-uniform probabilities. "
+    "quota_based: Fixed quota per list. "
+    "metadata_based: Filter/rank by metadata.",
+)
+@click.option(
+    "--distribution-config",
+    type=str,
+    help="Strategy-specific configuration (JSON format). "
+    "Examples: "
+    "quota_based: '{\"participants_per_list\": 25, \"allow_overflow\": false}'. "
+    "weighted_random: '{\"weight_expression\": \"list_metadata.priority || 1.0\"}'. "
+    "stratified: '{\"factors\": [\"condition\", \"verb_type\"]}'. "
+    "metadata_based: "
+    "'{\"filter_expression\": \"list_metadata.difficulty === 'easy'\"}'. ",
+)
+@click.option(
+    "--max-participants",
+    type=int,
+    help="Maximum total participants across all lists (unlimited if not specified)",
+)
+@click.option(
+    "--debug-mode",
+    is_flag=True,
+    help="Enable debug mode (always assign same list for testing)",
+)
+@click.option(
+    "--debug-list-index",
+    type=int,
+    default=0,
+    help="List index to use in debug mode (default: 0)",
+)
 @click.pass_context
 def generate(
     ctx: click.Context,
@@ -71,6 +129,11 @@ def generate(
     title: str,
     description: str,
     instructions: str,
+    distribution_strategy: str,
+    distribution_config: str | None,
+    max_participants: int | None,
+    debug_mode: bool,
+    debug_list_index: int,
 ) -> None:
     r"""Generate jsPsych experiment from lists and items.
 
@@ -92,15 +155,63 @@ def generate(
         Experiment description.
     instructions : str
         Instructions text.
+    distribution_strategy : str
+        Distribution strategy type (required).
+    distribution_config : str | None
+        Strategy-specific configuration as JSON string.
+    max_participants : int | None
+        Maximum total participants.
+    debug_mode : bool
+        Enable debug mode.
+    debug_list_index : int
+        List index for debug mode.
 
     Examples
     --------
+    # Basic balanced distribution
     $ bead deployment generate lists/ items.jsonl experiment/ \\
-        --experiment-type likert_rating \\
+        --experiment-type forced_choice \\
         --title "Acceptability Study" \\
-        --instructions "Rate each sentence from 1 to 7"
+        --distribution-strategy balanced
+
+    # Quota-based with config
+    $ bead deployment generate lists/ items.jsonl experiment/ \\
+        --experiment-type forced_choice \\
+        --distribution-strategy quota_based \\
+        --distribution-config '{"participants_per_list": 25, "allow_overflow": false}'
+
+    # Stratified by factors
+    $ bead deployment generate lists/ items.jsonl experiment/ \\
+        --experiment-type forced_choice \\
+        --distribution-strategy stratified \\
+        --distribution-config '{"factors": ["condition", "verb_type"]}'
     """
     try:
+        # Parse distribution config if provided
+        strategy_config_dict: dict[str, Any] = {}
+        if distribution_config:
+            try:
+                strategy_config_dict = json.loads(distribution_config)
+            except json.JSONDecodeError as e:
+                print_error(
+                    f"Invalid JSON in --distribution-config: {e}\n"
+                    f"Provided: {distribution_config}\n"
+                    f"Example: '{{\"participants_per_list\": 25}}'"
+                )
+                ctx.exit(1)
+
+        # Create distribution strategy
+        try:
+            dist_strategy = ListDistributionStrategy(
+                strategy_type=DistributionStrategyType(distribution_strategy),
+                strategy_config=strategy_config_dict,
+                max_participants=max_participants,
+                debug_mode=debug_mode,
+                debug_list_index=debug_list_index,
+            )
+        except ValueError as e:
+            print_error(f"Invalid distribution strategy configuration: {e}")
+            ctx.exit(1)
         # Load experiment lists
         print_info(f"Loading experiment lists from {lists_dir}")
         list_files = list(lists_dir.glob("*.jsonl"))
@@ -133,15 +244,34 @@ def generate(
 
         print_info(f"Loaded {len(items_dict)} items")
 
-        # Create empty templates dict (simplified for CLI)
+        # Create stub templates for each unique item_template_id (simplified for CLI)
+        # Extract unique template IDs from items
+        unique_template_ids = {item.item_template_id for item in items_dict.values()}
         templates_dict: dict[UUID, ItemTemplate] = {}
+        for template_id in unique_template_ids:
+            # Create minimal stub template (no actual template structure needed for deployment)
+            templates_dict[template_id] = ItemTemplate(
+                id=template_id,
+                name=f"template_{template_id}",
+                description="Auto-generated stub template for CLI deployment",
+                judgment_type="acceptability",
+                task_type="ordinal_scale",
+                task_spec=TaskSpec(
+                    prompt="Rate this item.",
+                    scale_bounds=(1, 7),
+                ),
+                presentation_spec=PresentationSpec(mode="static"),
+            )
 
-        # Create experiment config
+        print_info(f"Created {len(templates_dict)} stub templates for deployment")
+
+        # Create experiment config with distribution strategy
         config = ExperimentConfig(
             experiment_type=experiment_type,  # type: ignore
             title=title,
             description=description,
             instructions=instructions,
+            distribution_strategy=dist_strategy,
         )
 
         # Generate experiment
@@ -317,12 +447,16 @@ def validate(ctx: click.Context, experiment_dir: Path) -> None:
     try:
         print_info(f"Validating experiment: {experiment_dir}")
 
-        # Check required files
+        # Check required files (batch mode)
         required_files = [
             "index.html",
             "css/experiment.css",
             "js/experiment.js",
-            "data/timeline.json",
+            "js/list_distributor.js",
+            "data/config.json",
+            "data/lists.jsonl",
+            "data/items.jsonl",
+            "data/distribution.json",
         ]
 
         missing_files: list[str] = []
@@ -337,21 +471,39 @@ def validate(ctx: click.Context, experiment_dir: Path) -> None:
                 console.print(f"  [red]✗[/red] {file_path}")
             ctx.exit(1)
 
-        # Validate timeline.json
-        timeline_file = experiment_dir / "data" / "timeline.json"
-        with open(timeline_file, encoding="utf-8") as f:
-            timeline_data: object = json.load(f)
+        # Validate lists.jsonl
+        lists_file = experiment_dir / "data" / "lists.jsonl"
+        with open(lists_file, encoding="utf-8") as f:
+            lists_data = [json.loads(line) for line in f if line.strip()]
 
-        if not isinstance(timeline_data, list):
-            print_error("timeline.json must be a list")
+        if not lists_data:
+            print_error("lists.jsonl must contain at least one list")
+            ctx.exit(1)
+
+        # Validate items.jsonl
+        items_file = experiment_dir / "data" / "items.jsonl"
+        with open(items_file, encoding="utf-8") as f:
+            items_data = [json.loads(line) for line in f if line.strip()]
+
+        if not items_data:
+            print_error("items.jsonl must contain at least one item")
+            ctx.exit(1)
+
+        # Validate distribution.json
+        dist_file = experiment_dir / "data" / "distribution.json"
+        with open(dist_file, encoding="utf-8") as f:
+            dist_data: object = json.load(f)
+
+        if not isinstance(dist_data, dict) or "strategy_type" not in dist_data:  # type: ignore[operator]
+            print_error("distribution.json must contain a strategy_type field")
             ctx.exit(1)
 
         print_success(
-            f"Experiment structure is valid ({len(timeline_data)} trials)"  # type: ignore[arg-type]
+            f"Experiment structure is valid ({len(lists_data)} lists, {len(items_data)} items)"
         )
 
     except json.JSONDecodeError as e:
-        print_error(f"Invalid JSON in timeline.json: {e}")
+        print_error(f"Invalid JSON in experiment data files: {e}")
         ctx.exit(1)
     except Exception as e:
         print_error(f"Failed to validate experiment: {e}")

@@ -17,6 +17,13 @@ from pydantic import ValidationError
 from rich.console import Console
 from rich.table import Table
 
+from bead.cli.constraint_builders import create_constraint
+from bead.cli.resource_loaders import (
+    import_framenet,
+    import_propbank,
+    import_unimorph,
+    import_verbnet,
+)
 from bead.cli.utils import print_error, print_info, print_success
 from bead.resources.lexical_item import LexicalItem
 from bead.resources.lexicon import Lexicon
@@ -618,6 +625,13 @@ def validate_lexicon(ctx: click.Context, lexicon_file: Path) -> None:
         ctx.exit(1)
 
 
+# Add resource loader commands to resources group
+resources.add_command(import_verbnet, name="import-verbnet")
+resources.add_command(import_unimorph, name="import-unimorph")
+resources.add_command(import_propbank, name="import-propbank")
+resources.add_command(import_framenet, name="import-framenet")
+
+
 @resources.command()
 @click.argument("template_file", type=click.Path(exists=True, path_type=Path))
 @click.pass_context
@@ -671,3 +685,310 @@ def validate_template(ctx: click.Context, template_file: Path) -> None:
     except Exception as e:
         print_error(f"Failed to validate template: {e}")
         ctx.exit(1)
+
+
+@resources.command()
+@click.argument("output_file", type=click.Path(path_type=Path))
+@click.option(
+    "--pattern",
+    required=True,
+    help="Template pattern with {slot_name} placeholders (e.g., '{subject} {verb} {object}')",
+)
+@click.option(
+    "--name",
+    required=True,
+    help="Template name",
+)
+@click.option(
+    "--slot",
+    "slots",
+    multiple=True,
+    help="Slot specification: name:required (e.g., subject:true, object:false)",
+)
+@click.option(
+    "--description",
+    help="Description of the template",
+)
+@click.option(
+    "--language-code",
+    help="ISO 639 language code (e.g., 'eng', 'en')",
+)
+@click.option(
+    "--tags",
+    help="Comma-separated tags for categorization",
+)
+@click.pass_context
+def generate_templates(
+    ctx: click.Context,
+    output_file: Path,
+    pattern: str,
+    name: str,
+    slots: tuple[str, ...],
+    description: str | None,
+    language_code: str | None,
+    tags: str | None,
+) -> None:
+    r"""Generate templates from pattern specifications.
+
+    Creates template objects from a pattern string with slot placeholders.
+    Slots are automatically extracted from the pattern or explicitly specified.
+
+    Parameters
+    ----------
+    ctx : click.Context
+        Click context object.
+    output_file : Path
+        Path to output template file (JSONL).
+    pattern : str
+        Template pattern with {slot_name} placeholders.
+    name : str
+        Template name.
+    slots : tuple[str, ...]
+        Slot specifications (name:required).
+    description : str | None
+        Template description.
+    language_code : str | None
+        ISO 639 language code.
+    tags : str | None
+        Comma-separated tags.
+
+    Examples
+    --------
+    # Generate simple template (auto-detect slots)
+    $ bead resources generate-templates template.jsonl \\
+        --pattern "{subject} {verb} {object}" \\
+        --name simple_transitive
+
+    # With explicit slot specifications
+    $ bead resources generate-templates template.jsonl \\
+        --pattern "{subject} {verb} {object}" \\
+        --name transitive \\
+        --slot subject:true \\
+        --slot verb:true \\
+        --slot object:false \\
+        --description "Transitive sentence template"
+
+    # With language and tags
+    $ bead resources generate-templates template.jsonl \\
+        --pattern "{subject} {verb} {object}" \\
+        --name transitive \\
+        --language-code eng \\
+        --tags "transitive,simple"
+    """
+    try:
+        # Extract slot names from pattern
+        slot_names_in_pattern = set(re.findall(r"\{(\w+)\}", pattern))
+
+        if not slot_names_in_pattern:
+            print_error(
+                "No slot placeholders found in pattern.\n\n"
+                "Pattern must contain {slot_name} placeholders.\n\n"
+                f"Example: '{{subject}} {{verb}} {{object}}'"
+            )
+            ctx.exit(1)
+
+        # Build slot dictionary
+        slot_dict: dict[str, Slot] = {}
+
+        if slots:
+            # Use explicit slot specifications
+            for slot_spec in slots:
+                if ":" not in slot_spec:
+                    print_error(
+                        f"Invalid slot specification: {slot_spec}\n\n"
+                        f"Format: name:required (e.g., subject:true, object:false)"
+                    )
+                    ctx.exit(1)
+
+                slot_name, required_str = slot_spec.split(":", 1)
+                required = required_str.lower() in ("true", "yes", "1", "t", "y")
+
+                if slot_name not in slot_names_in_pattern:
+                    print_error(
+                        f"Slot '{slot_name}' not found in pattern.\n\n"
+                        f"Available slots: {', '.join(sorted(slot_names_in_pattern))}"
+                    )
+                    ctx.exit(1)
+
+                slot_dict[slot_name] = Slot(name=slot_name, required=required)
+        else:
+            # Auto-generate slots (all required)
+            for slot_name in slot_names_in_pattern:
+                slot_dict[slot_name] = Slot(name=slot_name, required=True)
+
+        # Build template
+        template_data: dict[str, Any] = {
+            "name": name,
+            "template_string": pattern,
+            "slots": slot_dict,
+        }
+
+        if description:
+            template_data["description"] = description
+        if language_code:
+            template_data["language_code"] = language_code
+        if tags:
+            template_data["tags"] = [t.strip() for t in tags.split(",") if t.strip()]
+
+        template = Template(**template_data)
+
+        # Save to JSONL
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+        mode = "a" if output_file.exists() else "w"
+        with open(output_file, mode, encoding="utf-8") as f:
+            f.write(template.model_dump_json() + "\n")
+
+        print_success(
+            f"Created template '{name}' with {len(slot_dict)} slots: {output_file}"
+        )
+
+        # Show slot details
+        console.print("\n[cyan]Slots:[/cyan]")
+        for slot_name, slot in sorted(slot_dict.items()):
+            required_str = "[green]required[/green]" if slot.required else "[yellow]optional[/yellow]"
+            console.print(f"  • {slot_name}: {required_str}")
+
+    except ValidationError as e:
+        print_error(f"Validation error: {e}")
+        ctx.exit(1)
+    except Exception as e:
+        print_error(f"Failed to generate template: {e}")
+        ctx.exit(1)
+
+
+@resources.command()
+@click.argument("base_template_file", type=click.Path(exists=True, path_type=Path))
+@click.argument("output_file", type=click.Path(path_type=Path))
+@click.option(
+    "--slot-variants",
+    help="JSON file with slot variant specifications: {slot_name: [variant1, variant2, ...]}",
+    type=click.Path(exists=True, path_type=Path),
+)
+@click.option(
+    "--name-pattern",
+    default="{base_name}_variant_{index}",
+    help="Pattern for variant names (default: {base_name}_variant_{index})",
+)
+@click.option(
+    "--max-variants",
+    type=int,
+    help="Maximum number of variants to generate",
+)
+@click.pass_context
+def generate_template_variants(
+    ctx: click.Context,
+    base_template_file: Path,
+    output_file: Path,
+    slot_variants: Path | None,
+    name_pattern: str,
+    max_variants: int | None,
+) -> None:
+    r"""Generate systematic variations of a base template.
+
+    Creates template variants by substituting slot configurations or
+    reordering slots while preserving the base structure.
+
+    Parameters
+    ----------
+    ctx : click.Context
+        Click context object.
+    base_template_file : Path
+        Path to base template file (JSONL).
+    output_file : Path
+        Path to output variants file (JSONL).
+    slot_variants : Path | None
+        JSON file with slot variant specifications.
+    name_pattern : str
+        Pattern for variant names.
+    max_variants : int | None
+        Maximum number of variants to generate.
+
+    Examples
+    --------
+    # Generate variants with slot permutations
+    $ bead resources generate-template-variants base.jsonl variants.jsonl \\
+        --slot-variants slot_variants.json \\
+        --max-variants 10
+
+    Where slot_variants.json contains:
+    {
+      "subject": ["{subject}", "{object}"],
+      "object": ["{object}", "{subject}"]
+    }
+
+    This creates templates with swapped subject/object positions.
+    """
+    try:
+        print_info(f"Loading base template from {base_template_file}")
+
+        # Load base template
+        with open(base_template_file, encoding="utf-8") as f:
+            first_line = f.readline().strip()
+            if not first_line:
+                print_error("Base template file is empty")
+                ctx.exit(1)
+
+            base_template_data = json.loads(first_line)
+            base_template = Template(**base_template_data)
+
+        # For now, implement simple variant generation
+        # Future: Support slot reordering, constraint variations, etc.
+        if slot_variants:
+            print_error(
+                "Slot variant generation not yet implemented.\n\n"
+                "Currently, this command creates simple metadata variants.\n\n"
+                "Future versions will support full slot substitution and reordering."
+            )
+            ctx.exit(1)
+
+        # Create simple metadata variants (placeholder implementation)
+        variants: list[Template] = []
+        base_name = base_template.name
+
+        # For now, just create a few variants with different metadata
+        # This is a simplified implementation
+        for i in range(max_variants or 3):
+            variant_name = name_pattern.format(base_name=base_name, index=i)
+
+            variant_data = base_template.model_dump()
+            variant_data["name"] = variant_name
+            variant_data["metadata"] = {
+                **variant_data.get("metadata", {}),
+                "variant_index": i,
+                "base_template": base_name,
+            }
+
+            variant = Template(**variant_data)
+            variants.append(variant)
+
+        # Save variants
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+        with open(output_file, "w", encoding="utf-8") as f:
+            for variant in variants:
+                f.write(variant.model_dump_json() + "\n")
+
+        print_success(
+            f"Generated {len(variants)} template variants from '{base_name}': {output_file}"
+        )
+
+        print_info(
+            "\n[yellow]Note:[/yellow] Full slot variant generation will be "
+            "implemented in a future version."
+        )
+
+    except ValidationError as e:
+        print_error(f"Validation error: {e}")
+        ctx.exit(1)
+    except Exception as e:
+        print_error(f"Failed to generate template variants: {e}")
+        ctx.exit(1)
+
+
+# Register external resource loader commands
+resources.add_command(import_verbnet)
+resources.add_command(import_unimorph)
+resources.add_command(import_propbank)
+resources.add_command(import_framenet)
+
+# Register constraint builder command
+resources.add_command(create_constraint)

@@ -366,8 +366,36 @@ def show_stats(ctx: click.Context, lists_dir: Path) -> None:
         ctx.exit(1)
 
 
-# Register commands
+# Import constraint builder commands
+from bead.cli.list_constraints import (  # noqa: E402
+    create_balance,
+    create_batch_balance,
+    create_batch_coverage,
+    create_batch_diversity,
+    create_batch_min_occurrence,
+    create_diversity,
+    create_grouped_quantile,
+    create_quantile,
+    create_size,
+    create_uniqueness,
+)
+
+# Register core commands
 lists.add_command(partition)
 lists.add_command(list_lists)
 lists.add_command(validate)
 lists.add_command(show_stats)
+
+# Register list constraint commands
+lists.add_command(create_uniqueness, name="create-uniqueness")
+lists.add_command(create_balance, name="create-balance")
+lists.add_command(create_quantile, name="create-quantile")
+lists.add_command(create_grouped_quantile, name="create-grouped-quantile")
+lists.add_command(create_diversity, name="create-diversity")
+lists.add_command(create_size, name="create-size")
+
+# Register batch constraint commands
+lists.add_command(create_batch_coverage, name="create-batch-coverage")
+lists.add_command(create_batch_balance, name="create-batch-balance")
+lists.add_command(create_batch_diversity, name="create-batch-diversity")
+lists.add_command(create_batch_min_occurrence, name="create-batch-min-occurrence")
