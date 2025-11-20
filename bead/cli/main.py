@@ -373,6 +373,7 @@ from bead.cli.config import config  # noqa: E402
 from bead.cli.deployment import deployment  # noqa: E402
 from bead.cli.items import items  # noqa: E402
 from bead.cli.lists import lists  # noqa: E402
+from bead.cli.models import models  # noqa: E402
 from bead.cli.resources import resources  # noqa: E402
 from bead.cli.templates import templates  # noqa: E402
 from bead.cli.training import training  # noqa: E402
@@ -383,4 +384,5 @@ cli.add_command(templates)
 cli.add_command(items)
 cli.add_command(lists)
 cli.add_command(deployment)
+cli.add_command(models)
 cli.add_command(training)
