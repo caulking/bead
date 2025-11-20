@@ -931,35 +931,88 @@ def generate_template_variants(
             base_template_data = json.loads(first_line)
             base_template = Template(**base_template_data)
 
-        # For now, implement simple variant generation
-        # Future: Support slot reordering, constraint variations, etc.
-        if slot_variants:
-            print_error(
-                "Slot variant generation not yet implemented.\n\n"
-                "Currently, this command creates simple metadata variants.\n\n"
-                "Future versions will support full slot substitution and reordering."
-            )
-            ctx.exit(1)
-
-        # Create simple metadata variants (placeholder implementation)
         variants: list[Template] = []
         base_name = base_template.name
+        base_template_string = base_template.template_string
 
-        # For now, just create a few variants with different metadata
-        # This is a simplified implementation
-        for i in range(max_variants or 3):
-            variant_name = name_pattern.format(base_name=base_name, index=i)
+        if slot_variants:
+            # Load slot variant specifications
+            print_info(f"Loading slot variants from {slot_variants}")
+            with open(slot_variants, encoding="utf-8") as f:
+                variant_spec = json.load(f)
 
-            variant_data = base_template.model_dump()
-            variant_data["name"] = variant_name
-            variant_data["metadata"] = {
-                **variant_data.get("metadata", {}),
-                "variant_index": i,
-                "base_template": base_name,
-            }
+            # Generate all combinations of slot substitutions
+            from itertools import product
 
-            variant = Template(**variant_data)
-            variants.append(variant)
+            slot_names = list(variant_spec.keys())
+            slot_options = [variant_spec[slot] for slot in slot_names]
+
+            # Generate all combinations
+            combinations = list(product(*slot_options))
+
+            # Limit to max_variants if specified
+            if max_variants and len(combinations) > max_variants:
+                print_info(
+                    f"Limiting to {max_variants} variants (out of {len(combinations)} possible)"
+                )
+                combinations = combinations[:max_variants]
+
+            for idx, combo in enumerate(combinations):
+                # Create substitution map
+                substitution_map = dict(zip(slot_names, combo))
+
+                # Apply substitutions to template_string
+                variant_template_string = base_template_string
+                for slot_name, replacement in substitution_map.items():
+                    variant_template_string = variant_template_string.replace(
+                        f"{{{slot_name}}}", replacement
+                    )
+
+                # Skip if template_string didn't change (original)
+                if idx == 0 and variant_template_string == base_template_string:
+                    continue
+
+                # Create variant template
+                variant_name = name_pattern.format(base_name=base_name, index=idx)
+                variant_data = base_template.model_dump()
+                variant_data["name"] = variant_name
+                variant_data["template_string"] = variant_template_string
+                variant_data["metadata"] = {
+                    **variant_data.get("metadata", {}),
+                    "variant_index": idx,
+                    "base_template": base_name,
+                    "substitutions": substitution_map,
+                }
+
+                variant = Template(**variant_data)
+                variants.append(variant)
+
+            print_success(
+                f"Generated {len(variants)} slot-based template variants"
+            )
+
+        else:
+            # Generate simple metadata-only variants
+            print_info("No slot variants specified, generating metadata variants")
+            num_variants = max_variants or 3
+
+            for i in range(num_variants):
+                variant_name = name_pattern.format(base_name=base_name, index=i)
+
+                variant_data = base_template.model_dump()
+                variant_data["name"] = variant_name
+                variant_data["metadata"] = {
+                    **variant_data.get("metadata", {}),
+                    "variant_index": i,
+                    "base_template": base_name,
+                }
+
+                variant = Template(**variant_data)
+                variants.append(variant)
+
+            print_success(
+                f"Generated {len(variants)} metadata-only template variants"
+            )
 
         # Save variants
         output_file.parent.mkdir(parents=True, exist_ok=True)
@@ -967,14 +1020,7 @@ def generate_template_variants(
             for variant in variants:
                 f.write(variant.model_dump_json() + "\n")
 
-        print_success(
-            f"Generated {len(variants)} template variants from '{base_name}': {output_file}"
-        )
-
-        print_info(
-            "\n[yellow]Note:[/yellow] Full slot variant generation will be "
-            "implemented in a future version."
-        )
+        print_success(f"Saved variants to {output_file}")
 
     except ValidationError as e:
         print_error(f"Validation error: {e}")
