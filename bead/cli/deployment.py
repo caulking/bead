@@ -119,6 +119,11 @@ def deployment() -> None:
     default=0,
     help="List index to use in debug mode (default: 0)",
 )
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    help="Show what would be done without generating files",
+)
 @click.pass_context
 def generate(
     ctx: click.Context,
@@ -134,6 +139,7 @@ def generate(
     max_participants: int | None,
     debug_mode: bool,
     debug_list_index: int,
+    dry_run: bool,
 ) -> None:
     r"""Generate jsPsych experiment from lists and items.
 
@@ -165,6 +171,8 @@ def generate(
         Enable debug mode.
     debug_list_index : int
         List index for debug mode.
+    dry_run : bool
+        Show what would be done without generating files.
 
     Examples
     --------
@@ -185,6 +193,12 @@ def generate(
         --experiment-type forced_choice \\
         --distribution-strategy stratified \\
         --distribution-config '{"factors": ["condition", "verb_type"]}'
+
+    # Dry run to preview
+    $ bead deployment generate lists/ items.jsonl experiment/ \\
+        --experiment-type forced_choice \\
+        --distribution-strategy balanced \\
+        --dry-run
     """
     try:
         # Parse distribution config if provided
@@ -275,25 +289,48 @@ def generate(
             distribution_strategy=dist_strategy,
         )
 
-        # Generate experiment
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            console=console,
-        ) as progress:
-            progress.add_task("Generating jsPsych experiment...", total=None)
+        # Generate experiment (or show dry-run preview)
+        if dry_run:
+            print_info("[DRY RUN] Would generate jsPsych experiment with:")
+            console.print(f"  [dim]Output directory:[/dim] {output_dir}")
+            console.print(f"  [dim]Experiment type:[/dim] {experiment_type}")
+            console.print(f"  [dim]Title:[/dim] {title}")
+            console.print(f"  [dim]Distribution strategy:[/dim] {distribution_strategy}")
+            console.print(f"  [dim]Number of lists:[/dim] {len(experiment_lists)}")
+            console.print(f"  [dim]Number of items:[/dim] {len(items_dict)}")
+            console.print(f"  [dim]Number of templates:[/dim] {len(templates_dict)}")
+            if max_participants:
+                console.print(f"  [dim]Max participants:[/dim] {max_participants}")
+            if debug_mode:
+                console.print(f"  [dim]Debug mode:[/dim] Enabled (list index: {debug_list_index})")
+            print_info("[DRY RUN] Files that would be created:")
+            console.print(f"  [dim]{output_dir}/index.html[/dim]")
+            console.print(f"  [dim]{output_dir}/js/experiment.js[/dim]")
+            console.print(f"  [dim]{output_dir}/js/list_distributor.js[/dim]")
+            console.print(f"  [dim]{output_dir}/css/experiment.css[/dim]")
+            console.print(f"  [dim]{output_dir}/data/config.json[/dim]")
+            console.print(f"  [dim]{output_dir}/data/lists.jsonl[/dim]")
+            console.print(f"  [dim]{output_dir}/data/items.jsonl[/dim]")
+            console.print(f"  [dim]{output_dir}/data/distribution.json[/dim]")
+        else:
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                console=console,
+            ) as progress:
+                progress.add_task("Generating jsPsych experiment...", total=None)
 
-            generator = JsPsychExperimentGenerator(
-                config=config,
-                output_dir=output_dir,
-            )
-            output_path = generator.generate(
-                lists=experiment_lists,
-                items=items_dict,
-                templates=templates_dict,
-            )
+                generator = JsPsychExperimentGenerator(
+                    config=config,
+                    output_dir=output_dir,
+                )
+                output_path = generator.generate(
+                    lists=experiment_lists,
+                    items=items_dict,
+                    templates=templates_dict,
+                )
 
-        print_success(f"Generated jsPsych experiment: {output_path}")
+            print_success(f"Generated jsPsych experiment: {output_path}")
 
     except ValidationError as e:
         print_error(f"Validation error: {e}")

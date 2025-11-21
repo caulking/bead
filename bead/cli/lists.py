@@ -58,6 +58,11 @@ def lists() -> None:
     type=int,
     help="Random seed for reproducibility",
 )
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    help="Show what would be done without writing files",
+)
 @click.pass_context
 def partition(
     ctx: click.Context,
@@ -66,6 +71,7 @@ def partition(
     strategy: str,
     n_lists: int,
     random_seed: int | None,
+    dry_run: bool,
 ) -> None:
     r"""Partition items into experiment lists.
 
@@ -83,6 +89,8 @@ def partition(
         Number of lists to create.
     random_seed : int | None
         Random seed for reproducibility.
+    dry_run : bool
+        Show what would be done without writing files.
 
     Examples
     --------
@@ -95,6 +103,9 @@ def partition(
 
     # Stratified partitioning
     $ bead lists partition items.jsonl lists/ --n-lists 5 --strategy stratified
+
+    # Dry run to preview
+    $ bead lists partition items.jsonl lists/ --n-lists 5 --strategy balanced --dry-run
     """
     try:
         if n_lists < 1:
@@ -144,17 +155,24 @@ def partition(
                 metadata=metadata,
             )
 
-        # Save lists
-        output_dir.mkdir(parents=True, exist_ok=True)
-        for exp_list in experiment_lists:
-            list_file = output_dir / f"list_{exp_list.list_number}.jsonl"
-            with open(list_file, "w", encoding="utf-8") as f:
-                f.write(exp_list.model_dump_json() + "\n")
+        # Save lists (or show dry-run preview)
+        if dry_run:
+            print_info("[DRY RUN] Would create the following files:")
+            for exp_list in experiment_lists:
+                list_file = output_dir / f"list_{exp_list.list_number}.jsonl"
+                console.print(f"  [dim]{list_file}[/dim] ({len(exp_list.item_refs)} items)")
+            print_info(f"[DRY RUN] Total: {len(experiment_lists)} lists with {len(items)} items")
+        else:
+            output_dir.mkdir(parents=True, exist_ok=True)
+            for exp_list in experiment_lists:
+                list_file = output_dir / f"list_{exp_list.list_number}.jsonl"
+                with open(list_file, "w", encoding="utf-8") as f:
+                    f.write(exp_list.model_dump_json() + "\n")
 
-        print_success(
-            f"Created {len(experiment_lists)} lists "
-            f"with {len(items)} items: {output_dir}"
-        )
+            print_success(
+                f"Created {len(experiment_lists)} lists "
+                f"with {len(items)} items: {output_dir}"
+            )
 
         # Show distribution
         console.print("\n[cyan]Distribution:[/cyan]")

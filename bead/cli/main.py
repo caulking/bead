@@ -370,6 +370,7 @@ Thumbs.db
 
 # Import command groups
 from bead.cli.active_learning import active_learning  # noqa: E402
+from bead.cli.completion import completion  # noqa: E402
 from bead.cli.config import config  # noqa: E402
 from bead.cli.deployment import deployment  # noqa: E402
 from bead.cli.items import items  # noqa: E402
@@ -379,8 +380,10 @@ from bead.cli.resources import resources  # noqa: E402
 from bead.cli.simulate import simulate  # noqa: E402
 from bead.cli.templates import templates  # noqa: E402
 from bead.cli.training import training  # noqa: E402
+from bead.cli.workflow import workflow  # noqa: E402
 
 cli.add_command(active_learning)
+cli.add_command(completion)
 cli.add_command(config)
 cli.add_command(resources)
 cli.add_command(templates)
@@ -390,3 +393,4 @@ cli.add_command(deployment)
 cli.add_command(models)
 cli.add_command(simulate)
 cli.add_command(training)
+cli.add_command(workflow)
