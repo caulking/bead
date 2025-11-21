@@ -1,0 +1,49 @@
+# Pre-commit hooks for bead package
+#
+# Installation:
+#   pip install pre-commit
+#   pre-commit install
+#
+# Run manually:
+#   pre-commit run --all-files
+#
+# Update hook versions:
+#   pre-commit autoupdate
+
+repos:
+  # Docstring format validation (NumPy convention)
+  - repo: https://github.com/pycqa/pydocstyle
+    rev: 6.3.0
+    hooks:
+      - id: pydocstyle
+        args:
+          - --convention=numpy
+          # D105: Missing docstring in magic method (acceptable)
+          # D107: Missing docstring in __init__ (we document in class docstring)
+          - --add-ignore=D105,D107
+        exclude: ^(tests/|bead/dsl/parser\.py)
+
+  # Docstring-signature consistency validation
+  - repo: https://github.com/terrencepreilly/darglint
+    rev: v1.8.1
+    hooks:
+      - id: darglint
+        args:
+          # Verbosity level 2: full error messages
+          - -v
+          - "2"
+        exclude: ^(tests/|bead/dsl/parser\.py|bead/active_learning/|bead/simulation/)
+
+  # Additional code quality checks (optional but recommended)
+  # Uncomment to enable after Phase 2
+
+  # - repo: https://github.com/pre-commit/pre-commit-hooks
+  #   rev: v4.5.0
+  #   hooks:
+  #     - id: trailing-whitespace
+  #     - id: end-of-file-fixer
+  #     - id: check-yaml
+  #     - id: check-added-large-files
+  #     - id: check-merge-conflict
+  #     - id: check-toml
+  #     - id: mixed-line-ending
