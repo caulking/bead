@@ -376,6 +376,7 @@ from bead.cli.items import items  # noqa: E402
 from bead.cli.lists import lists  # noqa: E402
 from bead.cli.models import models  # noqa: E402
 from bead.cli.resources import resources  # noqa: E402
+from bead.cli.simulate import simulate  # noqa: E402
 from bead.cli.templates import templates  # noqa: E402
 from bead.cli.training import training  # noqa: E402
 
@@ -387,4 +388,5 @@ cli.add_command(items)
 cli.add_command(lists)
 cli.add_command(deployment)
 cli.add_command(models)
+cli.add_command(simulate)
 cli.add_command(training)

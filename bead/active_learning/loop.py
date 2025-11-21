@@ -15,7 +15,6 @@ import numpy as np
 
 from bead.active_learning.selection import ItemSelector
 from bead.active_learning.trainers.base import ModelMetadata
-from bead.config.active_learning import ActiveLearningLoopConfig
 from bead.evaluation.convergence import ConvergenceDetector
 from bead.evaluation.model_metrics import ModelMetrics
 from bead.items.item import Item
@@ -23,6 +22,7 @@ from bead.items.item_template import ItemTemplate
 
 if TYPE_CHECKING:
     from bead.active_learning.models.base import ActiveLearningModel
+    from bead.config.active_learning import ActiveLearningLoopConfig
 
 
 class IterationResult(TypedDict):
