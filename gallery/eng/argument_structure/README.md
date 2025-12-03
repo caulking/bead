@@ -70,6 +70,60 @@ For clausal complement constructions, the project uses the **MegaAttitude** fram
 3. **Convergence:** How many annotations are needed for models to reach human-level agreement?
 4. **Active Learning:** Which items should be annotated to maximize learning efficiency?
 
+## Two Ways to Run This Pipeline
+
+This pipeline can be executed using **two equivalent approaches** that produce identical outputs:
+
+### CLI Approach
+
+Configuration-driven workflows using the `bead` command-line interface. Best for users who prefer declarative configuration and shell scripting.
+
+**Documentation**: [CLI User Guide](../../../docs/user-guide/cli/workflows.md)
+
+**Quick Example**:
+```bash
+# Stage 1: Import lexicons
+bead resources import-verbnet --output lexicons/verbs.jsonl
+
+# Stage 2: Fill templates
+bead templates fill templates.jsonl lexicons/*.jsonl filled.jsonl \
+  --strategy exhaustive
+
+# ... (6 stages total)
+```
+
+**When to use**: Simple workflows, single operations, avoiding Python programming, shell script integration.
+
+### Python API Approach
+
+Programmatic control using Python scripts. Best for batch operations, complex logic, and dynamic workflows.
+
+**Documentation**: [API User Guide](../../../docs/user-guide/api/workflows.md)
+
+**Quick Example**:
+```python
+from bead.resources.adapters.glazing import GlazingAdapter
+from bead.templates.filler import TemplateFiller
+
+# Stage 1: Import lexicons
+adapter = GlazingAdapter(resource="verbnet")
+items = adapter.fetch_items(query="break", language_code="en")
+
+# Stage 2: Fill templates
+filler = TemplateFiller(templates, lexicons)
+filled = filler.fill(strategy="exhaustive")
+
+# ... (6 stages total)
+```
+
+**When to use**: Batch operations (1000s of items), complex logic, Python integration, dynamic configuration.
+
+### Current Implementation
+
+The scripts in this directory (`generate_lexicons.py`, `fill_templates.py`, etc.) use the **Python API approach** because they perform complex batch operations with custom plugins (see "Plugin Architecture" section below). However, the same pipeline could be implemented using CLI commands for simpler, single-operation workflows.
+
+**Key Principle**: Both approaches are first-class citizens. Choose based on your workflow needs, not capability constraints.
+
 ## Architecture
 
 ### Core Components
@@ -162,13 +216,319 @@ The pipeline consists of 10 main scripts organized into 4 stages:
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### Utility Modules
+### Plugin Architecture
 
-The `utils/` package provides specialized extraction and generation tools. The `verbnet_parser.py` module wraps `GlazingAdapter` to extract verbs with frame information from VerbNet, filtering by patterns like clausal complements, PPs, and particle verbs. For morphology, `morphology.py` wraps `UniMorphAdapter` to get verb inflections (3sg present, past, participles) and handles particle verbs like "turn off" or "cross-examine", including progressive forms.
+The `utils/` package provides **language-specific plugins** that extend the core `bead` framework for English argument structure experiments. These plugins remain in the gallery because they contain English-specific linguistic knowledge that should not be part of the language-agnostic framework.
 
-Template generation happens in `template_generator.py`, which creates `Template` objects from VerbNet frames and maps them to MegaAttitude clausal structures. It handles both simple frames (NP V NP) and complex ones (NP V that S) with DSL constraints. The `constraint_builder.py` module builds programmatic constraints for slots, handling determiner-noun agreement and bleached lexicon restrictions.
+#### Why Plugins Are Language-Specific
 
-Finally, `clausal_frames.py` maps VerbNet patterns to MegaAttitude's 13 frame types (that/whether/to/wh/gerund/etc.) with mood tracking for indicative, subjunctive, and conditional complements.
+| Plugin | Purpose | English-Specific Features |
+|--------|---------|---------------------------|
+| `renderers.py` | Template rendering | "another"/"the other" for repeated nouns, English determiners |
+| `template_generator.py` | VerbNet → Templates | VerbNet is English-only, frame structure patterns |
+| `constraint_builder.py` | Slot constraints | English det-noun agreement (a/the + count/mass), subj-verb agreement (3sg -s) |
+| `verbnet_parser.py` | VerbNet extraction | VerbNet database is English-only |
+| `morphology.py` | Morphological forms | English inflections (3sg, past, progressive), particle verb handling |
+| `clausal_frames.py` | Clausal structure mapping | MegaAttitude frame system, English complementizers |
+
+#### Plugin Details
+
+**`utils/renderers.py`** - Custom Template Rendering
+
+Provides `OtherNounRenderer` class for handling repeated noun slots:
+
+```python
+from utils.renderers import OtherNounRenderer
+from bead.templates.filler import TemplateFiller
+
+renderer = OtherNounRenderer()
+filler = TemplateFiller(templates, lexicons, renderer=renderer)
+filled = filler.fill(strategy="exhaustive")
+```
+
+**Rendering rules**:
+- 1st occurrence: Original determiner + noun ("a cat")
+- 2nd occurrence (total=2): "another cat" or "the other cat"
+- 3rd+ occurrence: Ordinals ("a second cat", "a third cat")
+
+**Why English-specific**: Relies on English determiner system and "another"/"other" constructions that don't exist in all languages.
+
+**`utils/template_generator.py`** - VerbNet to Template Conversion
+
+Extracts templates from VerbNet frames and maps to MegaAttitude clausal structures:
+
+```python
+from utils.template_generator import TemplateGenerator
+
+generator = TemplateGenerator()
+templates = generator.generate_templates_for_verb("think", verbnet_class="29.9")
+```
+
+**Features**:
+- Converts VerbNet frames (NP V that S) to `Template` objects
+- Maps clausal complements to MegaAttitude frame types
+- Generates DSL constraints for slot fillers
+- Handles thematic role to syntactic position mapping
+
+**Why English-specific**: VerbNet is an English-only resource with English-specific frame structures.
+
+**`utils/constraint_builder.py`** - English Agreement Constraints
+
+Builds programmatic constraints for English morphosyntax:
+
+```python
+from utils.constraint_builder import ConstraintBuilder
+
+builder = ConstraintBuilder()
+
+# Determiner-noun number agreement
+det_noun_constraint = builder.build_det_noun_agreement()
+
+# Subject-verb agreement (3sg -s)
+subj_verb_constraint = builder.build_subj_verb_agreement()
+```
+
+**Features**:
+- Det-noun agreement: "a/the" + singular, "the" + plural, "*a" + plural
+- Subj-verb agreement: 3sg subjects require -s verbs
+- Bleached lexicon restrictions (semantic control)
+
+**Why English-specific**: English morphosyntactic agreement patterns (number marking, 3sg -s).
+
+**`utils/verbnet_parser.py`** - VerbNet Data Extraction
+
+Wraps `GlazingAdapter` to extract verbs with frame information:
+
+```python
+from utils.verbnet_parser import VerbNetExtractor
+
+extractor = VerbNetExtractor()
+verbs = extractor.extract_all_verbs()
+clausal_verbs = extractor.extract_verbs_with_clausal_complements()
+```
+
+**Features**:
+- Fetches verbs by VerbNet class
+- Filters by frame patterns (clausal, PP, particle verbs)
+- Extracts frame details (syntax, thematic roles, examples)
+
+**Why English-specific**: VerbNet is English-only.
+
+**`utils/morphology.py`** - Morphological Forms
+
+Wraps `UniMorphAdapter` to get English verb inflections:
+
+```python
+from utils.morphology import MorphologyExtractor
+
+extractor = MorphologyExtractor()
+forms = extractor.get_all_required_forms("break")
+# Returns: break, breaks, broke, broken, breaking
+```
+
+**Features**:
+- Fetches 5 forms: base, 3sg present, past, past participle, progressive
+- Handles particle verbs ("turn off" → "turn off", "turns off", "turned off", ...)
+- Handles progressive aspect ("be" + V-ing)
+
+**Why English-specific**: English inflectional morphology patterns.
+
+**`utils/clausal_frames.py`** - Clausal Structure Mapping
+
+Maps VerbNet frame patterns to MegaAttitude frame types:
+
+```python
+from utils.clausal_frames import map_to_megaattitude_frame
+
+frame_info = map_to_megaattitude_frame(
+    verbnet_frame="NP V that S[+indicative]",
+    complementizer="that"
+)
+# Returns: {"frame_type": "finite_that_indicative", "mood": "indicative"}
+```
+
+**Features**:
+- Maps to 13 MegaAttitude frame types
+- Tracks mood (indicative, subjunctive, conditional)
+- Handles finite, non-finite, and wh-complements
+
+**Why English-specific**: MegaAttitude frame inventory designed for English complement system.
+
+### Configuration Documentation
+
+The pipeline is controlled by `config.yaml`, which defines all stages of the workflow. This section documents the structure and purpose of each configuration section.
+
+#### Configuration File Structure
+
+```yaml
+# config.yaml
+project:           # Project metadata
+paths:             # Directory structure
+resources:         # Lexicon and template paths
+template:          # Template filling strategies
+items:             # Item construction
+lists:             # List partitioning
+deployment:        # jsPsych/JATOS settings
+active_learning:   # Sampling strategy
+training:          # Convergence detection
+```
+
+#### Section Details
+
+**`project`** - Project Metadata
+```yaml
+project:
+  name: "argument_structure"
+  language_code: "eng"
+  description: "VerbNet argument structure alternations"
+  version: "1.0.0"
+  authors: ["Aaron Steven White"]
+```
+
+**`paths`** - Directory Structure
+```yaml
+paths:
+  data_dir: "."
+  output_dir: "."
+  cache_dir: ".cache"
+  lexicons_dir: "lexicons"
+  templates_dir: "templates"
+  items_dir: "items"
+  lists_dir: "lists"
+  filled_templates_dir: "filled_templates"
+```
+
+**`resources`** - Lexicon and Template Paths
+```yaml
+resources:
+  lexicons:
+    - path: "lexicons/verbnet_verbs.jsonl"
+      name: "verbnet_verbs"
+      description: "VerbNet verbs with frame information"
+  templates:
+    - path: "templates/generic_frames.jsonl"
+      name: "generic_frames"
+      description: "Generic frame structures"
+```
+
+**`template`** - Template Filling Strategies
+
+Supports three strategies: `exhaustive` (all combinations), `mlm` (masked language model), or `mixed` (both):
+
+```yaml
+template:
+  filling_strategy: "mixed"
+  output_path: "filled_templates/generic_frames_filled.jsonl"
+
+  mlm:
+    model_name: "bert-base-uncased"
+    beam_size: 5
+    top_k: 10
+
+  slot_strategies:
+    # Phase 1: Exhaustive filling
+    det_subj: {strategy: "exhaustive"}
+    verb: {strategy: "exhaustive"}
+
+    # Phase 2: MLM filling
+    noun_subj: {strategy: "mlm", max_fills: 5}
+    prep: {strategy: "mlm", max_fills: 5}
+```
+
+**`items`** - Item Construction
+```yaml
+items:
+  judgment_type: "forced_choice"
+  task_type: "2afc"
+
+  lm_scorer:
+    model_name: "gpt2"
+    device: "cpu"
+    cache_enabled: true
+```
+
+**`lists`** - List Partitioning
+
+Defines how items are partitioned into experimental lists with constraints:
+
+```yaml
+lists:
+  n_lists: 8
+  items_per_list: 100
+
+  # Per-list constraints
+  constraints:
+    - type: "balance"
+      property_expression: "item.metadata.pair_type"
+      target_counts: {same_verb: 50, different_verb: 50}
+
+    - type: "uniqueness"
+      property_expression: "item.metadata.verb_lemma"
+
+  # Across-list constraints
+  batch_constraints:
+    - type: "coverage"
+      property_expression: "item.metadata.template_id"
+      target_values: [...]  # All 26 template UUIDs
+      min_coverage: 1.0
+```
+
+**`deployment`** - jsPsych/JATOS Settings
+```yaml
+deployment:
+  platform: "jatos"
+
+  jspsych:
+    version: "8.0.0"
+    plugins: ["html-button-response", "survey-text"]
+    prolific_completion_code: "YOUR_CODE"
+
+  ui:
+    theme: "material"
+    button_style: "filled"
+```
+
+**`active_learning`** - Sampling Strategy
+```yaml
+active_learning:
+  strategy: "uncertainty_sampling"
+  method: "entropy"
+  budget_per_iteration: 200
+  max_iterations: 20
+```
+
+**`training`** - Convergence Detection
+```yaml
+training:
+  convergence:
+    metric: "krippendorff_alpha"
+    threshold: 0.05
+    min_iterations: 3
+
+  model:
+    architecture: "bert-base-uncased"
+    learning_rate: 2e-5
+    batch_size: 16
+```
+
+#### How Plugins Are Referenced
+
+Plugins are **imported directly in Python scripts**, not referenced in `config.yaml`. For example:
+
+```python
+# generate_lexicons.py
+from utils.morphology import MorphologyExtractor
+from utils.verbnet_parser import VerbNetExtractor
+
+# fill_templates.py
+from utils.renderers import OtherNounRenderer
+from bead.templates.filler import TemplateFiller
+
+renderer = OtherNounRenderer()
+filler = TemplateFiller(templates, lexicons, renderer=renderer)
+```
+
+This keeps the configuration file language-agnostic while allowing language-specific extensions through the plugin system.
 
 ## Dataset Design
 
