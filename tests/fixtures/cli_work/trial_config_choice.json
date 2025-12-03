@@ -1,6 +1,0 @@
-{
-  "type": "choice",
-  "button_html": "<button>%choice%</button>",
-  "enable_keyboard": true,
-  "randomize_position": true
-}

@@ -1,4 +1,4 @@
-word,semantic_class,aspect,valency,tenseless_vp,gerund,tenseless_clause,infinitival_clause,tensed_clause
+lemma,semantic_class,aspect,valency,tenseless_vp,gerund,tenseless_clause,infinitival_clause,tensed_clause
 do,activity,dynamic,transitive/intransitive,do {{ object }},doing {{ object }},{{ subject }} do {{ object }},{{ subject }} to do {{ object }},{{ subject }} did {{ object }}
 be,state,stative,copula,be {{ complement }},being {{ complement }},{{ subject }} be {{ complement }},{{ subject }} to be {{ complement }},{{ subject }} was {{ complement }}
 have,state,stative,transitive,have {{ object }},having {{ object }},{{ subject }} have {{ object }},{{ subject }} to have {{ object }},{{ subject }} had {{ object }}

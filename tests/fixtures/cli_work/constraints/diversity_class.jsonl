@@ -1,1 +1,0 @@
-{"id":"019ae51f-2b00-7b12-ad5b-bd7f52020b4a","created_at":"2025-12-03T16:50:16.448227Z","modified_at":"2025-12-03T16:50:16.448231Z","version":"1.0.0","metadata":{},"constraint_type":"diversity","property_expression":"item['verb_class']","min_unique_values":10,"context":{},"priority":3}
