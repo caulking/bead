@@ -151,7 +151,6 @@ csv_path = resources_dir / "bleached_nouns.csv"
 noun_lexicon = from_csv(
     path=csv_path,
     name="bleached_nouns",
-    column_mapping={"word": "lemma"},
     feature_columns=["number", "countability", "semantic_class"],
     language_code="eng",
     description="Controlled noun inventory for templates",
