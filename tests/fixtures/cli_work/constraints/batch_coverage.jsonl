@@ -1,0 +1,1 @@
+{"id":"019ae520-3a28-7243-a7a6-5b1f707c2d99","created_at":"2025-12-03T16:51:25.864164Z","modified_at":"2025-12-03T16:51:25.864169Z","version":"1.0.0","metadata":{},"constraint_type":"coverage","property_expression":"item['template_id']","context":{},"target_values":["0","1","2","3","4","5"],"min_coverage":1.0,"priority":5}

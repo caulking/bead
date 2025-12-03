@@ -1,0 +1,10 @@
+{
+  "type": "rating_scale",
+  "min_value": 1,
+  "max_value": 7,
+  "step": 1,
+  "min_label": "Strongly Disagree",
+  "max_label": "Strongly Agree",
+  "show_numeric_labels": false,
+  "required": true
+}
