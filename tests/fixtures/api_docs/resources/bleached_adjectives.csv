@@ -1,4 +1,4 @@
-word,semantic_class,gradability,stage_vs_individual,notes
+lemma,semantic_class,gradability,stage_vs_individual,notes
 good,evaluation,gradable,individual,positive evaluation
 bad,evaluation,gradable,individual,negative evaluation
 right,evaluation,non-gradable,stage,correct

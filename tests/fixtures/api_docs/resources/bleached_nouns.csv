@@ -1,4 +1,4 @@
-word,semantic_class,number,countability
+lemma,semantic_class,number,countability
 person,animate,singular,count
 people,animate,plural,count/mass
 group,animate,singular,count
