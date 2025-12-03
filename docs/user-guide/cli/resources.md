@@ -6,281 +6,204 @@ The resources module handles Stage 1 of the pipeline: creating lexical items, te
 
 Lexicons store collections of lexical items (words or phrases) with linguistic features.
 
-### From CSV or JSON
+### From CSV
 
-Convert structured data to JSONL format:
+Convert CSV files to JSONL format:
 
 ```bash
-bead resources create-lexicon \
-    --input words.csv \
-    --name my_lexicon \
-    --language-code eng \
-    --output lexicons/words.jsonl
+bead resources create-lexicon lexicons/test_nouns.jsonl \
+    --name test_nouns \
+    --from-csv resources/bleached_nouns.csv \
+    --language-code eng
 ```
 
-The CSV file must include columns for `lemma` and `pos` (part of speech). Additional columns become features in the `metadata` dictionary.
+The CSV file must include a `lemma` column. Optional columns: `pos`, `form`, and any features.
 
-Example CSV:
+### Validating Existing Lexicons
 
-```csv
-lemma,pos,frequency,animacy
-cat,N,1000,animate
-book,N,850,inanimate
-run,V,1200,
+Verify lexicon format:
+
+```bash
+bead resources validate-lexicon lexicons/bleached_nouns.jsonl
 ```
 
-### From VerbNet
+### Validating Different Lexicons
 
-Import verbs directly from the VerbNet database via the glazing adapter:
+```bash
+bead resources validate-lexicon lexicons/verbnet_verbs.jsonl
+```
+
+### Listing Available Lexicons
+
+View all lexicons in a directory:
+
+```bash
+bead resources list-lexicons --directory lexicons/
+```
+
+## Working with External Resources
+
+The CLI supports importing from VerbNet, UniMorph, PropBank, and FrameNet. These commands require network access.
+
+### VerbNet Import
 
 ```bash
 bead resources import-verbnet \
     --verb-class put-9.1 \
-    --output lexicons/put_verbs.jsonl \
-    --limit 20
+    --limit 5 \
+    --output lexicons/verbs.jsonl
 ```
 
-Each verb includes VerbNet class information, thematic roles, and frame counts in its metadata. Use `--query` to search for specific verbs:
-
-```bash
-bead resources import-verbnet \
-    --query "run" \
-    --output lexicons/run_verbs.jsonl
-```
-
-### From UniMorph
-
-Generate inflected forms with morphological features:
+### UniMorph Import
 
 ```bash
 bead resources import-unimorph \
-    --language eng \
+    --language-code eng \
     --pos VERB \
     --features "V;PST" \
-    --output lexicons/past_tense_verbs.jsonl \
-    --limit 100
+    --limit 10 \
+    --output lexicons/past_verbs.jsonl
 ```
 
-The `--features` parameter uses UniMorph notation. Common feature combinations:
-
-- `V;PST`: past tense verbs
-- `V;PRS;3;SG`: present tense, 3rd person singular
-- `N;PL`: plural nouns
-- `ADJ;CMPR`: comparative adjectives
-
-### From PropBank
-
-Import predicate-argument structures from PropBank:
+### PropBank Import
 
 ```bash
 bead resources import-propbank \
     --frameset eat.01 \
-    --output lexicons/eating_verbs.jsonl
+    --output lexicons/eat.jsonl
 ```
 
-PropBank framesets include role labels (ARG0, ARG1, etc.) in metadata.
-
-### From FrameNet
-
-Import frame semantic information:
+### FrameNet Import
 
 ```bash
 bead resources import-framenet \
     --frame Ingestion \
-    --output lexicons/ingestion_frame.jsonl
+    --output lexicons/ingestion.jsonl
 ```
-
-FrameNet frames include frame elements and semantic relationships.
 
 ## Creating Templates
 
 Templates define sentence patterns with slots for lexical items.
 
-### From Patterns
+### From Pattern
 
-Generate templates from text patterns with `{placeholder}` syntax:
+Generate a template from a pattern string:
 
 ```bash
-bead resources generate-templates \
-    --from-pattern "{det} {subj} {verb} {det} {obj}" \
-    --slot subj:required \
-    --slot verb:required \
-    --slot obj:required \
-    --slot det:optional \
-    --description "Basic transitive sentence frame" \
-    --language-code eng \
-    --output templates/transitive.jsonl
+bead resources generate-templates templates/transitive.jsonl \
+    --pattern "{subj} {verb} {obj}" \
+    --name transitive \
+    --language-code eng
 ```
 
-The command auto-detects slots from curly braces. Use `--slot name:required` or `--slot name:optional` to specify requirements explicitly.
-
-Multiple patterns in one command:
+### With Slot Specifications
 
 ```bash
-bead resources generate-templates \
-    --from-pattern "{subj} {verb} {obj}" \
-    --from-pattern "{subj} {aux} {verb} by {agent}" \
-    --output templates/multiple_frames.jsonl
+bead resources generate-templates templates/detailed_transitive.jsonl \
+    --pattern "{det} {subj} {verb} {obj}" \
+    --name detailed_transitive \
+    --slot subj:true \
+    --slot verb:true \
+    --slot obj:true \
+    --slot det:false
 ```
 
 ### Template Variants
 
-Generate systematic variations from base templates:
+Generate variations from existing templates:
 
 ```bash
-bead resources generate-template-variants \
-    --base-template templates/transitive.jsonl \
-    --name-pattern "{base_name}_variant_{index}" \
-    --max-variants 5 \
-    --output templates/transitive_variants.jsonl
+bead resources generate-template-variants templates/generic_frames.jsonl templates/variants.jsonl \
+    --name-pattern "{base_name}_v{index}" \
+    --max-variants 3
 ```
-
-Each variant receives metadata tracking its base template and variant index.
 
 ## Creating Constraints
 
-Constraints restrict which lexical items can fill template slots. Three constraint types support different use cases.
+Constraints restrict which lexical items can fill template slots.
 
 ### Extensional Constraints
 
-Whitelist specific items for a slot:
+Whitelist specific values:
 
 ```bash
-# From comma-separated values
-bead resources create-constraint \
+bead resources create-constraint constraints/motion.jsonl \
     --type extensional \
-    --property lemma \
-    --values "run,walk,jump" \
-    --output constraints/motion_verbs.jsonl
-
-# From file (one value per line)
-bead resources create-constraint \
-    --type extensional \
-    --property lemma \
-    --values-file motion_verbs.txt \
-    --output constraints/motion_verbs.jsonl
+    --slot verb \
+    --values "run,walk,jump"
 ```
-
-Extensional constraints define explicit membership: only listed items can fill the slot.
 
 ### Intensional Constraints
 
 Use DSL expressions for feature-based filtering:
 
 ```bash
-bead resources create-constraint \
+bead resources create-constraint constraints/verbs.jsonl \
     --type intensional \
-    --expression "self.features.get('pos') == 'V'" \
-    --description "Only verbs" \
-    --output constraints/verb_constraint.jsonl
+    --slot verb \
+    --expression "self.pos == 'VERB'"
 ```
 
-The DSL supports:
-
-- Feature access: `self.features.get('pos')`
-- Comparisons: `==`, `!=`, `<`, `>`, `<=`, `>=`
-- Boolean logic: `and`, `or`, `not`
-- Membership: `in`, `not in`
-
-Example with multiple conditions:
+### Complex Conditions
 
 ```bash
-bead resources create-constraint \
+bead resources create-constraint constraints/animate.jsonl \
     --type intensional \
-    --expression "self.features.get('pos') == 'N' and self.features.get('animacy') == 'animate'" \
-    --description "Animate nouns only" \
-    --output constraints/animate_nouns.jsonl
+    --slot noun \
+    --expression "self.pos == 'NOUN' and self.features.animacy == 'animate'"
 ```
 
 ### Relational Constraints
 
-Define relationships across multiple slots:
+Define relationships across slots:
 
 ```bash
-bead resources create-constraint \
+bead resources create-constraint constraints/different.jsonl \
     --type relational \
-    --relation "slot1.lemma != slot2.lemma" \
-    --description "Subject and object must differ" \
-    --output constraints/different_args.jsonl
+    --relation "subject.lemma != object.lemma" \
+    --description "Different arguments"
 ```
 
-Relational constraints reference slots by name. Use `slot1`, `slot2`, etc., or actual slot names if known.
-
-Agreement constraint example:
+### Agreement Constraints
 
 ```bash
-bead resources create-constraint \
+bead resources create-constraint constraints/agreement.jsonl \
     --type relational \
-    --relation "subj.features.get('number') == verb.features.get('number')" \
-    --description "Subject-verb number agreement" \
-    --output constraints/agreement.jsonl
+    --relation "subject.features.number == verb.features.number" \
+    --description "Subject-verb agreement"
 ```
 
 ## Validation
 
-Verify lexicons and templates before using them:
+Verify resources before using them:
 
 ```bash
-# Validate lexicon format
-bead resources validate-lexicon \
-    --lexicon lexicons/words.jsonl
-
-# Validate template structure
-bead resources validate-template \
-    --template templates/frames.jsonl
+bead resources validate-lexicon lexicons/bleached_nouns.jsonl
 ```
 
-Validation checks:
-
-- JSONL format correctness
-- Required fields present (id, lemma/pattern, language_code)
-- Feature dictionaries well-formed
-- Slot names consistent
+```bash
+bead resources validate-template templates/generic_frames.jsonl
+```
 
 ## Listing Resources
 
-View available lexicons and templates:
+View available resources:
 
 ```bash
-# List all lexicons in directory
-bead resources list-lexicons \
-    --directory lexicons/
-
-# List all templates
-bead resources list-templates \
-    --directory templates/
+bead resources list-lexicons --directory lexicons/
 ```
 
-Output shows file paths, item counts, and language codes.
-
-## JSONL Format
-
-All resource files use JSONL (JSON Lines) format: one JSON object per line. This enables streaming and partial loading for large datasets.
-
-Example lexicon file:
-
-```jsonl
-{"id": "uuid1", "lemma": "run", "pos": "V", "features": {"tense": "base"}, "metadata": {}, "created_at": "2025-01-20T10:00:00Z", "modified_at": "2025-01-20T10:00:00Z"}
-{"id": "uuid2", "lemma": "ran", "pos": "V", "features": {"tense": "past"}, "metadata": {"base_form": "run"}, "created_at": "2025-01-20T10:00:01Z", "modified_at": "2025-01-20T10:00:01Z"}
+```bash
+bead resources list-templates --directory templates/
 ```
 
-Example template file:
+## Cache Management
 
-```jsonl
-{"id": "uuid3", "pattern": "{subj} {verb} {obj}", "slots": {"subj": {"required": true}, "verb": {"required": true}, "obj": {"required": true}}, "description": "Transitive frame", "language_code": "eng", "created_at": "2025-01-20T10:00:00Z", "modified_at": "2025-01-20T10:00:00Z"}
-```
-
-## Integration with External Resources
-
-The import commands (VerbNet, UniMorph, PropBank, FrameNet) cache results to avoid repeated network requests. Cache location: `.cache/bead/adapters/`.
-
-To force refresh:
+External resource imports cache results. To force refresh:
 
 ```bash
 rm -rf .cache/bead/adapters/
 ```
-
-All external resources are accessed via the glazing adapter library, which provides unified interfaces to linguistic databases.
 
 ## Next Steps
 
