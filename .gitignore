@@ -16,3 +16,16 @@ gallery/**/deployment/
 node_modules/
 coverage/
 site/
+
+# CLI documentation test artifacts (created in project root during pytest-codeblocks runs)
+/constraints/
+/experiment/
+/items/
+/lexicons/
+/templates/
+/lists/
+/filled_templates/
+/responses/
+/exports/
+/trial_config_*.json
+/*.jzip
