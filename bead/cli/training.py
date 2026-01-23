@@ -8,21 +8,22 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, cast
+from typing import cast
 
 import click
 import numpy as np
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn, track
 from rich.table import Table
+from sklearn.metrics import accuracy_score, precision_recall_fscore_support
+from sklearn.model_selection import KFold
 
 from bead.cli.models import _import_class  # type: ignore[attr-defined]
 from bead.cli.utils import print_error, print_info, print_success
+from bead.data.base import JsonValue
 from bead.data.serialization import read_jsonlines
 from bead.data_collection.jatos import JATOSDataCollector
-from bead.evaluation.cross_validation import CrossValidator
 from bead.evaluation.interannotator import InterAnnotatorMetrics
-from bead.evaluation.model_metrics import ModelMetrics
 from bead.items.item import Item
 
 console = Console()
@@ -143,13 +144,13 @@ def show_data_stats(ctx: click.Context, data_file: Path) -> None:
         print_info(f"Analyzing data: {data_file}")
 
         # Load and analyze data
-        results: list[dict[str, object]] = []
+        results: list[dict[str, JsonValue]] = []
         with open(data_file, encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
                 if not line:
                     continue
-                result: dict[str, object] = json.loads(line)
+                result: dict[str, JsonValue] = json.loads(line)
                 results.append(result)
 
         if not results:
@@ -160,16 +161,16 @@ def show_data_stats(ctx: click.Context, data_file: Path) -> None:
         total_results = len(results)
 
         # Count unique workers if available
-        worker_ids: set[object] = set()
+        worker_ids: set[str] = set()
         for result in results:
-            if "worker_id" in result:
+            if "worker_id" in result and isinstance(result["worker_id"], str):
                 worker_ids.add(result["worker_id"])
 
         # Count response types if available
         response_types: dict[str, int] = {}
         for result in results:
             if "data" in result:
-                data: object = result["data"]
+                data: JsonValue = result["data"]
                 if isinstance(data, dict):
                     for key in data.keys():  # type: ignore[var-annotated]
                         key_str = str(key)  # type: ignore[arg-type]
@@ -306,12 +307,12 @@ def evaluate(
 
         # Load test labels
         with open(test_labels, encoding="utf-8") as f:
-            labels: list[Any] = [json.loads(line.strip()) for line in f if line.strip()]
+            labels: list[str | int | float] = [
+                json.loads(line.strip()) for line in f if line.strip()
+            ]
 
         if len(items_list) != len(labels):
-            print_error(
-                f"Mismatch: {len(items_list)} items but {len(labels)} labels"
-            )
+            print_error(f"Mismatch: {len(items_list)} items but {len(labels)} labels")
             ctx.exit(1)
 
         # Load participant IDs if provided
@@ -331,7 +332,7 @@ def evaluate(
         # Load model
         model_class_name = f"{task_type.title().replace('_', '')}Model"
         model_module = f"bead.active_learning.models.{task_type}"
-        model_class = _import_class(model_module, model_class_name)
+        model_class = _import_class(f"{model_module}.{model_class_name}")
 
         model_instance = model_class.load(model_dir)
         print_success(f"Loaded model from {model_dir}")
@@ -351,17 +352,23 @@ def evaluate(
 
         for metric_name in metrics_list:
             if metric_name == "accuracy":
-                acc = ModelMetrics.accuracy(labels, predictions)
+                acc = accuracy_score(labels, predictions)
                 results["accuracy"] = acc
             elif metric_name in ["precision", "recall", "f1"]:
-                prf = ModelMetrics.precision_recall_f1(
-                    labels, predictions, average=average
+                precision, recall, f1, support = precision_recall_fscore_support(
+                    labels, predictions, average=average, zero_division=0.0
                 )
                 if "precision" not in results:
-                    results["precision"] = prf["precision"]
-                    results["recall"] = prf["recall"]
-                    results["f1"] = prf["f1"]
-                    results["support"] = prf["support"]
+                    results["precision"] = float(precision)
+                    results["recall"] = float(recall)
+                    results["f1"] = float(f1)
+                    # support is None when using averaging
+                    if support is not None:
+                        results["support"] = (
+                            float(support)
+                            if isinstance(support, (int, float))
+                            else float(sum(support))
+                        )
             else:
                 print_error(f"Unknown metric: {metric_name}")
                 ctx.exit(1)
@@ -512,7 +519,7 @@ def cross_validate(
 
         # Load labels
         with open(labels, encoding="utf-8") as f:
-            labels_list: list[Any] = [
+            labels_list: list[JsonValue] = [
                 json.loads(line.strip()) for line in f if line.strip()
             ]
 
@@ -549,29 +556,30 @@ def cross_validate(
         model_class_name = f"{task_type.title().replace('_', '')}Model"
         config_class_name = f"{task_type.title().replace('_', '')}ModelConfig"
         model_module = f"bead.active_learning.models.{task_type}"
+        config_module = "bead.config.active_learning"
 
-        model_class = _import_class(model_module, model_class_name)
-        config_class = _import_class(model_module, config_class_name)
+        model_class = _import_class(f"{model_module}.{model_class_name}")
+        config_class = _import_class(f"{config_module}.{config_class_name}")
 
         # Create cross-validator
-        cv = CrossValidator(k=k_folds, shuffle=True, random_seed=random_seed)
+        cv = KFold(n_splits=k_folds, shuffle=True, random_state=random_seed)
 
-        # Generate folds (no stratification for now)
-        folds = cv.k_fold_split(items_list, stratify_by=None)
+        # Generate fold indices
+        fold_indices = list(cv.split(items_list))
 
-        print_info(f"Generated {len(folds)} folds")
+        print_info(f"Generated {len(fold_indices)} folds")
 
         # Train and evaluate on each fold
-        fold_results: list[dict[str, float]] = []
+        fold_results: list[dict[str, float | int]] = []
 
-        for fold_idx, (train_items, test_items) in enumerate(folds, start=1):
+        for fold_idx, (train_indices, test_indices) in enumerate(fold_indices, start=1):
             print_info(f"\n[Fold {fold_idx}/{k_folds}]")
-            print_info(f"  Train: {len(train_items)} items")
-            print_info(f"  Test: {len(test_items)} items")
+            print_info(f"  Train: {len(train_indices)} items")
+            print_info(f"  Test: {len(test_indices)} items")
 
-            # Get indices for train and test sets
-            train_indices = [items_list.index(item) for item in train_items]
-            test_indices = [items_list.index(item) for item in test_items]
+            # Get items for train and test sets
+            train_items = [items_list[i] for i in train_indices]
+            test_items = [items_list[i] for i in test_indices]
 
             # Get labels for this fold
             train_labels = [labels_list[i] for i in train_indices]
@@ -592,24 +600,38 @@ def cross_validate(
 
             # Make predictions on test set
             predictions = model_instance.predict(test_items, participant_ids=test_pids)
+            pred_labels = [p.predicted_class for p in predictions]
 
             # Compute metrics
-            accuracy = ModelMetrics.accuracy(test_labels, predictions)
-            prf = ModelMetrics.precision_recall_f1(test_labels, predictions)
+            accuracy = accuracy_score(test_labels, pred_labels)
+            precision, recall, f1, support = precision_recall_fscore_support(
+                test_labels, pred_labels, average="macro", zero_division=0.0
+            )
+            prf: dict[str, float] = {
+                "precision": float(precision),
+                "recall": float(recall),
+                "f1": float(f1),
+            }
+            # support is None when using averaging
+            if support is not None:
+                prf["support"] = (
+                    float(support)
+                    if isinstance(support, (int, float))
+                    else float(sum(support))
+                )
 
-            fold_result = {
+            fold_result: dict[str, float | int] = {
                 "fold": fold_idx,
-                "accuracy": accuracy,
+                "accuracy": float(accuracy),
                 "precision": prf["precision"],
                 "recall": prf["recall"],
                 "f1": prf["f1"],
-                "support": prf["support"],
             }
+            if "support" in prf:
+                fold_result["support"] = prf["support"]
             fold_results.append(fold_result)
 
-            print_success(
-                f"  Accuracy: {accuracy:.4f}, F1: {prf['f1']:.4f}"
-            )
+            print_success(f"  Accuracy: {accuracy:.4f}, F1: {prf['f1']:.4f}")
 
         # Compute average metrics
         avg_results = {
@@ -745,7 +767,7 @@ def learning_curve(
 
         # Load labels
         with open(labels, encoding="utf-8") as f:
-            labels_list: list[Any] = [
+            labels_list: list[str | int | float] = [
                 json.loads(line.strip()) for line in f if line.strip()
             ]
 
@@ -762,9 +784,10 @@ def learning_curve(
         model_class_name = f"{task_type.title().replace('_', '')}Model"
         config_class_name = f"{task_type.title().replace('_', '')}ModelConfig"
         model_module = f"bead.active_learning.models.{task_type}"
+        config_module = "bead.config.active_learning"
 
-        model_class = _import_class(model_module, model_class_name)
-        config_class = _import_class(model_module, config_class_name)
+        model_class = _import_class(f"{model_module}.{model_class_name}")
+        config_class = _import_class(f"{config_module}.{config_class_name}")
 
         # Parse train sizes
         sizes = [float(s.strip()) for s in train_sizes.split(",")]
@@ -804,19 +827,19 @@ def learning_curve(
             )
 
             # Compute metrics
-            train_acc = ModelMetrics.accuracy(train_labels_subset, train_predictions)
-            test_acc = ModelMetrics.accuracy(test_labels_subset, test_predictions)
+            train_acc = accuracy_score(train_labels_subset, train_predictions)
+            test_acc = accuracy_score(test_labels_subset, test_predictions)
 
-            curve_results.append({
-                "train_size": size,
-                "n_samples": n_samples,
-                "train_accuracy": train_acc,
-                "test_accuracy": test_acc,
-            })
-
-            print_success(
-                f"  Train acc: {train_acc:.4f}, Test acc: {test_acc:.4f}"
+            curve_results.append(
+                {
+                    "train_size": size,
+                    "n_samples": n_samples,
+                    "train_accuracy": train_acc,
+                    "test_accuracy": test_acc,
+                }
             )
+
+            print_success(f"  Train acc: {train_acc:.4f}, Test acc: {test_acc:.4f}")
 
         # Display summary
         console.rule("[bold]Learning Curve Summary[/bold]")
@@ -863,12 +886,14 @@ def learning_curve(
 )
 @click.option(
     "--metric",
-    type=click.Choice([
-        "krippendorff_alpha",
-        "fleiss_kappa",
-        "cohens_kappa",
-        "percentage_agreement",
-    ]),
+    type=click.Choice(
+        [
+            "krippendorff_alpha",
+            "fleiss_kappa",
+            "cohens_kappa",
+            "percentage_agreement",
+        ]
+    ),
     default="krippendorff_alpha",
     help="Agreement metric to compute",
 )
@@ -931,7 +956,7 @@ def compute_agreement(
         print_info(f"Loaded {len(annotation_records)} annotation records")
 
         # Organize annotations by rater
-        rater_annotations: dict[str, list[Any]] = {}
+        rater_annotations: dict[str, list[str | int | float]] = {}
         for record in annotation_records:
             rater_id = str(record.get("rater_id", "unknown"))
             label = record.get("label")
@@ -1020,9 +1045,7 @@ def compute_agreement(
         if output:
             output.parent.mkdir(parents=True, exist_ok=True)
             with open(output, "w", encoding="utf-8") as f:
-                data_type_value = (
-                    data_type if metric == "krippendorff_alpha" else None
-                )
+                data_type_value = data_type if metric == "krippendorff_alpha" else None
                 json.dump(
                     {
                         "metric": metric,
