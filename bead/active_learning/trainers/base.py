@@ -8,9 +8,13 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING
 
 from bead.data.base import BeadBaseModel
+
+if TYPE_CHECKING:
+    from datasets import Dataset
+    from transformers import PreTrainedModel
 
 
 class ModelMetadata(BeadBaseModel):
@@ -22,7 +26,7 @@ class ModelMetadata(BeadBaseModel):
         Model identifier.
     framework : str
         Training framework ("huggingface" or "pytorch_lightning").
-    training_config : dict[str, Any]
+    training_config : dict[str, str | int | float | bool | Path | None]
         Training configuration used.
     training_data_path : Path
         Path to training data.
@@ -43,7 +47,7 @@ class ModelMetadata(BeadBaseModel):
         Model identifier.
     framework : str
         Training framework ("huggingface" or "pytorch_lightning").
-    training_config : dict[str, Any]
+    training_config : dict[str, str | int | float | bool | Path | None]
         Training configuration used.
     training_data_path : Path
         Path to training data.
@@ -78,7 +82,7 @@ class ModelMetadata(BeadBaseModel):
 
     model_name: str
     framework: str
-    training_config: dict[str, Any]
+    training_config: dict[str, str | int | float | bool | Path | None]
     training_data_path: Path
     eval_data_path: Path | None = None
     metrics: dict[str, float]
@@ -95,12 +99,12 @@ class BaseTrainer(ABC):
 
     Parameters
     ----------
-    config : Any
+    config : dict[str, str | int | float | bool | Path | None] | BeadBaseModel
         Training configuration (framework-specific).
 
     Attributes
     ----------
-    config : Any
+    config : dict[str, str | int | float | bool | Path | None] | BeadBaseModel
         Training configuration.
 
     Examples
@@ -125,18 +129,29 @@ class BaseTrainer(ABC):
     {}
     """
 
-    def __init__(self, config: Any) -> None:
+    def __init__(
+        self, config: dict[str, str | int | float | bool | Path | None] | BeadBaseModel
+    ) -> None:
         self.config = config
 
     @abstractmethod
-    def train(self, train_data: Any, eval_data: Any | None = None) -> ModelMetadata:
+    def train(
+        self,
+        train_data: Dataset
+        | dict[str, str | int | float | bool | None]
+        | list[dict[str, str | int | float | bool | None]],
+        eval_data: Dataset
+        | dict[str, str | int | float | bool | None]
+        | list[dict[str, str | int | float | bool | None]]
+        | None = None,
+    ) -> ModelMetadata:
         """Train model and return metadata.
 
         Parameters
         ----------
-        train_data : Any
+        train_data : Dataset | dict | list
             Training dataset (framework-specific format).
-        eval_data : Any | None
+        eval_data : Dataset | dict | list | None
             Evaluation dataset (framework-specific format).
 
         Returns
@@ -172,7 +187,9 @@ class BaseTrainer(ABC):
         pass
 
     @abstractmethod
-    def load_model(self, model_dir: Path) -> Any:
+    def load_model(
+        self, model_dir: Path
+    ) -> PreTrainedModel | dict[str, str | int | float | bool | None] | BeadBaseModel:
         """Load model from directory.
 
         Parameters
@@ -182,7 +199,7 @@ class BaseTrainer(ABC):
 
         Returns
         -------
-        Any
+        PreTrainedModel | dict[str, str | int | float | bool | None] | BeadBaseModel
             Loaded model (framework-specific type).
 
         Examples
