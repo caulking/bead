@@ -17,9 +17,8 @@ from bead.items.item import Item
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from bead.config.active_learning import UncertaintySamplerConfig
-
     from bead.active_learning.models.base import ActiveLearningModel
+    from bead.config.active_learning import UncertaintySamplerConfig
 
 
 class ItemSelector:

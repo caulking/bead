@@ -184,6 +184,32 @@ class ActiveLearningLoopConfig(BaseModel):
         description="Minimum improvement to avoid convergence",
         gt=0,
     )
+    # Data collection configuration (optional)
+    jatos_base_url: str | None = Field(
+        default=None,
+        description="JATOS base URL for data collection",
+    )
+    jatos_api_token: str | None = Field(
+        default=None,
+        description="JATOS API token for authentication",
+    )
+    jatos_study_id: int | None = Field(
+        default=None,
+        description="JATOS study ID to collect data from",
+    )
+    prolific_api_key: str | None = Field(
+        default=None,
+        description="Prolific API key for data collection",
+    )
+    prolific_study_id: str | None = Field(
+        default=None,
+        description="Prolific study ID to collect data from",
+    )
+    data_collection_timeout: int = Field(
+        default=3600,
+        description="Timeout in seconds for data collection",
+        gt=0,
+    )
 
 
 class TrainerConfig(BaseModel):
@@ -845,8 +871,8 @@ class FreeTextModelConfig(BaseModel):
         lt=1.0,
     )
     lora_target_modules: list[str] = Field(
-        default=["q_proj", "v_proj"],
-        description="Attention modules to apply LoRA",
+        default=["q", "v"],
+        description="Attention modules to apply LoRA to",
     )
     eval_metric: Literal["exact_match", "token_accuracy", "bleu"] = Field(
         default="exact_match",

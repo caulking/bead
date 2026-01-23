@@ -12,11 +12,14 @@ from pathlib import Path
 from typing import TYPE_CHECKING, TypedDict
 
 import numpy as np
+from sklearn.metrics import accuracy_score
 
 from bead.active_learning.selection import ItemSelector
 from bead.active_learning.trainers.base import ModelMetadata
+from bead.data_collection.jatos import JATOSDataCollector
+from bead.data_collection.merger import DataMerger
+from bead.data_collection.prolific import ProlificDataCollector
 from bead.evaluation.convergence import ConvergenceDetector
-from bead.evaluation.model_metrics import ModelMetrics
 from bead.items.item import Item
 from bead.items.item_template import ItemTemplate
 
@@ -52,7 +55,7 @@ class ActiveLearningLoop:
     Manages the iterative process of selecting informative items,
     training models on collected data, and determining when to stop.
 
-    Note: Phase 22 (data collection) is not yet implemented, so this
+    Note: Data collection integration is not yet implemented, so this
     loop uses placeholder interfaces for deployment and data collection.
     The focus is on the selection logic and loop orchestration.
 
@@ -105,6 +108,31 @@ class ActiveLearningLoop:
         self.item_selector = item_selector
         self.config = config or ActiveLearningLoopConfig()
         self.iteration_history: list[IterationResult] = []
+
+        # Initialize data collectors if configured
+        self.jatos_collector: JATOSDataCollector | None = None
+        self.prolific_collector: ProlificDataCollector | None = None
+        self.data_merger: DataMerger | None = None
+
+        if (
+            self.config.jatos_base_url
+            and self.config.jatos_api_token
+            and self.config.jatos_study_id is not None
+        ):
+            self.jatos_collector = JATOSDataCollector(
+                base_url=self.config.jatos_base_url,
+                api_token=self.config.jatos_api_token,
+                study_id=self.config.jatos_study_id,
+            )
+
+        if self.config.prolific_api_key and self.config.prolific_study_id:
+            self.prolific_collector = ProlificDataCollector(
+                api_key=self.config.prolific_api_key,
+                study_id=self.config.prolific_study_id,
+            )
+
+        if self.jatos_collector or self.prolific_collector:
+            self.data_merger = DataMerger()
 
     def run(
         self,
@@ -220,19 +248,14 @@ class ActiveLearningLoop:
             ]
 
             # Train model
-            train_metrics = current_model.train(
-                items=labeled_items, labels=labels
-            )
+            train_metrics = current_model.train(items=labeled_items, labels=labels)
 
             # Evaluate model on labeled items
-            predictions = current_model.predict(
-                labeled_items
-            )
+            predictions = current_model.predict(labeled_items)
             pred_labels = [p.predicted_class for p in predictions]
 
             # Compute accuracy
-            metrics_calculator = ModelMetrics()
-            accuracy = metrics_calculator.accuracy(labels, pred_labels)
+            accuracy = accuracy_score(labels, pred_labels)
 
             # Create metadata
             training_config_dict = {
@@ -377,14 +400,14 @@ class ActiveLearningLoop:
             budget=budget,
         )
 
-        # Step 2: Deploy experiment (PLACEHOLDER - Phase 22 not yet implemented)
+        # Step 2: Deploy experiment (PLACEHOLDER - data collection not yet implemented)
         # In the future, this would:
         # - Create experiment lists using ListPartitioner
         # - Generate jsPsych experiment using JsPsychExperimentGenerator
         # - Export to JATOS format
         # - Return deployment info for manual upload
 
-        # Step 3: Collect data (PLACEHOLDER - Phase 22 not yet implemented)
+        # Step 3: Collect data (PLACEHOLDER - data collection not yet implemented)
         # In the future, this would:
         # - Wait for participants to complete experiments
         # - Use JATOSDataCollector to download results
