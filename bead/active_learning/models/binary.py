@@ -6,19 +6,21 @@ Different from 2AFC in semantics - represents absolute judgment rather than choi
 
 from __future__ import annotations
 
-import json
-import warnings
-from collections import Counter
+import tempfile
 from pathlib import Path
 
 import numpy as np
 import torch
 import torch.nn as nn
-from transformers import AutoModel, AutoTokenizer
+from transformers import AutoModel, AutoTokenizer, TrainingArguments
 
-from bead.active_learning.config import MixedEffectsConfig, VarianceComponents
+from bead.active_learning.config import VarianceComponents
 from bead.active_learning.models.base import ActiveLearningModel, ModelPrediction
 from bead.active_learning.models.random_effects import RandomEffectsManager
+from bead.active_learning.trainers.data_collator import MixedEffectsDataCollator
+from bead.active_learning.trainers.dataset_utils import items_to_dataset
+from bead.active_learning.trainers.metrics import compute_binary_metrics
+from bead.active_learning.trainers.model_wrapper import EncoderClassifierWrapper
 from bead.config.active_learning import BinaryModelConfig
 from bead.items.item import Item
 from bead.items.item_template import ItemTemplate, TaskType
@@ -245,98 +247,37 @@ class BinaryModel(ActiveLearningModel):
                 f"Labels must be one of {valid_labels}."
             )
 
-    def train(
+    def _prepare_training_data(
         self,
         items: list[Item],
         labels: list[str],
-        participant_ids: list[str] | None = None,
-        validation_items: list[Item] | None = None,
-        validation_labels: list[str] | None = None,
-    ) -> dict[str, float]:
-        """Train model on binary data with participant-level random effects.
+        participant_ids: list[str],
+        validation_items: list[Item] | None,
+        validation_labels: list[str] | None,
+    ) -> tuple[
+        list[Item], list[float], list[str], list[Item] | None, list[float] | None
+    ]:
+        """Prepare training data for binary model.
 
         Parameters
         ----------
         items : list[Item]
             Training items.
         labels : list[str]
-            Training labels (binary values like "yes"/"no" or "true"/"false").
-        participant_ids : list[str] | None
-            Participant identifier for each item.
-            - For fixed effects (mode='fixed'): Pass None.
-            - For mixed effects: Must provide list[str] with same length as items.
+            Training labels.
+        participant_ids : list[str]
+            Normalized participant IDs.
         validation_items : list[Item] | None
-            Optional validation items.
+            Validation items.
         validation_labels : list[str] | None
-            Optional validation labels.
+            Validation labels.
 
         Returns
         -------
-        dict[str, float]
-            Training metrics including:
-            - "train_accuracy": Final training accuracy
-            - "train_loss": Final training loss
-            - "val_accuracy": Validation accuracy (if validation data provided)
-            - "participant_variance": σ²_u (if estimate_variance_components=True)
-            - "n_participants": Number of unique participants
-
-        Raises
-        ------
-        ValueError
-            If participant_ids is None when mode is 'random_intercepts' or 'random_slopes'.
-        ValueError
-            If items and labels have different lengths.
-        ValueError
-            If items and participant_ids have different lengths.
-        ValueError
-            If participant_ids contains empty strings.
-        ValueError
-            If labels contain invalid values.
-        ValueError
-            If validation data is incomplete.
+        tuple[list[Item], list[float], list[str], list[Item] | None, list[float] | None]
+            Prepared items, numeric labels, participant_ids, validation_items,
+            numeric validation_labels.
         """
-        # Validate and normalize participant_ids
-        if participant_ids is None:
-            if self.config.mixed_effects.mode != "fixed":
-                raise ValueError(
-                    f"participant_ids is required when mode='{self.config.mixed_effects.mode}'. "
-                    f"For fixed effects, set mode='fixed' in config. "
-                    f"For mixed effects, provide participant_ids as list[str]."
-                )
-            participant_ids = ["_fixed_"] * len(items)
-        elif self.config.mixed_effects.mode == "fixed":
-            warnings.warn(
-                f"participant_ids provided but mode='fixed'. Participant IDs will be ignored.",
-                UserWarning,
-                stacklevel=2
-            )
-            participant_ids = ["_fixed_"] * len(items)
-
-        # Validate input lengths
-        if len(items) != len(labels):
-            raise ValueError(
-                f"Number of items ({len(items)}) must match "
-                f"number of labels ({len(labels)})"
-            )
-
-        if len(items) != len(participant_ids):
-            raise ValueError(
-                f"Length mismatch: {len(items)} items != {len(participant_ids)} "
-                f"participant_ids. participant_ids must have same length as items."
-            )
-
-        if any(not pid for pid in participant_ids):
-            raise ValueError(
-                "participant_ids cannot contain empty strings. "
-                "Ensure all participants have valid identifiers."
-            )
-
-        if (validation_items is None) != (validation_labels is None):
-            raise ValueError(
-                "Both validation_items and validation_labels must be "
-                "provided, or neither"
-            )
-
         # Initialize label names
         unique_labels = sorted(set(labels))
         if len(unique_labels) != 2:
@@ -351,39 +292,307 @@ class BinaryModel(ActiveLearningModel):
         self._validate_labels(labels)
         self._initialize_classifier()
 
-        # Initialize random effects manager with n_classes=1 (scalar bias)
-        self.random_effects = RandomEffectsManager(
-            self.config.mixed_effects, n_classes=self.num_classes
-        )
-
-        # Register participants for adaptive regularization
-        participant_counts = Counter(participant_ids)
-        for pid, count in participant_counts.items():
-            self.random_effects.register_participant(pid, count)
-
-        # Convert labels to binary (0/1) floats
+        # Convert labels to binary (0/1) floats for HuggingFace Trainer
         # Positive class (second alphabetically) = 1, negative = 0
-        y = torch.tensor(
-            [1.0 if label == self.positive_class else 0.0 for label in labels],
-            dtype=torch.float,
-            device=self.config.device,
+        y_numeric = [1.0 if label == self.positive_class else 0.0 for label in labels]
+
+        # Convert validation labels if provided
+        val_y_numeric = None
+        if validation_items is not None and validation_labels is not None:
+            self._validate_labels(validation_labels)
+            if len(validation_items) != len(validation_labels):
+                raise ValueError(
+                    f"Number of validation items ({len(validation_items)}) "
+                    f"must match number of validation labels ({len(validation_labels)})"
+                )
+            val_y_numeric = [
+                1.0 if label == self.positive_class else 0.0
+                for label in validation_labels
+            ]
+
+        return items, y_numeric, participant_ids, validation_items, val_y_numeric
+
+    def _initialize_random_effects(self, n_classes: int) -> None:
+        """Initialize random effects manager.
+
+        Parameters
+        ----------
+        n_classes : int
+            Number of classes (1 for binary).
+        """
+        self.random_effects = RandomEffectsManager(
+            self.config.mixed_effects, n_classes=n_classes
         )
 
-        # Build optimizer parameters based on mode
+    def _do_training(
+        self,
+        items: list[Item],
+        labels_numeric: list[float],
+        participant_ids: list[str],
+        validation_items: list[Item] | None,
+        validation_labels_numeric: list[float] | None,
+    ) -> dict[str, float]:
+        """Perform binary model training.
+
+        Parameters
+        ----------
+        items : list[Item]
+            Training items.
+        labels_numeric : list[float]
+            Numeric labels (0.0 or 1.0).
+        participant_ids : list[str]
+            Participant IDs.
+        validation_items : list[Item] | None
+            Validation items.
+        validation_labels_numeric : list[float] | None
+            Numeric validation labels.
+
+        Returns
+        -------
+        dict[str, float]
+            Training metrics.
+        """
+        # Convert validation_labels_numeric back to string labels for validation metrics
+        validation_labels = None
+        if validation_items is not None and validation_labels_numeric is not None:
+            validation_labels = [
+                self.positive_class if label == 1.0 else self.label_names[0]
+                for label in validation_labels_numeric
+            ]
+
+        # Use HuggingFace Trainer for fixed and random_intercepts modes
+        # random_slopes requires custom loop due to per-participant heads
+        use_huggingface_trainer = self.config.mixed_effects.mode in (
+            "fixed",
+            "random_intercepts",
+        )
+
+        if use_huggingface_trainer:
+            metrics = self._train_with_huggingface_trainer(
+                items,
+                labels_numeric,
+                participant_ids,
+                validation_items,
+                validation_labels,
+            )
+        else:
+            # Use custom training loop for random_slopes
+            metrics = self._train_with_custom_loop(
+                items,
+                labels_numeric,
+                participant_ids,
+                validation_items,
+                validation_labels,
+            )
+
+        # Add validation accuracy if validation data provided
+        if validation_items is not None and validation_labels is not None:
+            # Validation with placeholder participant_ids for mixed effects
+            # Use _do_predict directly since we're in training
+            if self.config.mixed_effects.mode == "fixed":
+                val_participant_ids = ["_fixed_"] * len(validation_items)
+            else:
+                val_participant_ids = ["_validation_"] * len(validation_items)
+            val_predictions = self._do_predict(validation_items, val_participant_ids)
+            val_pred_labels = [p.predicted_class for p in val_predictions]
+            val_acc = sum(
+                pred == true
+                for pred, true in zip(val_pred_labels, validation_labels, strict=True)
+            ) / len(validation_labels)
+            metrics["val_accuracy"] = val_acc
+
+        return metrics
+
+    def _train_with_huggingface_trainer(
+        self,
+        items: list[Item],
+        y_numeric: list[float],
+        participant_ids: list[str],
+        validation_items: list[Item] | None,
+        validation_labels: list[str] | None,
+    ) -> dict[str, float]:
+        """Train using HuggingFace Trainer with mixed effects support.
+
+        Parameters
+        ----------
+        items : list[Item]
+            Training items.
+        y_numeric : list[float]
+            Numeric labels (0.0 or 1.0).
+        participant_ids : list[str]
+            Participant IDs.
+        validation_items : list[Item] | None
+            Validation items.
+        validation_labels : list[str] | None
+            Validation labels.
+
+        Returns
+        -------
+        dict[str, float]
+            Training metrics.
+        """
+        # Convert items to HuggingFace Dataset
+        train_dataset = items_to_dataset(
+            items=items,
+            labels=y_numeric,
+            participant_ids=participant_ids,
+            tokenizer=self.tokenizer,
+            max_length=self.config.max_length,
+        )
+
+        # Create validation dataset if provided
+        eval_dataset = None
+        if validation_items is not None and validation_labels is not None:
+            val_y_numeric = [
+                1.0 if label == self.positive_class else 0.0
+                for label in validation_labels
+            ]
+            eval_dataset = items_to_dataset(
+                items=validation_items,
+                labels=val_y_numeric,
+                participant_ids=["_validation_"] * len(validation_items),
+                tokenizer=self.tokenizer,
+                max_length=self.config.max_length,
+            )
+
+        # Create wrapper model for Trainer
+        wrapped_model = EncoderClassifierWrapper(
+            encoder=self.encoder, classifier_head=self.classifier_head
+        )
+
+        # Create data collator
+        data_collator = MixedEffectsDataCollator(tokenizer=self.tokenizer)
+
+        # Create training arguments with checkpointing
+        with tempfile.TemporaryDirectory() as tmpdir:
+            checkpoint_dir = Path(tmpdir) / "checkpoints"
+            checkpoint_dir.mkdir(parents=True, exist_ok=True)
+
+            training_args = TrainingArguments(
+                output_dir=str(checkpoint_dir),
+                num_train_epochs=self.config.num_epochs,
+                per_device_train_batch_size=self.config.batch_size,
+                per_device_eval_batch_size=self.config.batch_size,
+                learning_rate=self.config.learning_rate,
+                logging_steps=10,
+                eval_strategy="epoch" if eval_dataset is not None else "no",
+                save_strategy="epoch",  # Save checkpoints every epoch
+                save_total_limit=1,  # Keep only the latest checkpoint
+                load_best_model_at_end=False,  # Don't auto-load best
+                report_to="none",  # Disable wandb/tensorboard
+                remove_unused_columns=False,  # Keep participant_id
+                use_cpu=self.config.device == "cpu",  # Explicitly use CPU if specified
+            )
+
+            # Import here to avoid circular import
+            from bead.active_learning.trainers.mixed_effects import (  # noqa: PLC0415
+                MixedEffectsTrainer,
+            )
+
+            # Create trainer
+            trainer = MixedEffectsTrainer(
+                model=wrapped_model,
+                args=training_args,
+                train_dataset=train_dataset,
+                eval_dataset=eval_dataset,
+                data_collator=data_collator,
+                tokenizer=self.tokenizer,
+                random_effects_manager=self.random_effects,
+                compute_metrics=compute_binary_metrics,
+            )
+
+            # Train (checkpoints are saved automatically by Trainer)
+            train_result = trainer.train()
+
+            # Get training metrics using evaluate (Trainer computes metrics during eval)
+            train_metrics = trainer.evaluate(eval_dataset=train_dataset)
+            # Trainer prefixes eval metrics with "eval_"
+            metrics: dict[str, float] = {
+                "train_loss": float(train_result.training_loss),
+                "train_accuracy": train_metrics.get("eval_accuracy", 0.0),
+                "train_precision": train_metrics.get("eval_precision", 0.0),
+                "train_recall": train_metrics.get("eval_recall", 0.0),
+                "train_f1": train_metrics.get("eval_f1", 0.0),
+            }
+
+            # Get validation metrics if eval_dataset was provided
+            if eval_dataset is not None:
+                val_metrics = trainer.evaluate(eval_dataset=eval_dataset)
+                metrics.update(
+                    {
+                        "val_accuracy": val_metrics.get("eval_accuracy", 0.0),
+                        "val_precision": val_metrics.get("eval_precision", 0.0),
+                        "val_recall": val_metrics.get("eval_recall", 0.0),
+                        "val_f1": val_metrics.get("eval_f1", 0.0),
+                    }
+                )
+
+        # Estimate variance components
+        if self.config.mixed_effects.estimate_variance_components:
+            var_comps = self.random_effects.estimate_variance_components()
+            if var_comps:
+                var_comp = var_comps.get("mu") or var_comps.get("slopes")
+                if var_comp:
+                    self.variance_history.append(var_comp)
+                    metrics["participant_variance"] = var_comp.variance
+                    metrics["n_participants"] = var_comp.n_groups
+
+        # Validation metrics (already computed by Trainer if eval_dataset provided)
+        if eval_dataset is not None:
+            val_metrics = trainer.evaluate(eval_dataset=eval_dataset)
+            metrics.update(
+                {
+                    "val_accuracy": val_metrics.get("eval_accuracy", 0.0),
+                    "val_precision": val_metrics.get("eval_precision", 0.0),
+                    "val_recall": val_metrics.get("eval_recall", 0.0),
+                    "val_f1": val_metrics.get("eval_f1", 0.0),
+                }
+            )
+
+        return metrics
+
+    def _train_with_custom_loop(
+        self,
+        items: list[Item],
+        y_numeric: list[float],
+        participant_ids: list[str],
+        validation_items: list[Item] | None,
+        validation_labels: list[str] | None,
+    ) -> dict[str, float]:
+        """Train using custom training loop (for random_slopes mode).
+
+        Parameters
+        ----------
+        items : list[Item]
+            Training items.
+        y_numeric : list[float]
+            Numeric labels (0.0 or 1.0).
+        participant_ids : list[str]
+            Participant IDs.
+        validation_items : list[Item] | None
+            Validation items.
+        validation_labels : list[str] | None
+            Validation labels.
+
+        Returns
+        -------
+        dict[str, float]
+            Training metrics.
+        """
+        # Convert to tensor
+        y = torch.tensor(y_numeric, dtype=torch.float, device=self.config.device)
+
+        # Build optimizer parameters
         params_to_optimize = list(self.encoder.parameters()) + list(
             self.classifier_head.parameters()
         )
 
-        # Add random effects parameters
-        if self.config.mixed_effects.mode == "random_intercepts":
-            for param_dict in self.random_effects.intercepts.values():
-                params_to_optimize.extend(param_dict.values())
-        elif self.config.mixed_effects.mode == "random_slopes":
+        # Add random effects parameters (for random_slopes)
+        if self.config.mixed_effects.mode == "random_slopes":
             for head in self.random_effects.slopes.values():
                 params_to_optimize.extend(head.parameters())
 
         optimizer = torch.optim.AdamW(params_to_optimize, lr=self.config.learning_rate)
-        # BCE with Logits Loss for binary classification (applies sigmoid internally)
         criterion = nn.BCEWithLogitsLoss()
 
         self.encoder.train()
@@ -406,36 +615,17 @@ class BinaryModel(ActiveLearningModel):
 
                 embeddings = self._prepare_inputs(batch_items)
 
-                # Forward pass depends on mixed effects mode
-                if self.config.mixed_effects.mode == "fixed":
-                    # Standard forward pass
-                    logits = self.classifier_head(embeddings).squeeze(1)  # (batch,)
-
-                elif self.config.mixed_effects.mode == "random_intercepts":
-                    # Fixed head + per-participant scalar bias
-                    logits = self.classifier_head(embeddings).squeeze(1)  # (batch,)
-                    for j, pid in enumerate(batch_participant_ids):
-                        # bias is now scalar (n_classes=1)
-                        bias = self.random_effects.get_intercepts(
-                            pid,
-                            n_classes=self.num_classes,
-                            param_name="mu",
-                            create_if_missing=True,
-                        )
-                        logits[j] = logits[j] + bias.item()
-
-                elif self.config.mixed_effects.mode == "random_slopes":
-                    # Per-participant head
-                    logits_list = []
-                    for j, pid in enumerate(batch_participant_ids):
-                        participant_head = self.random_effects.get_slopes(
-                            pid,
-                            fixed_head=self.classifier_head,
-                            create_if_missing=True,
-                        )
-                        logits_j = participant_head(embeddings[j : j + 1]).squeeze()
-                        logits_list.append(logits_j)
-                    logits = torch.stack(logits_list)
+                # Random slopes: per-participant head
+                logits_list = []
+                for j, pid in enumerate(batch_participant_ids):
+                    participant_head = self.random_effects.get_slopes(
+                        pid,
+                        fixed_head=self.classifier_head,
+                        create_if_missing=True,
+                    )
+                    logits_j = participant_head(embeddings[j : j + 1]).squeeze()
+                    logits_list.append(logits_j)
+                logits = torch.stack(logits_list)
 
                 # Data loss + prior regularization
                 loss_bce = criterion(logits, batch_labels)
@@ -447,14 +637,11 @@ class BinaryModel(ActiveLearningModel):
                 optimizer.step()
 
                 epoch_loss += loss.item()
-                # Predictions: threshold at 0.5 on sigmoid(logits)
                 predictions = (torch.sigmoid(logits) > 0.5).float()
                 epoch_correct += (predictions == batch_labels).sum().item()
 
             epoch_acc = epoch_correct / len(items)
             epoch_loss = epoch_loss / n_batches
-
-        self._is_fitted = True
 
         metrics: dict[str, float] = {
             "train_accuracy": epoch_acc,
@@ -465,28 +652,18 @@ class BinaryModel(ActiveLearningModel):
         if self.config.mixed_effects.estimate_variance_components:
             var_comps = self.random_effects.estimate_variance_components()
             if var_comps:
-                # Extract the "mu" variance component (single-parameter model)
                 var_comp = var_comps.get("mu") or var_comps.get("slopes")
                 if var_comp:
                     self.variance_history.append(var_comp)
                     metrics["participant_variance"] = var_comp.variance
                     metrics["n_participants"] = var_comp.n_groups
 
+        # Validation
         if validation_items is not None and validation_labels is not None:
-            self._validate_labels(validation_labels)
-
-            if len(validation_items) != len(validation_labels):
-                raise ValueError(
-                    f"Number of validation items ({len(validation_items)}) "
-                    f"must match number of validation labels ({len(validation_labels)})"
-                )
-
-            # Validation with placeholder participant_ids for mixed effects
-            if self.config.mixed_effects.mode == "fixed":
-                val_predictions = self.predict(validation_items, participant_ids=None)
-            else:
-                val_participant_ids = ["_validation_"] * len(validation_items)
-                val_predictions = self.predict(validation_items, participant_ids=val_participant_ids)
+            val_predictions = self.predict(
+                validation_items,
+                participant_ids=["_validation_"] * len(validation_items),
+            )
             val_pred_labels = [p.predicted_class for p in val_predictions]
             val_acc = sum(
                 pred == true
@@ -496,68 +673,23 @@ class BinaryModel(ActiveLearningModel):
 
         return metrics
 
-    def predict(
-        self, items: list[Item], participant_ids: list[str] | None = None
+    def _do_predict(
+        self, items: list[Item], participant_ids: list[str]
     ) -> list[ModelPrediction]:
-        """Predict class labels for items with participant-specific random effects.
+        """Perform binary model prediction.
 
         Parameters
         ----------
         items : list[Item]
             Items to predict.
-        participant_ids : list[str] | None
-            Participant identifier for each item.
-            - For fixed effects (mode='fixed'): Pass None.
-            - For mixed effects: Must provide list[str] with same length as items.
+        participant_ids : list[str]
+            Normalized participant IDs.
 
         Returns
         -------
         list[ModelPrediction]
-            Predictions with probabilities and predicted class.
-
-        Raises
-        ------
-        ValueError
-            If model has not been trained yet.
-        ValueError
-            If participant_ids is None when mode requires mixed effects.
-        ValueError
-            If items and participant_ids have different lengths.
-        ValueError
-            If participant_ids contains empty strings.
+            Predictions.
         """
-        if not self._is_fitted:
-            raise ValueError("Model not trained. Call train() before predict().")
-
-        # Validate and normalize participant_ids
-        if participant_ids is None:
-            if self.config.mixed_effects.mode != "fixed":
-                raise ValueError(
-                    f"participant_ids is required when mode='{self.config.mixed_effects.mode}'. "
-                    f"For fixed effects, set mode='fixed' in config. "
-                    f"For mixed effects, provide participant_ids as list[str]."
-                )
-            participant_ids = ["_fixed_"] * len(items)
-        elif self.config.mixed_effects.mode == "fixed":
-            warnings.warn(
-                f"participant_ids provided but mode='fixed'. Participant IDs will be ignored.",
-                UserWarning,
-                stacklevel=2
-            )
-            participant_ids = ["_fixed_"] * len(items)
-
-        if len(items) != len(participant_ids):
-            raise ValueError(
-                f"Length mismatch: {len(items)} items != {len(participant_ids)} "
-                f"participant_ids"
-            )
-
-        if any(not pid for pid in participant_ids):
-            raise ValueError(
-                "participant_ids cannot contain empty strings. "
-                "Ensure all participants have valid identifiers."
-            )
-
         self.encoder.eval()
         self.classifier_head.eval()
 
@@ -608,7 +740,7 @@ class BinaryModel(ActiveLearningModel):
             p0 = 1.0 - p1
             prob_dict = {
                 self.label_names[0]: p0,  # Negative class (first alphabetically)
-                self.positive_class: p1,   # Positive class (second alphabetically)
+                self.positive_class: p1,  # Positive class (second alphabetically)
             }
 
             predictions.append(
@@ -622,68 +754,23 @@ class BinaryModel(ActiveLearningModel):
 
         return predictions
 
-    def predict_proba(
-        self, items: list[Item], participant_ids: list[str] | None = None
+    def _do_predict_proba(
+        self, items: list[Item], participant_ids: list[str]
     ) -> np.ndarray:
-        """Predict class probabilities for items with random effects.
+        """Perform binary model probability prediction.
 
         Parameters
         ----------
         items : list[Item]
             Items to predict.
-        participant_ids : list[str] | None
-            Participant identifier for each item.
-            - For fixed effects (mode='fixed'): Pass None.
-            - For mixed effects: Must provide list[str] with same length as items.
+        participant_ids : list[str]
+            Normalized participant IDs.
 
         Returns
         -------
         np.ndarray
-            Array of shape (n_items, 2) with probabilities.
-
-        Raises
-        ------
-        ValueError
-            If model has not been trained yet.
-        ValueError
-            If participant_ids is None when mode requires mixed effects.
-        ValueError
-            If items and participant_ids have different lengths.
-        ValueError
-            If participant_ids contains empty strings.
+            Probability array of shape (n_items, 2).
         """
-        if not self._is_fitted:
-            raise ValueError("Model not trained. Call train() before predict_proba().")
-
-        # Validate and normalize participant_ids
-        if participant_ids is None:
-            if self.config.mixed_effects.mode != "fixed":
-                raise ValueError(
-                    f"participant_ids is required when mode='{self.config.mixed_effects.mode}'. "
-                    f"For fixed effects, set mode='fixed' in config. "
-                    f"For mixed effects, provide participant_ids as list[str]."
-                )
-            participant_ids = ["_fixed_"] * len(items)
-        elif self.config.mixed_effects.mode == "fixed":
-            warnings.warn(
-                f"participant_ids provided but mode='fixed'. Participant IDs will be ignored.",
-                UserWarning,
-                stacklevel=2
-            )
-            participant_ids = ["_fixed_"] * len(items)
-
-        if len(items) != len(participant_ids):
-            raise ValueError(
-                f"Length mismatch: {len(items)} items != {len(participant_ids)} "
-                f"participant_ids"
-            )
-
-        if any(not pid for pid in participant_ids):
-            raise ValueError(
-                "participant_ids cannot contain empty strings. "
-                "Ensure all participants have valid identifiers."
-            )
-
         self.encoder.eval()
         self.classifier_head.eval()
 
@@ -723,25 +810,28 @@ class BinaryModel(ActiveLearningModel):
 
         return proba
 
-    def save(self, path: str) -> None:
-        """Save model to disk including random effects and variance history.
+    def _get_save_state(self) -> dict[str, object]:
+        """Get model-specific state to save.
+
+        Returns
+        -------
+        dict[str, object]
+            State dictionary.
+        """
+        return {
+            "num_classes": self.num_classes,
+            "label_names": self.label_names,
+            "positive_class": self.positive_class,
+        }
+
+    def _save_model_components(self, save_path: Path) -> None:
+        """Save model-specific components.
 
         Parameters
         ----------
-        path : str
-            Directory path to save the model.
-
-        Raises
-        ------
-        ValueError
-            If model has not been trained yet.
+        save_path : Path
+            Directory to save to.
         """
-        if not self._is_fitted:
-            raise ValueError("Model not trained. Call train() before save().")
-
-        save_path = Path(path)
-        save_path.mkdir(parents=True, exist_ok=True)
-
         self.encoder.save_pretrained(save_path / "encoder")
         self.tokenizer.save_pretrained(save_path / "encoder")
 
@@ -750,49 +840,38 @@ class BinaryModel(ActiveLearningModel):
             save_path / "classifier_head.pt",
         )
 
-        # Save random effects (includes variance history)
-        if self.random_effects is not None:
-            self.random_effects.save(save_path / "random_effects")
-
-        # Save both config and training state
-        config_dict = self.config.model_dump()
-        config_dict["num_classes"] = self.num_classes
-        config_dict["label_names"] = self.label_names
-        config_dict["positive_class"] = self.positive_class
-
-        with open(save_path / "config.json", "w") as f:
-            json.dump(config_dict, f, indent=2)
-
-    def load(self, path: str) -> None:
-        """Load model from disk including random effects and variance history.
+    def _restore_training_state(self, config_dict: dict[str, object]) -> None:
+        """Restore model-specific training state.
 
         Parameters
         ----------
-        path : str
-            Directory path to load the model from.
-
-        Raises
-        ------
-        FileNotFoundError
-            If model directory does not exist.
+        config_dict : dict[str, object]
+            Configuration dictionary with training state.
         """
-        load_path = Path(path)
-        if not load_path.exists():
-            raise FileNotFoundError(f"Model directory not found: {path}")
-
-        with open(load_path / "config.json") as f:
-            config_dict = json.load(f)
-
-        # Extract training state
         self.num_classes = config_dict.pop("num_classes")
         self.label_names = config_dict.pop("label_names")
         self.positive_class = config_dict.pop("positive_class")
 
-        # Reconstruct configuration
-        # Handle mixed_effects reconstruction
+    def _load_model_components(self, load_path: Path) -> None:
+        """Load model-specific components.
+
+        Parameters
+        ----------
+        load_path : Path
+            Directory to load from.
+        """
+        # Load config.json to reconstruct config
+        with open(load_path / "config.json") as f:
+            import json  # noqa: PLC0415
+
+            config_dict = json.load(f)
+
+        # Reconstruct MixedEffectsConfig if needed
         if "mixed_effects" in config_dict and isinstance(
             config_dict["mixed_effects"], dict
         ):
+            from bead.active_learning.config import MixedEffectsConfig  # noqa: PLC0415
+
             config_dict["mixed_effects"] = MixedEffectsConfig(
                 **config_dict["mixed_effects"]
             )
@@ -808,20 +887,24 @@ class BinaryModel(ActiveLearningModel):
                 load_path / "classifier_head.pt", map_location=self.config.device
             )
         )
-
-        # Initialize and load random effects
-        self.random_effects = RandomEffectsManager(
-            self.config.mixed_effects, n_classes=self.num_classes
-        )
-        random_effects_path = load_path / "random_effects"
-        if random_effects_path.exists():
-            self.random_effects.load(
-                random_effects_path, fixed_head=self.classifier_head
-            )
-            # Restore variance history
-            if self.random_effects.variance_history:
-                self.variance_history = self.random_effects.variance_history.copy()
-
-        self.encoder.to(self.config.device)
         self.classifier_head.to(self.config.device)
-        self._is_fitted = True
+
+    def _get_random_effects_fixed_head(self) -> torch.nn.Module | None:
+        """Get fixed head for random effects loading.
+
+        Returns
+        -------
+        nn.Module | None
+            Fixed head module.
+        """
+        return self.classifier_head
+
+    def _get_n_classes_for_random_effects(self) -> int:
+        """Get number of classes for random effects initialization.
+
+        Returns
+        -------
+        int
+            Number of classes (1 for binary).
+        """
+        return self.num_classes

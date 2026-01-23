@@ -14,10 +14,11 @@ from __future__ import annotations
 
 import copy
 import math
-from typing import Any
 
 import torch
 import torch.nn as nn
+
+from bead.data.base import JsonValue
 
 __all__ = ["LoRALayer", "LoRALinear", "ParticipantLoRAAdapter"]
 
@@ -286,19 +287,19 @@ class ParticipantLoRAAdapter(nn.Module):
                     setattr(parent, attr_name, lora_layer)
                     self.lora_layers[name] = lora_layer
 
-    def forward(self, *args: Any, **kwargs: Any) -> Any:
+    def forward(self, *args: object, **kwargs: object) -> object:
         """Forward pass through decoder with LoRA.
 
         Parameters
         ----------
-        *args : Any
+        *args : object
             Positional arguments for decoder.
-        **kwargs : Any
+        **kwargs : object
             Keyword arguments for decoder.
 
         Returns
         -------
-        Any
+        object
             Decoder output.
         """
         return self.decoder(*args, **kwargs)
@@ -316,33 +317,33 @@ class ParticipantLoRAAdapter(nn.Module):
             params.extend(lora_linear.lora.parameters())
         return params
 
-    def state_dict(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
+    def state_dict(self, *args: object, **kwargs: object) -> dict[str, JsonValue]:
         """Get state dict (delegates to decoder).
 
         Returns
         -------
-        dict[str, Any]
+        dict[str, JsonValue]
             State dictionary.
         """
         return self.decoder.state_dict(*args, **kwargs)
 
     def load_state_dict(
-        self, state_dict: dict[str, Any], *args: Any, **kwargs: Any
-    ) -> Any:
+        self, state_dict: dict[str, JsonValue], *args: object, **kwargs: object
+    ) -> object:
         """Load state dict (delegates to decoder).
 
         Parameters
         ----------
-        state_dict : dict[str, Any]
+        state_dict : dict[str, JsonValue]
             State dictionary to load.
-        *args : Any
+        *args : object
             Additional arguments.
-        **kwargs : Any
+        **kwargs : object
             Additional keyword arguments.
 
         Returns
         -------
-        Any
+        object
             Load result.
         """
         return self.decoder.load_state_dict(state_dict, *args, **kwargs)

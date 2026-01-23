@@ -7,8 +7,6 @@ Each option can be independently selected or not selected.
 from __future__ import annotations
 
 import json
-import warnings
-from collections import Counter
 from pathlib import Path
 
 import numpy as np
@@ -307,103 +305,40 @@ class MultiSelectModel(ActiveLearningModel):
                 f"Got: {label_str!r}. Error: {e}"
             ) from e
 
-    def train(
+    def _prepare_training_data(
         self,
         items: list[Item],
         labels: list[str],
-        participant_ids: list[str] | None = None,
-        validation_items: list[Item] | None = None,
-        validation_labels: list[str] | None = None,
-    ) -> dict[str, float]:
-        """Train model on multi-select data with participant-level random effects.
+        participant_ids: list[str],
+        validation_items: list[Item] | None,
+        validation_labels: list[str] | None,
+    ) -> tuple[
+        list[Item], torch.Tensor, list[str], list[Item] | None, torch.Tensor | None
+    ]:
+        """Prepare training data for multi-select model.
 
         Parameters
         ----------
         items : list[Item]
             Training items.
         labels : list[str]
-            Training labels. Each label is a JSON-serialized list of selected
-            option names, e.g., '["option_a", "option_c"]'.
-        participant_ids : list[str] | None
-            Participant identifier for each item.
-            - For fixed effects (mode='fixed'): Pass None.
-            - For mixed effects: Must provide list[str] with same length as items.
+            Training labels (JSON strings of selected options).
+        participant_ids : list[str]
+            Normalized participant IDs.
         validation_items : list[Item] | None
-            Optional validation items.
+            Validation items.
         validation_labels : list[str] | None
-            Optional validation labels.
+            Validation labels.
 
         Returns
         -------
-        dict[str, float]
-            Training metrics including:
-            - "train_accuracy": Final training accuracy (Hamming score)
-            - "train_loss": Final training loss
-            - "val_accuracy": Validation accuracy (if validation data provided)
-            - "participant_variance": σ²_u (if estimate_variance_components=True)
-            - "n_participants": Number of unique participants
-
-        Raises
-        ------
-        ValueError
-            If participant_ids is None when mode is 'random_intercepts' or 'random_slopes'.
-        ValueError
-            If items and labels have different lengths.
-        ValueError
-            If items and participant_ids have different lengths.
-        ValueError
-            If participant_ids contains empty strings.
-        ValueError
-            If labels contain invalid values.
-        ValueError
-            If validation data is incomplete.
+        tuple
+            Prepared items, labels, participant_ids, val items, val labels.
         """
-        # Validate and normalize participant_ids
-        if participant_ids is None:
-            if self.config.mixed_effects.mode != "fixed":
-                raise ValueError(
-                    f"participant_ids is required when mode='{self.config.mixed_effects.mode}'. "
-                    f"For fixed effects, set mode='fixed' in config. "
-                    f"For mixed effects, provide participant_ids as list[str]."
-                )
-            participant_ids = ["_fixed_"] * len(items)
-        elif self.config.mixed_effects.mode == "fixed":
-            warnings.warn(
-                f"participant_ids provided but mode='fixed'. Participant IDs will be ignored.",
-                UserWarning,
-                stacklevel=2
-            )
-            participant_ids = ["_fixed_"] * len(items)
-
-        # Validate input lengths
-        if len(items) != len(labels):
-            raise ValueError(
-                f"Number of items ({len(items)}) must match "
-                f"number of labels ({len(labels)})"
-            )
-
-        if len(items) != len(participant_ids):
-            raise ValueError(
-                f"Length mismatch: {len(items)} items != {len(participant_ids)} "
-                f"participant_ids. participant_ids must have same length as items."
-            )
-
-        if any(not pid for pid in participant_ids):
-            raise ValueError(
-                "participant_ids cannot contain empty strings. "
-                "Ensure all participants have valid identifiers."
-            )
-
-        if (validation_items is None) != (validation_labels is None):
-            raise ValueError(
-                "Both validation_items and validation_labels must be "
-                "provided, or neither"
-            )
-
-        # Infer option names from first item
         if not items:
             raise ValueError("Cannot train with empty items list")
 
+        # Infer option names from first item
         self.option_names = sorted(items[0].rendered_elements.keys())
         self.num_options = len(self.option_names)
         option_to_idx = {opt: idx for idx, opt in enumerate(self.option_names)}
@@ -424,15 +359,72 @@ class MultiSelectModel(ActiveLearningModel):
 
         self._initialize_classifier(self.num_options)
 
-        # Initialize random effects manager
+        # Convert validation labels if provided
+        val_y = None
+        if validation_items is not None and validation_labels is not None:
+            if len(validation_items) != len(validation_labels):
+                raise ValueError(
+                    f"Number of validation items ({len(validation_items)}) "
+                    f"must match number of validation labels ({len(validation_labels)})"
+                )
+            val_y = torch.zeros(
+                (len(validation_items), self.num_options),
+                dtype=torch.float,
+                device=self.config.device,
+            )
+            for i, label_str in enumerate(validation_labels):
+                selected_options = self._parse_multi_select_labels(label_str)
+                for opt in selected_options:
+                    if opt not in option_to_idx:
+                        raise ValueError(
+                            f"Invalid option {opt!r} in validation label. "
+                            f"Valid options: {self.option_names}"
+                        )
+                    val_y[i, option_to_idx[opt]] = 1.0
+
+        return items, y, participant_ids, validation_items, val_y
+
+    def _initialize_random_effects(self, n_classes: int) -> None:
+        """Initialize random effects manager.
+
+        Parameters
+        ----------
+        n_classes : int
+            Number of classes (num_options for multi-select).
+        """
         self.random_effects = RandomEffectsManager(
-            self.config.mixed_effects, n_classes=self.num_options
+            self.config.mixed_effects, n_classes=n_classes
         )
 
-        # Register participants for adaptive regularization
-        participant_counts = Counter(participant_ids)
-        for pid, count in participant_counts.items():
-            self.random_effects.register_participant(pid, count)
+    def _do_training(
+        self,
+        items: list[Item],
+        labels_numeric: torch.Tensor,
+        participant_ids: list[str],
+        validation_items: list[Item] | None,
+        validation_labels_numeric: torch.Tensor | None,
+    ) -> dict[str, float]:
+        """Perform multi-select model training.
+
+        Parameters
+        ----------
+        items : list[Item]
+            Training items.
+        labels_numeric : torch.Tensor
+            Binary label tensor of shape (n_items, n_options).
+        participant_ids : list[str]
+            Participant IDs.
+        validation_items : list[Item] | None
+            Validation items.
+        validation_labels_numeric : torch.Tensor | None
+            Validation label tensor.
+
+        Returns
+        -------
+        dict[str, float]
+            Training metrics.
+        """
+        y = labels_numeric
 
         # Build optimizer parameters based on mode
         params_to_optimize = list(self.encoder.parameters()) + list(
@@ -453,6 +445,9 @@ class MultiSelectModel(ActiveLearningModel):
 
         self.encoder.train()
         self.classifier_head.train()
+
+        epoch_acc = 0.0
+        epoch_loss = 0.0
 
         for _epoch in range(self.config.num_epochs):
             n_batches = (
@@ -482,7 +477,10 @@ class MultiSelectModel(ActiveLearningModel):
                     logits = self.classifier_head(embeddings)
                     for j, pid in enumerate(batch_participant_ids):
                         bias = self.random_effects.get_intercepts(
-                            pid, n_classes=self.num_options, param_name="mu", create_if_missing=True
+                            pid,
+                            n_classes=self.num_options,
+                            param_name="mu",
+                            create_if_missing=True,
                         )
                         logits[j] = logits[j] + bias
 
@@ -522,49 +520,34 @@ class MultiSelectModel(ActiveLearningModel):
             epoch_acc = epoch_correct_predictions / epoch_total_predictions
             epoch_loss = epoch_loss / n_batches
 
-        self._is_fitted = True
-
         metrics: dict[str, float] = {
             "train_accuracy": epoch_acc,
             "train_loss": epoch_loss,
         }
 
-        # Estimate variance components
-        if self.config.mixed_effects.estimate_variance_components:
-            var_comps = self.random_effects.estimate_variance_components()
-            if var_comps:
-                var_comp = var_comps.get("mu") or var_comps.get("slopes")
-                if var_comp:
-                    self.variance_history.append(var_comp)
-                    metrics["participant_variance"] = var_comp.variance
-                    metrics["n_participants"] = var_comp.n_groups
-
-        if validation_items is not None and validation_labels is not None:
-            if len(validation_items) != len(validation_labels):
-                raise ValueError(
-                    f"Number of validation items ({len(validation_items)}) "
-                    f"must match number of validation labels ({len(validation_labels)})"
-                )
-
+        # Add validation accuracy if validation data provided
+        if validation_items is not None and validation_labels_numeric is not None:
             # Validation with placeholder participant_ids for mixed effects
             if self.config.mixed_effects.mode == "fixed":
-                val_predictions = self.predict(validation_items, participant_ids=None)
+                val_participant_ids = ["_fixed_"] * len(validation_items)
             else:
                 val_participant_ids = ["_validation_"] * len(validation_items)
-                val_predictions = self.predict(validation_items, participant_ids=val_participant_ids)
+            val_predictions = self._do_predict(validation_items, val_participant_ids)
 
             # Parse validation labels
-            val_labels_parsed = [
-                set(self._parse_multi_select_labels(lbl))
-                for lbl in validation_labels
-            ]
+            val_labels_parsed = []
+            for i in range(validation_labels_numeric.shape[0]):
+                selected = [
+                    self.option_names[j]
+                    for j in range(self.num_options)
+                    if validation_labels_numeric[i, j] > 0.5
+                ]
+                val_labels_parsed.append(set(selected))
 
             # Compute Hamming accuracy
             val_correct = 0
             val_total = 0
-            for pred, true_set in zip(
-                val_predictions, val_labels_parsed, strict=True
-            ):
+            for pred, true_set in zip(val_predictions, val_labels_parsed, strict=True):
                 # pred.predicted_class is JSON string of selected options
                 pred_set = set(json.loads(pred.predicted_class))
                 for opt in self.option_names:
@@ -577,68 +560,23 @@ class MultiSelectModel(ActiveLearningModel):
 
         return metrics
 
-    def predict(
-        self, items: list[Item], participant_ids: list[str] | None = None
+    def _do_predict(
+        self, items: list[Item], participant_ids: list[str]
     ) -> list[ModelPrediction]:
-        """Predict selected options for items with participant-specific random effects.
+        """Perform multi-select model prediction.
 
         Parameters
         ----------
         items : list[Item]
             Items to predict.
-        participant_ids : list[str] | None
-            Participant identifier for each item.
-            - For fixed effects (mode='fixed'): Pass None.
-            - For mixed effects: Must provide list[str] with same length as items.
+        participant_ids : list[str]
+            Normalized participant IDs.
 
         Returns
         -------
         list[ModelPrediction]
-            Predictions with probabilities and predicted selected options.
-            predicted_class is a JSON string of selected option names.
-
-        Raises
-        ------
-        ValueError
-            If model has not been trained yet.
-        ValueError
-            If participant_ids is None when mode requires mixed effects.
-        ValueError
-            If items and participant_ids have different lengths.
-        ValueError
-            If participant_ids contains empty strings.
+            Predictions.
         """
-        if not self._is_fitted:
-            raise ValueError("Model not trained. Call train() before predict().")
-
-        if participant_ids is None:
-            if self.config.mixed_effects.mode != "fixed":
-                raise ValueError(
-                    f"participant_ids is required when mode='{self.config.mixed_effects.mode}'. "
-                    f"For fixed effects, set mode='fixed' in config. "
-                    f"For mixed effects, provide participant_ids as list[str]."
-                )
-            participant_ids = ["_fixed_"] * len(items)
-        elif self.config.mixed_effects.mode == "fixed":
-            warnings.warn(
-                f"participant_ids provided but mode='fixed'. Participant IDs will be ignored.",
-                UserWarning,
-                stacklevel=2
-            )
-            participant_ids = ["_fixed_"] * len(items)
-
-        if len(items) != len(participant_ids):
-            raise ValueError(
-                f"Length mismatch: {len(items)} items != {len(participant_ids)} "
-                f"participant_ids"
-            )
-
-        if any(not pid for pid in participant_ids):
-            raise ValueError(
-                "participant_ids cannot contain empty strings. "
-                "Ensure all participants have valid identifiers."
-            )
-
         self.encoder.eval()
         self.classifier_head.eval()
 
@@ -654,7 +592,10 @@ class MultiSelectModel(ActiveLearningModel):
                 for i, pid in enumerate(participant_ids):
                     # Unknown participants: use prior mean (zero bias)
                     bias = self.random_effects.get_intercepts(
-                        pid, n_classes=self.num_options, param_name="mu", create_if_missing=False
+                        pid,
+                        n_classes=self.num_options,
+                        param_name="mu",
+                        create_if_missing=False,
                     )
                     logits[i] = logits[i] + bias
 
@@ -684,15 +625,13 @@ class MultiSelectModel(ActiveLearningModel):
 
             # Build probability dict: {option: probability}
             prob_dict = {
-                opt: float(proba[i, idx])
-                for idx, opt in enumerate(self.option_names)
+                opt: float(proba[i, idx]) for idx, opt in enumerate(self.option_names)
             }
 
             # Confidence: average probability of selected options (or 0.5 if none)
             if selected_options:
                 option_probs = [
-                    proba[i, self.option_names.index(opt)]
-                    for opt in selected_options
+                    proba[i, self.option_names.index(opt)] for opt in selected_options
                 ]
                 confidence = float(np.mean(option_probs))
             else:
@@ -709,67 +648,23 @@ class MultiSelectModel(ActiveLearningModel):
 
         return predictions
 
-    def predict_proba(
-        self, items: list[Item], participant_ids: list[str] | None = None
+    def _do_predict_proba(
+        self, items: list[Item], participant_ids: list[str]
     ) -> np.ndarray:
-        """Predict selection probabilities for items with random effects.
+        """Perform multi-select model probability prediction.
 
         Parameters
         ----------
         items : list[Item]
             Items to predict.
-        participant_ids : list[str] | None
-            Participant identifier for each item.
-            - For fixed effects (mode='fixed'): Pass None.
-            - For mixed effects: Must provide list[str] with same length as items.
+        participant_ids : list[str]
+            Normalized participant IDs.
 
         Returns
         -------
         np.ndarray
-            Array of shape (n_items, n_options) with probabilities.
-
-        Raises
-        ------
-        ValueError
-            If model has not been trained yet.
-        ValueError
-            If participant_ids is None when mode requires mixed effects.
-        ValueError
-            If items and participant_ids have different lengths.
-        ValueError
-            If participant_ids contains empty strings.
+            Probability array of shape (n_items, n_options).
         """
-        if not self._is_fitted:
-            raise ValueError("Model not trained. Call train() before predict_proba().")
-
-        if participant_ids is None:
-            if self.config.mixed_effects.mode != "fixed":
-                raise ValueError(
-                    f"participant_ids is required when mode='{self.config.mixed_effects.mode}'. "
-                    f"For fixed effects, set mode='fixed' in config. "
-                    f"For mixed effects, provide participant_ids as list[str]."
-                )
-            participant_ids = ["_fixed_"] * len(items)
-        elif self.config.mixed_effects.mode == "fixed":
-            warnings.warn(
-                f"participant_ids provided but mode='fixed'. Participant IDs will be ignored.",
-                UserWarning,
-                stacklevel=2
-            )
-            participant_ids = ["_fixed_"] * len(items)
-
-        if len(items) != len(participant_ids):
-            raise ValueError(
-                f"Length mismatch: {len(items)} items != {len(participant_ids)} "
-                f"participant_ids"
-            )
-
-        if any(not pid for pid in participant_ids):
-            raise ValueError(
-                "participant_ids cannot contain empty strings. "
-                "Ensure all participants have valid identifiers."
-            )
-
         self.encoder.eval()
         self.classifier_head.eval()
 
@@ -784,7 +679,10 @@ class MultiSelectModel(ActiveLearningModel):
                 logits = self.classifier_head(embeddings)
                 for i, pid in enumerate(participant_ids):
                     bias = self.random_effects.get_intercepts(
-                        pid, n_classes=self.num_options, param_name="mu", create_if_missing=False
+                        pid,
+                        n_classes=self.num_options,
+                        param_name="mu",
+                        create_if_missing=False,
                     )
                     logits[i] = logits[i] + bias
 
@@ -803,25 +701,27 @@ class MultiSelectModel(ActiveLearningModel):
 
         return proba
 
-    def save(self, path: str) -> None:
-        """Save model to disk including random effects and variance history.
+    def _get_save_state(self) -> dict[str, object]:
+        """Get model-specific state to save.
+
+        Returns
+        -------
+        dict[str, object]
+            State dictionary.
+        """
+        return {
+            "num_options": self.num_options,
+            "option_names": self.option_names,
+        }
+
+    def _save_model_components(self, save_path: Path) -> None:
+        """Save model-specific components.
 
         Parameters
         ----------
-        path : str
-            Directory path to save the model.
-
-        Raises
-        ------
-        ValueError
-            If model has not been trained yet.
+        save_path : Path
+            Directory to save to.
         """
-        if not self._is_fitted:
-            raise ValueError("Model not trained. Call train() before save().")
-
-        save_path = Path(path)
-        save_path.mkdir(parents=True, exist_ok=True)
-
         self.encoder.save_pretrained(save_path / "encoder")
         self.tokenizer.save_pretrained(save_path / "encoder")
 
@@ -830,44 +730,30 @@ class MultiSelectModel(ActiveLearningModel):
             save_path / "classifier_head.pt",
         )
 
-        # Save random effects (includes variance history)
-        if self.random_effects is not None:
-            self.random_effects.save(save_path / "random_effects")
-
-        # Save both config and training state
-        config_dict = self.config.model_dump()
-        config_dict["num_options"] = self.num_options
-        config_dict["option_names"] = self.option_names
-
-        with open(save_path / "config.json", "w") as f:
-            json.dump(config_dict, f, indent=2)
-
-    def load(self, path: str) -> None:
-        """Load model from disk including random effects and variance history.
+    def _restore_training_state(self, config_dict: dict[str, object]) -> None:
+        """Restore model-specific training state.
 
         Parameters
         ----------
-        path : str
-            Directory path to load the model from.
-
-        Raises
-        ------
-        FileNotFoundError
-            If model directory does not exist.
+        config_dict : dict[str, object]
+            Configuration dictionary with training state.
         """
-        load_path = Path(path)
-        if not load_path.exists():
-            raise FileNotFoundError(f"Model directory not found: {path}")
-
-        with open(load_path / "config.json") as f:
-            config_dict = json.load(f)
-
-        # Extract training state
         self.num_options = config_dict.pop("num_options")
         self.option_names = config_dict.pop("option_names")
 
-        # Reconstruct configuration
-        # Handle mixed_effects reconstruction
+    def _load_model_components(self, load_path: Path) -> None:
+        """Load model-specific components.
+
+        Parameters
+        ----------
+        load_path : Path
+            Directory to load from.
+        """
+        # Load config.json to reconstruct config
+        with open(load_path / "config.json") as f:
+            config_dict = json.load(f)
+
+        # Reconstruct MixedEffectsConfig if needed
         if "mixed_effects" in config_dict and isinstance(
             config_dict["mixed_effects"], dict
         ):
@@ -886,20 +772,24 @@ class MultiSelectModel(ActiveLearningModel):
                 load_path / "classifier_head.pt", map_location=self.config.device
             )
         )
-
-        # Initialize and load random effects
-        self.random_effects = RandomEffectsManager(
-            self.config.mixed_effects, n_classes=self.num_options
-        )
-        random_effects_path = load_path / "random_effects"
-        if random_effects_path.exists():
-            self.random_effects.load(
-                random_effects_path, fixed_head=self.classifier_head
-            )
-            # Restore variance history
-            if self.random_effects.variance_history:
-                self.variance_history = self.random_effects.variance_history.copy()
-
-        self.encoder.to(self.config.device)
         self.classifier_head.to(self.config.device)
-        self._is_fitted = True
+
+    def _get_random_effects_fixed_head(self) -> nn.Sequential | None:
+        """Get fixed head for random effects loading.
+
+        Returns
+        -------
+        nn.Sequential | None
+            Fixed head module.
+        """
+        return self.classifier_head
+
+    def _get_n_classes_for_random_effects(self) -> int:
+        """Get number of classes for random effects initialization.
+
+        Returns
+        -------
+        int
+            Number of options.
+        """
+        return self.num_options

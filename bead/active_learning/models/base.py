@@ -24,7 +24,10 @@ References
 
 from __future__ import annotations
 
+import json
 from abc import ABC, abstractmethod
+from collections import Counter
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -38,6 +41,8 @@ from bead.data.base import BeadBaseModel
 from bead.items.item import Item
 
 if TYPE_CHECKING:
+    import torch
+
     from bead.items.item_template import ItemTemplate, TaskType
 
 __all__ = [
@@ -95,7 +100,7 @@ class ActiveLearningModel(ABC):
 
     Attributes
     ----------
-    config : Any
+    config : dict[str, str | int | float | bool | None] | BeadBaseModel
         Model configuration (task-type-specific).
         Must include a `mixed_effects: MixedEffectsConfig` field.
     supported_task_types : list[TaskType]
@@ -123,7 +128,9 @@ class ActiveLearningModel(ABC):
     ...         pass
     """
 
-    def __init__(self, config: any) -> None:
+    def __init__(
+        self, config: dict[str, str | int | float | bool | None] | BeadBaseModel
+    ) -> None:
         """Initialize model with configuration.
 
         Parameters
@@ -164,6 +171,151 @@ class ActiveLearningModel(ABC):
                 f"{type(config.mixed_effects).__name__}. "
                 f"Ensure the field is properly typed: mixed_effects: MixedEffectsConfig"
             )
+
+    def _validate_items_labels_length(
+        self, items: list[Item], labels: list[str]
+    ) -> None:
+        """Validate that items and labels have the same length.
+
+        Parameters
+        ----------
+        items : list[Item]
+            Training items.
+        labels : list[str]
+            Training labels.
+
+        Raises
+        ------
+        ValueError
+            If items and labels have different lengths.
+        """
+        if len(items) != len(labels):
+            raise ValueError(
+                f"Number of items ({len(items)}) must match "
+                f"number of labels ({len(labels)})"
+            )
+
+    def _validate_participant_ids_required(
+        self, participant_ids: list[str] | None, mode: str
+    ) -> None:
+        """Validate that participant_ids is provided when required.
+
+        Parameters
+        ----------
+        participant_ids : list[str] | None
+            Participant IDs to validate.
+        mode : str
+            Mixed effects mode ('fixed', 'random_intercepts', 'random_slopes').
+
+        Raises
+        ------
+        ValueError
+            If participant_ids is None when mode requires it.
+        """
+        if participant_ids is None and mode != "fixed":
+            raise ValueError(
+                f"participant_ids is required when mode='{mode}'. "
+                f"For fixed effects, set mode='fixed' in config. "
+                f"For mixed effects, provide participant_ids as list[str]."
+            )
+
+    def _validate_participant_ids_length(
+        self, items: list[Item], participant_ids: list[str]
+    ) -> None:
+        """Validate that items and participant_ids have the same length.
+
+        Parameters
+        ----------
+        items : list[Item]
+            Training items.
+        participant_ids : list[str]
+            Participant IDs.
+
+        Raises
+        ------
+        ValueError
+            If items and participant_ids have different lengths.
+        """
+        if len(items) != len(participant_ids):
+            raise ValueError(
+                f"Length mismatch: {len(items)} items != {len(participant_ids)} "
+                f"participant_ids. participant_ids must have same length as items."
+            )
+
+    def _validate_participant_ids_not_empty(self, participant_ids: list[str]) -> None:
+        """Validate that participant_ids does not contain empty strings.
+
+        Parameters
+        ----------
+        participant_ids : list[str]
+            Participant IDs to validate.
+
+        Raises
+        ------
+        ValueError
+            If participant_ids contains empty strings.
+        """
+        if any(not pid for pid in participant_ids):
+            raise ValueError(
+                "participant_ids cannot contain empty strings. "
+                "Ensure all participants have valid identifiers."
+            )
+
+    def _normalize_participant_ids(
+        self,
+        participant_ids: list[str] | None,
+        items: list[Item],
+        mode: str,
+    ) -> list[str]:
+        """Normalize participant_ids based on mode.
+
+        For fixed mode, replaces participant_ids with dummy values.
+        For mixed effects modes, validates and returns participant_ids as-is.
+
+        Parameters
+        ----------
+        participant_ids : list[str] | None
+            Participant IDs (may be None for fixed mode).
+        items : list[Item]
+            Training items (used to determine length).
+        mode : str
+            Mixed effects mode ('fixed', 'random_intercepts', 'random_slopes').
+
+        Returns
+        -------
+        list[str]
+            Normalized participant IDs (all "_fixed_" for fixed mode).
+
+        Raises
+        ------
+        ValueError
+            If participant_ids is None when mode requires it.
+        ValueError
+            If items and participant_ids have different lengths.
+        ValueError
+            If participant_ids contains empty strings.
+        """
+        import warnings  # noqa: PLC0415
+
+        if participant_ids is None:
+            if mode != "fixed":
+                self._validate_participant_ids_required(participant_ids, mode)
+            return ["_fixed_"] * len(items)
+
+        # Validate length and empty strings before normalizing
+        self._validate_participant_ids_length(items, participant_ids)
+        self._validate_participant_ids_not_empty(participant_ids)
+
+        if mode == "fixed":
+            warnings.warn(
+                "participant_ids provided but mode='fixed'. "
+                "Participant IDs will be ignored.",
+                UserWarning,
+                stacklevel=3,
+            )
+            return ["_fixed_"] * len(items)
+
+        return participant_ids
 
     @property
     @abstractmethod
@@ -210,14 +362,194 @@ class ActiveLearningModel(ABC):
         """
         pass
 
+    # Hook methods for model-specific implementations
     @abstractmethod
-    def train(
+    def _prepare_training_data(
         self,
         items: list[Item],
         labels: list[str],
+        participant_ids: list[str],
+        validation_items: list[Item] | None,
+        validation_labels: list[str] | None,
+    ) -> tuple[list[Item], list, list[str], list[Item] | None, list | None]:
+        """Prepare training data for model-specific training.
+
+        Parameters
+        ----------
+        items : list[Item]
+            Training items.
+        labels : list[str]
+            Training labels.
+        participant_ids : list[str]
+            Normalized participant IDs.
+        validation_items : list[Item] | None
+            Validation items.
+        validation_labels : list[str] | None
+            Validation labels.
+
+        Returns
+        -------
+        tuple[list[Item], list, list[str], list[Item] | None, list | None]
+            Items, labels, participant_ids, val_items, val_labels.
+        """
+        pass
+
+    @abstractmethod
+    def _initialize_random_effects(self, n_classes: int) -> None:
+        """Initialize random effects manager.
+
+        Parameters
+        ----------
+        n_classes : int
+            Number of classes for random effects.
+        """
+        pass
+
+    @abstractmethod
+    def _do_training(
+        self,
+        items: list[Item],
+        labels_numeric: list,
+        participant_ids: list[str],
+        validation_items: list[Item] | None,
+        validation_labels_numeric: list | None,
+    ) -> dict[str, float]:
+        """Perform model-specific training.
+
+        Parameters
+        ----------
+        items : list[Item]
+            Training items.
+        labels_numeric : list
+            Numeric labels (format depends on model).
+        participant_ids : list[str]
+            Participant IDs.
+        validation_items : list[Item] | None
+            Validation items.
+        validation_labels_numeric : list | None
+            Numeric validation labels.
+
+        Returns
+        -------
+        dict[str, float]
+            Training metrics.
+        """
+        pass
+
+    @abstractmethod
+    def _do_predict(
+        self, items: list[Item], participant_ids: list[str]
+    ) -> list[ModelPrediction]:
+        """Perform model-specific prediction.
+
+        Parameters
+        ----------
+        items : list[Item]
+            Items to predict.
+        participant_ids : list[str]
+            Normalized participant IDs.
+
+        Returns
+        -------
+        list[ModelPrediction]
+            Predictions.
+        """
+        pass
+
+    @abstractmethod
+    def _do_predict_proba(
+        self, items: list[Item], participant_ids: list[str]
+    ) -> np.ndarray:
+        """Perform model-specific probability prediction.
+
+        Parameters
+        ----------
+        items : list[Item]
+            Items to predict.
+        participant_ids : list[str]
+            Normalized participant IDs.
+
+        Returns
+        -------
+        np.ndarray
+            Probability array.
+        """
+        pass
+
+    @abstractmethod
+    def _get_save_state(self) -> dict[str, object]:
+        """Get model-specific state to save.
+
+        Returns
+        -------
+        dict[str, object]
+            State dictionary to include in config.json.
+        """
+        pass
+
+    @abstractmethod
+    def _save_model_components(self, save_path: Path) -> None:
+        """Save model-specific components (encoder, head, etc.).
+
+        Parameters
+        ----------
+        save_path : Path
+            Directory to save to.
+        """
+        pass
+
+    @abstractmethod
+    def _load_model_components(self, load_path: Path) -> None:
+        """Load model-specific components.
+
+        Parameters
+        ----------
+        load_path : Path
+            Directory to load from.
+        """
+        pass
+
+    @abstractmethod
+    def _restore_training_state(self, config_dict: dict[str, object]) -> None:
+        """Restore model-specific training state.
+
+        Parameters
+        ----------
+        config_dict : dict[str, object]
+            Configuration dictionary with training state.
+        """
+        pass
+
+    @abstractmethod
+    def _get_random_effects_fixed_head(self) -> torch.nn.Module | None:
+        """Get fixed head for random effects loading.
+
+        Returns
+        -------
+        nn.Module | None
+            Fixed head module, or None if not applicable.
+        """
+        pass
+
+    @abstractmethod
+    def _get_n_classes_for_random_effects(self) -> int:
+        """Get number of classes for random effects initialization.
+
+        Returns
+        -------
+        int
+            Number of classes.
+        """
+        pass
+
+    # Common implementations
+    def train(
+        self,
+        items: list[Item],
+        labels: list[str] | list[list[str]],
         participant_ids: list[str] | None = None,
         validation_items: list[Item] | None = None,
-        validation_labels: list[str] | None = None,
+        validation_labels: list[str] | list[list[str]] | None = None,
     ) -> dict[str, float]:
         """Train model on labeled items with participant identifiers.
 
@@ -250,7 +582,8 @@ class ActiveLearningModel(ABC):
         Raises
         ------
         ValueError
-            If participant_ids is None when mode is 'random_intercepts' or 'random_slopes'.
+            If participant_ids is None when mode is 'random_intercepts'
+            or 'random_slopes'.
         ValueError
             If items, labels, and participant_ids have different lengths.
         ValueError
@@ -259,19 +592,80 @@ class ActiveLearningModel(ABC):
             If validation data is incomplete.
         ValueError
             If labels are invalid for this task type.
-
-        Examples
-        --------
-        >>> # Fixed effects
-        >>> metrics = model.train(items, labels, participant_ids=None)  # doctest: +SKIP
-
-        >>> # Mixed effects
-        >>> metrics = model.train(items, labels, participant_ids=["alice", "bob", "alice"])  # doctest: +SKIP
-        >>> print(f"σ²_u: {metrics['participant_variance']:.3f}")  # doctest: +SKIP
         """
-        pass
+        # Validate input lengths (handle both list[str] and list[list[str]] labels)
+        if labels and isinstance(labels[0], list):
+            # Cloze model: labels is list[list[str]]
+            if len(items) != len(labels):
+                raise ValueError(
+                    f"Number of items ({len(items)}) must match "
+                    f"number of labels ({len(labels)})"
+                )
+        else:
+            # Standard models: labels is list[str]
+            self._validate_items_labels_length(items, labels)
 
-    @abstractmethod
+        # Validate and normalize participant_ids
+        participant_ids = self._normalize_participant_ids(
+            participant_ids, items, self.config.mixed_effects.mode
+        )
+
+        if (validation_items is None) != (validation_labels is None):
+            raise ValueError(
+                "Both validation_items and validation_labels must be "
+                "provided, or neither"
+            )
+
+        # Prepare training data (model-specific)
+        (
+            prepared_items,
+            labels_numeric,
+            participant_ids,
+            validation_items,
+            validation_labels_numeric,
+        ) = self._prepare_training_data(
+            items, labels, participant_ids, validation_items, validation_labels
+        )
+
+        # Initialize random effects
+        n_classes = self._get_n_classes_for_random_effects()
+        self._initialize_random_effects(n_classes)
+
+        # Register participants for adaptive regularization
+        if hasattr(self, "random_effects") and self.random_effects is not None:
+            participant_counts = Counter(participant_ids)
+            for pid, count in participant_counts.items():
+                self.random_effects.register_participant(pid, count)
+
+        # Perform training (model-specific)
+        metrics = self._do_training(
+            prepared_items,
+            labels_numeric,
+            participant_ids,
+            validation_items,
+            validation_labels_numeric,
+        )
+
+        self._is_fitted = True
+
+        # Estimate variance components
+        if (
+            self.config.mixed_effects.estimate_variance_components
+            and hasattr(self, "random_effects")
+            and self.random_effects is not None
+        ):
+            var_comps = self.random_effects.estimate_variance_components()
+            if var_comps:
+                var_comp = var_comps.get("mu") or var_comps.get("slopes")
+                if var_comp:
+                    if not hasattr(self, "variance_history"):
+                        self.variance_history = []
+                    self.variance_history.append(var_comp)
+                    metrics["participant_variance"] = var_comp.variance
+                    metrics["n_participants"] = var_comp.n_groups
+
+        return metrics
+
     def predict(
         self, items: list[Item], participant_ids: list[str] | None = None
     ) -> list[ModelPrediction]:
@@ -304,17 +698,17 @@ class ActiveLearningModel(ABC):
             If participant_ids contains empty strings.
         ValueError
             If items are incompatible with model.
-
-        Examples
-        --------
-        >>> predictions = model.predict(test_items, participant_ids=None)  # doctest: +SKIP
-        >>> predictions = model.predict(test_items, participant_ids=["alice"] * len(test_items))  # doctest: +SKIP
-        >>> for pred in predictions:  # doctest: +SKIP
-        ...     print(f"{pred.predicted_class}: {pred.confidence:.2f}")
         """
-        pass
+        if not self._is_fitted:
+            raise ValueError("Model not trained. Call train() before predict().")
 
-    @abstractmethod
+        # Validate and normalize participant_ids
+        participant_ids = self._normalize_participant_ids(
+            participant_ids, items, self.config.mixed_effects.mode
+        )
+
+        return self._do_predict(items, participant_ids)
+
     def predict_proba(
         self, items: list[Item], participant_ids: list[str] | None = None
     ) -> np.ndarray:
@@ -347,16 +741,17 @@ class ActiveLearningModel(ABC):
             If participant_ids contains empty strings.
         ValueError
             If items are incompatible with model.
-
-        Examples
-        --------
-        >>> proba = model.predict_proba(test_items, participant_ids=None)  # doctest: +SKIP
-        >>> proba.shape  # doctest: +SKIP
-        (10, 2)
         """
-        pass
+        if not self._is_fitted:
+            raise ValueError("Model not trained. Call train() before predict_proba().")
 
-    @abstractmethod
+        # Validate and normalize participant_ids
+        participant_ids = self._normalize_participant_ids(
+            participant_ids, items, self.config.mixed_effects.mode
+        )
+
+        return self._do_predict_proba(items, participant_ids)
+
     def save(self, path: str) -> None:
         """Save model to disk.
 
@@ -369,14 +764,31 @@ class ActiveLearningModel(ABC):
         ------
         ValueError
             If model has not been trained.
-
-        Examples
-        --------
-        >>> model.save("/path/to/model")  # doctest: +SKIP
         """
-        pass
+        if not self._is_fitted:
+            raise ValueError("Model not trained. Call train() before save().")
 
-    @abstractmethod
+        save_path = Path(path)
+        save_path.mkdir(parents=True, exist_ok=True)
+
+        # Save model-specific components
+        self._save_model_components(save_path)
+
+        # Save random effects (includes variance history)
+        if hasattr(self, "random_effects") and self.random_effects is not None:
+            # Copy variance_history from model to random_effects before saving
+            if hasattr(self, "variance_history"):
+                self.random_effects.variance_history = self.variance_history.copy()
+            self.random_effects.save(save_path / "random_effects")
+
+        # Save config with model-specific state
+        config_dict = self.config.model_dump()
+        save_state = self._get_save_state()
+        config_dict.update(save_state)
+
+        with open(save_path / "config.json", "w") as f:
+            json.dump(config_dict, f, indent=2)
+
     def load(self, path: str) -> None:
         """Load model from disk.
 
@@ -389,9 +801,52 @@ class ActiveLearningModel(ABC):
         ------
         FileNotFoundError
             If model file/directory does not exist.
-
-        Examples
-        --------
-        >>> model.load("/path/to/model")  # doctest: +SKIP
         """
-        pass
+        load_path = Path(path)
+        if not load_path.exists():
+            raise FileNotFoundError(f"Model directory not found: {path}")
+
+        with open(load_path / "config.json") as f:
+            config_dict = json.load(f)
+
+        # Restore model-specific training state (before reconstructing config)
+        self._restore_training_state(config_dict)
+
+        # Load model-specific components (which will reconstruct the config)
+        # This must happen before initializing random effects so config is correct
+        self._load_model_components(load_path)
+
+        # Initialize and load random effects
+        n_classes = self._get_n_classes_for_random_effects()
+        from bead.active_learning.models.random_effects import (  # noqa: PLC0415
+            RandomEffectsManager,
+        )
+
+        # Check if model uses vocab_size instead of n_classes (e.g., ClozeModel)
+        if hasattr(self, "tokenizer") and hasattr(self.tokenizer, "vocab_size"):
+            # ClozeModel: use vocab_size
+            self.random_effects = RandomEffectsManager(
+                self.config.mixed_effects, vocab_size=n_classes
+            )
+        else:
+            # Standard models: use n_classes
+            self.random_effects = RandomEffectsManager(
+                self.config.mixed_effects, n_classes=n_classes
+            )
+        random_effects_path = load_path / "random_effects"
+        if random_effects_path.exists():
+            fixed_head = self._get_random_effects_fixed_head()
+            self.random_effects.load(random_effects_path, fixed_head=fixed_head)
+            # Restore variance history from random_effects
+            if hasattr(self.random_effects, "variance_history"):
+                if not hasattr(self, "variance_history"):
+                    self.variance_history = []
+                self.variance_history = self.random_effects.variance_history.copy()
+
+        # Move to device (model-specific)
+        if hasattr(self, "encoder"):
+            self.encoder.to(self.config.device)
+        if hasattr(self, "model"):
+            self.model.to(self.config.device)
+
+        self._is_fitted = True

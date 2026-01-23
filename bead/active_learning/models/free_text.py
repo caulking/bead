@@ -10,8 +10,6 @@ Architecture: T5-base or BART-base encoder-decoder model
 from __future__ import annotations
 
 import json
-import warnings
-from collections import Counter
 from pathlib import Path
 
 import numpy as np
@@ -19,9 +17,9 @@ import torch
 import torch.nn.functional
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 
-from bead.active_learning.config import MixedEffectsConfig, VarianceComponents
+from bead.active_learning.config import VarianceComponents
 from bead.active_learning.models.base import ActiveLearningModel, ModelPrediction
-from bead.active_learning.models.lora import create_participant_lora_adapter
+from bead.active_learning.models.peft_adapter import create_participant_lora_adapter
 from bead.active_learning.models.random_effects import RandomEffectsManager
 from bead.config.active_learning import FreeTextModelConfig
 from bead.items.item import Item
@@ -172,15 +170,21 @@ class FreeTextModel(ActiveLearningModel):
             texts.append(text)
         return texts
 
-    def train(
+    def _prepare_training_data(
         self,
         items: list[Item],
         labels: list[str],
-        participant_ids: list[str] | None = None,
-        validation_items: list[Item] | None = None,
-        validation_labels: list[str] | None = None,
-    ) -> dict[str, float]:
-        """Train model on free text data with participant-level random effects.
+        participant_ids: list[str],
+        validation_items: list[Item] | None,
+        validation_labels: list[str] | None,
+    ) -> tuple[
+        list[Item],
+        list[str],
+        list[str],
+        list[Item] | None,
+        list[str] | None,
+    ]:
+        """Prepare data for training, including validation.
 
         Parameters
         ----------
@@ -188,10 +192,8 @@ class FreeTextModel(ActiveLearningModel):
             Training items.
         labels : list[str]
             Training labels (target text strings).
-        participant_ids : list[str] | None
-            Participant identifier for each item.
-            - For fixed effects (mode='fixed'): Pass None.
-            - For mixed effects: Must provide list[str] with same length as items.
+        participant_ids : list[str]
+            Participant identifiers.
         validation_items : list[Item] | None
             Optional validation items.
         validation_labels : list[str] | None
@@ -199,95 +201,65 @@ class FreeTextModel(ActiveLearningModel):
 
         Returns
         -------
-        dict[str, float]
-            Training metrics including:
-            - "train_loss": Final training negative log-likelihood
-            - "train_exact_match": Exact match accuracy on training set
-            - "val_exact_match": Validation exact match (if validation data provided)
-            - "participant_variance": σ²_u (if estimate_variance_components=True)
-            - "n_participants": Number of unique participants
+        tuple
+            Prepared training data: items, labels, participant_ids,
+            validation_items, validation_labels.
 
         Raises
         ------
         ValueError
-            If participant_ids is None when mode is 'random_intercepts'
-            or 'random_slopes'.
-        ValueError
-            If items and labels have different lengths.
-        ValueError
-            If items and participant_ids have different lengths.
-        ValueError
-            If participant_ids contains empty strings.
-        ValueError
             If labels contain empty strings.
-        ValueError
-            If validation data is incomplete.
         """
-        # Validate and normalize participant_ids
-        if participant_ids is None:
-            if self.config.mixed_effects.mode != "fixed":
-                raise ValueError(
-                    f"participant_ids is required when "
-                    f"mode='{self.config.mixed_effects.mode}'. "
-                    f"For fixed effects, set mode='fixed' in config. "
-                    f"For mixed effects, provide participant_ids as list[str]."
-                )
-            participant_ids = ["_fixed_"] * len(items)
-        elif self.config.mixed_effects.mode == "fixed":
-            warnings.warn(
-                "participant_ids provided but mode='fixed'. "
-                "Participant IDs will be ignored.",
-                UserWarning,
-                stacklevel=2,
-            )
-            participant_ids = ["_fixed_"] * len(items)
-
-        # Validate input lengths
-        if len(items) != len(labels):
-            raise ValueError(
-                f"Number of items ({len(items)}) must match "
-                f"number of labels ({len(labels)})"
-            )
-
-        if len(items) != len(participant_ids):
-            raise ValueError(
-                f"Length mismatch: {len(items)} items != {len(participant_ids)} "
-                f"participant_ids. participant_ids must have same length as items."
-            )
-
-        if any(not pid for pid in participant_ids):
-            raise ValueError(
-                "participant_ids cannot contain empty strings. "
-                "Ensure all participants have valid identifiers."
-            )
-
         if any(not label for label in labels):
             raise ValueError(
                 "labels cannot contain empty strings. "
                 "Ensure all labels are non-empty text."
             )
 
-        if (validation_items is None) != (validation_labels is None):
-            raise ValueError(
-                "Both validation_items and validation_labels must be "
-                "provided, or neither"
-            )
+        val_labels_list: list[str] | None = None
+        if validation_items is not None and validation_labels is not None:
+            if any(not label for label in validation_labels):
+                raise ValueError(
+                    "validation_labels cannot contain empty strings. "
+                    "Ensure all validation labels are non-empty text."
+                )
+            val_labels_list = validation_labels
 
+        return items, labels, participant_ids, validation_items, val_labels_list
+
+    def _do_training(
+        self,
+        items: list[Item],
+        labels_numeric: list[str],
+        participant_ids: list[str],
+        validation_items: list[Item] | None,
+        validation_labels_numeric: list[str] | None,
+    ) -> dict[str, float]:
+        """Perform the actual training logic (custom loop for seq2seq).
+
+        Parameters
+        ----------
+        items : list[Item]
+            Training items.
+        labels_numeric : list[str]
+            Training labels (target text strings).
+        participant_ids : list[str]
+            Participant identifiers.
+        validation_items : list[Item] | None
+            Optional validation items.
+        validation_labels_numeric : list[str] | None
+            Optional validation labels.
+
+        Returns
+        -------
+        dict[str, float]
+            Training metrics.
+        """
         # Prepare inputs
         input_texts = self._prepare_inputs(items)
 
-        # Initialize random effects manager
         # Get actual vocabulary size from lm_head output dimension
         vocab_size = self.lm_head.out_features
-        self.random_effects = RandomEffectsManager(
-            self.config.mixed_effects,
-            vocab_size=vocab_size,  # For random intercepts (bias on logits)
-        )
-
-        # Register participants for adaptive regularization
-        participant_counts = Counter(participant_ids)
-        for pid, count in participant_counts.items():
-            self.random_effects.register_participant(pid, count)
 
         # Build optimizer parameters based on mode
         params_to_optimize = list(self.model.parameters())
@@ -315,7 +287,7 @@ class FreeTextModel(ActiveLearningModel):
                 end_idx = min(start_idx + self.config.batch_size, len(items))
 
                 batch_input_texts = input_texts[start_idx:end_idx]
-                batch_labels = labels[start_idx:end_idx]
+                batch_labels = labels_numeric[start_idx:end_idx]
                 batch_participant_ids = participant_ids[start_idx:end_idx]
 
                 # Tokenize inputs and labels
@@ -402,12 +374,12 @@ class FreeTextModel(ActiveLearningModel):
                         )
 
                         # Get encoder outputs for this item
-                        item_inputs = {k: v[j: j + 1] for k, v in inputs.items()}
+                        item_inputs = {k: v[j : j + 1] for k, v in inputs.items()}
                         encoder_outputs_j = self.encoder(**item_inputs)
 
                         # Run participant-specific decoder
                         decoder_outputs_j = participant_decoder(
-                            input_ids=targets["input_ids"][j:j + 1],
+                            input_ids=targets["input_ids"][j : j + 1],
                             encoder_hidden_states=encoder_outputs_j.last_hidden_state,
                             encoder_attention_mask=item_inputs["attention_mask"],
                         )
@@ -418,7 +390,7 @@ class FreeTextModel(ActiveLearningModel):
                         # Compute loss for this item
                         loss_j = torch.nn.functional.cross_entropy(
                             logits_j.view(-1, vocab_size),
-                            target_ids[j: j + 1].view(-1),
+                            target_ids[j : j + 1].view(-1),
                             ignore_index=-100,
                         )
                         losses.append(loss_j)
@@ -437,8 +409,6 @@ class FreeTextModel(ActiveLearningModel):
 
             epoch_loss = epoch_loss / n_batches
 
-        self._is_fitted = True
-
         metrics: dict[str, float] = {
             "train_loss": epoch_loss,
         }
@@ -449,42 +419,36 @@ class FreeTextModel(ActiveLearningModel):
             if var_comps:
                 var_comp = var_comps.get("mu") or var_comps.get("slopes")
                 if var_comp:
+                    if not hasattr(self, "variance_history"):
+                        self.variance_history = []
                     self.variance_history.append(var_comp)
                     metrics["participant_variance"] = var_comp.variance
                     metrics["n_participants"] = var_comp.n_groups
 
         # Compute training exact match
-        train_predictions = self.predict(items, participant_ids)
+        train_predictions = self._do_predict(items, participant_ids)
         train_pred_texts = [p.predicted_class for p in train_predictions]
         metrics["train_exact_match"] = self._compute_exact_match(
-            train_pred_texts, labels
+            train_pred_texts, labels_numeric
         )
 
-        if validation_items is not None and validation_labels is not None:
-            if len(validation_items) != len(validation_labels):
-                raise ValueError(
-                    f"Number of validation items ({len(validation_items)}) "
-                    f"must match number of validation labels ({len(validation_labels)})"
-                )
-
+        if validation_items is not None and validation_labels_numeric is not None:
             # Validation
             if self.config.mixed_effects.mode == "fixed":
-                val_predictions = self.predict(validation_items, participant_ids=None)
+                val_participant_ids = ["_fixed_"] * len(validation_items)
             else:
                 val_participant_ids = ["_validation_"] * len(validation_items)
-                val_predictions = self.predict(
-                    validation_items, participant_ids=val_participant_ids
-                )
+            val_predictions = self._do_predict(validation_items, val_participant_ids)
 
             val_pred_texts = [p.predicted_class for p in val_predictions]
             metrics["val_exact_match"] = self._compute_exact_match(
-                val_pred_texts, validation_labels
+                val_pred_texts, validation_labels_numeric
             )
 
         return metrics
 
-    def predict(
-        self, items: list[Item], participant_ids: list[str] | None = None
+    def _do_predict(
+        self, items: list[Item], participant_ids: list[str]
     ) -> list[ModelPrediction]:
         """Generate text for items with participant-specific random effects.
 
@@ -492,61 +456,14 @@ class FreeTextModel(ActiveLearningModel):
         ----------
         items : list[Item]
             Items to predict.
-        participant_ids : list[str] | None
-            Participant identifier for each item.
-            - For fixed effects (mode='fixed'): Pass None.
-            - For mixed effects: Must provide list[str] with same length as items.
+        participant_ids : list[str]
+            Participant identifiers.
 
         Returns
         -------
         list[ModelPrediction]
             Predictions with predicted_class as generated text.
-
-        Raises
-        ------
-        ValueError
-            If model has not been trained yet.
-        ValueError
-            If participant_ids is None when mode requires mixed effects.
-        ValueError
-            If items and participant_ids have different lengths.
-        ValueError
-            If participant_ids contains empty strings.
         """
-        if not self._is_fitted:
-            raise ValueError("Model not trained. Call train() before predict().")
-
-        # Validate and normalize participant_ids
-        if participant_ids is None:
-            if self.config.mixed_effects.mode != "fixed":
-                raise ValueError(
-                    f"participant_ids is required when "
-                    f"mode='{self.config.mixed_effects.mode}'. "
-                    f"For fixed effects, set mode='fixed' in config. "
-                    f"For mixed effects, provide participant_ids as list[str]."
-                )
-            participant_ids = ["_fixed_"] * len(items)
-        elif self.config.mixed_effects.mode == "fixed":
-            warnings.warn(
-                "participant_ids provided but mode='fixed'. "
-                "Participant IDs will be ignored.",
-                UserWarning,
-                stacklevel=2,
-            )
-            participant_ids = ["_fixed_"] * len(items)
-
-        if len(items) != len(participant_ids):
-            raise ValueError(
-                f"Length mismatch: {len(items)} items != {len(participant_ids)} "
-                f"participant_ids"
-            )
-
-        if any(not pid for pid in participant_ids):
-            raise ValueError(
-                "participant_ids cannot contain empty strings. "
-                "Ensure all participants have valid identifiers."
-            )
-
         self.model.eval()
 
         input_texts = self._prepare_inputs(items)
@@ -583,7 +500,7 @@ class FreeTextModel(ActiveLearningModel):
 
                 for i, pid in enumerate(participant_ids):
                     # Get encoder outputs for this item
-                    item_inputs = {k: v[i: i + 1] for k, v in inputs.items()}
+                    item_inputs = {k: v[i : i + 1] for k, v in inputs.items()}
                     encoder_outputs = self.encoder(**item_inputs)
 
                     # Get participant bias
@@ -622,10 +539,9 @@ class FreeTextModel(ActiveLearningModel):
                             break
 
                         # Append to decoder input (scalar after argmax)
-                        decoder_input_ids = torch.cat([
-                            decoder_input_ids,
-                            next_token_id.unsqueeze(-1)
-                        ], dim=1)
+                        decoder_input_ids = torch.cat(
+                            [decoder_input_ids, next_token_id.unsqueeze(-1)], dim=1
+                        )
 
                     # Decode generated text
                     text = self.tokenizer.decode(
@@ -652,7 +568,7 @@ class FreeTextModel(ActiveLearningModel):
                     )
 
                     # Get encoder outputs
-                    item_inputs = {k: v[i: i + 1] for k, v in inputs.items()}
+                    item_inputs = {k: v[i : i + 1] for k, v in inputs.items()}
                     encoder_outputs = self.encoder(**item_inputs)
 
                     # Greedy decoding with participant decoder
@@ -677,10 +593,9 @@ class FreeTextModel(ActiveLearningModel):
                         if next_token_id.item() == self.tokenizer.eos_token_id:
                             break
 
-                        decoder_input_ids = torch.cat([
-                            decoder_input_ids,
-                            next_token_id.unsqueeze(-1)
-                        ], dim=1)
+                        decoder_input_ids = torch.cat(
+                            [decoder_input_ids, next_token_id.unsqueeze(-1)], dim=1
+                        )
 
                     text = self.tokenizer.decode(
                         generated_ids, skip_special_tokens=True
@@ -700,8 +615,8 @@ class FreeTextModel(ActiveLearningModel):
 
         return predictions
 
-    def predict_proba(
-        self, items: list[Item], participant_ids: list[str] | None = None
+    def _do_predict_proba(
+        self, items: list[Item], participant_ids: list[str]
     ) -> np.ndarray:
         """Predict probabilities (not applicable for free text generation).
 
@@ -711,7 +626,7 @@ class FreeTextModel(ActiveLearningModel):
         ----------
         items : list[Item]
             Items to predict.
-        participant_ids : list[str] | None
+        participant_ids : list[str]
             Participant identifiers.
 
         Returns
@@ -721,9 +636,7 @@ class FreeTextModel(ActiveLearningModel):
         """
         return np.zeros((len(items), 0))
 
-    def _compute_exact_match(
-        self, predictions: list[str], labels: list[str]
-    ) -> float:
+    def _compute_exact_match(self, predictions: list[str], labels: list[str]) -> float:
         """Compute exact match accuracy.
 
         Parameters
@@ -743,66 +656,40 @@ class FreeTextModel(ActiveLearningModel):
             for p, label in zip(predictions, labels, strict=True)
         ) / len(predictions)
 
-    def save(self, path: str) -> None:
-        """Save model to disk including random effects and variance history.
+    def _save_model_components(self, save_path: Path) -> None:
+        """Save model-specific components (model, tokenizer).
 
         Parameters
         ----------
-        path : str
+        save_path : Path
             Directory path to save the model.
-
-        Raises
-        ------
-        ValueError
-            If model has not been trained yet.
         """
-        if not self._is_fitted:
-            raise ValueError("Model not trained. Call train() before save().")
-
-        save_path = Path(path)
-        save_path.mkdir(parents=True, exist_ok=True)
-
-        # Save model
         self.model.save_pretrained(save_path / "model")
         self.tokenizer.save_pretrained(save_path / "model")
 
-        # Save random effects
-        if self.random_effects is not None:
-            self.random_effects.save(save_path / "random_effects")
-
-        # Save config
-        config_dict = self.config.model_dump()
-
-        with open(save_path / "config.json", "w") as f:
-            json.dump(config_dict, f, indent=2)
-
-    def load(self, path: str) -> None:
-        """Load model from disk including random effects and variance history.
+    def _load_model_components(self, load_path: Path) -> None:
+        """Load model-specific components (model, tokenizer).
 
         Parameters
         ----------
-        path : str
+        load_path : Path
             Directory path to load the model from.
-
-        Raises
-        ------
-        FileNotFoundError
-            If model directory does not exist.
         """
-        load_path = Path(path)
-        if not load_path.exists():
-            raise FileNotFoundError(f"Model directory not found: {path}")
-
+        # Load config.json to reconstruct config
         with open(load_path / "config.json") as f:
             config_dict = json.load(f)
 
-        # Reconstruct configuration
+        # Reconstruct MixedEffectsConfig if needed
         if "mixed_effects" in config_dict and isinstance(
             config_dict["mixed_effects"], dict
         ):
+            from bead.active_learning.config import MixedEffectsConfig  # noqa: PLC0415
+
             config_dict["mixed_effects"] = MixedEffectsConfig(
                 **config_dict["mixed_effects"]
             )
+
+        from bead.config.active_learning import FreeTextModelConfig  # noqa: PLC0415
 
         self.config = FreeTextModelConfig(**config_dict)
 
@@ -815,32 +702,73 @@ class FreeTextModel(ActiveLearningModel):
         self.base_decoder = self.model.get_decoder()
         self.lm_head = self.model.lm_head
 
-        # Initialize and load random effects
-        # Get actual vocabulary size from lm_head output dimension
-        vocab_size = self.lm_head.out_features
+        self.model.to(self.config.device)
+
+    def _get_save_state(self) -> dict[str, object]:
+        """Get model-specific state to save in config.json.
+
+        Returns
+        -------
+        dict[str, object]
+            Model-specific state dictionary.
+        """
+        return {}
+
+    def _restore_training_state(self, config_dict: dict[str, object]) -> None:
+        """Restore model-specific training state from config_dict.
+
+        Parameters
+        ----------
+        config_dict : dict[str, object]
+            Configuration dictionary.
+        """
+        pass
+
+    def _get_n_classes_for_random_effects(self) -> int:
+        """Get the number of classes for initializing RandomEffectsManager.
+
+        For FreeTextModel, this is the vocabulary size.
+
+        Returns
+        -------
+        int
+            Vocabulary size.
+        """
+        return self.lm_head.out_features
+
+    def _initialize_random_effects(self, n_classes: int, **kwargs: object) -> None:
+        """Initialize the RandomEffectsManager.
+
+        Parameters
+        ----------
+        n_classes : int
+            Vocabulary size (for FreeTextModel).
+        **kwargs : object
+            Additional keyword arguments (not used).
+        """
         self.random_effects = RandomEffectsManager(
             self.config.mixed_effects,
-            vocab_size=vocab_size,
+            vocab_size=n_classes,
         )
-        random_effects_path = load_path / "random_effects"
-        if random_effects_path.exists():
+
+    def _get_random_effects_fixed_head(self) -> torch.nn.Module | None:
+        """Get the fixed head for random effects.
+
+        For FreeTextModel with random_slopes, returns a template adapter.
+        For other modes, returns None.
+
+        Returns
+        -------
+        torch.nn.Module | None
+            Template adapter for random_slopes, None otherwise.
+        """
+        if self.config.mixed_effects.mode == "random_slopes":
             # For random_slopes, need to provide a template adapter
-            if self.config.mixed_effects.mode == "random_slopes":
-                template_adapter = create_participant_lora_adapter(
-                    self.base_decoder,
-                    rank=self.config.lora_rank,
-                    alpha=self.config.lora_alpha,
-                    dropout=self.config.lora_dropout,
-                    target_modules=self.config.lora_target_modules,
-                )
-                self.random_effects.load(
-                    random_effects_path, fixed_head=template_adapter
-                )
-            else:
-                self.random_effects.load(random_effects_path)
-
-            if self.random_effects.variance_history:
-                self.variance_history = self.random_effects.variance_history.copy()
-
-        self.model.to(self.config.device)
-        self._is_fitted = True
+            return create_participant_lora_adapter(
+                self.base_decoder,
+                rank=self.config.lora_rank,
+                alpha=self.config.lora_alpha,
+                dropout=self.config.lora_dropout,
+                target_modules=self.config.lora_target_modules,
+            )
+        return None
