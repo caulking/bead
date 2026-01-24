@@ -6,7 +6,7 @@ The bead CLI provides command-line tools for every stage of the experimental pip
 
 ```bash
 # Verify bead CLI is available
-bead --help | head -5
+uv run bead --help | head -5
 ```
 
 ## When to Use the CLI
@@ -37,9 +37,9 @@ The CLI organizes commands into groups by pipeline stage:
 
 View available commands:
 ```bash
-bead --help
-bead resources --help
-bead templates fill --help
+uv run bead --help
+uv run bead resources --help
+uv run bead templates fill --help
 ```
 
 ## Configuration Files

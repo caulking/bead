@@ -33,3 +33,4 @@ tests/fixtures/cli_work/
 /exports/
 /trial_config_*.json
 /*.jzip
+.claude/

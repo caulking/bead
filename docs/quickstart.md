@@ -9,13 +9,13 @@ This guide walks through creating a complete linguistic judgment experiment usin
 Ensure bead is installed with all dependencies:
 
 ```bash
-pip install bead[dev,api,training]
+uv sync --all-extras
 ```
 
 Verify installation:
 
 ```bash
-bead --version
+uv run bead --version
 ```
 
 ## Example: Argument Structure Alternations
@@ -31,7 +31,7 @@ Create lexicons for verbs, nouns, and other lexical items.
 Extract verbs from the VerbNet database:
 
 ```bash
-bead resources import-verbnet \
+uv run bead resources import-verbnet \
     --verb-class put-9.1 \
     --output lexicons/verbs.jsonl \
     --limit 10
@@ -44,7 +44,7 @@ This creates a JSONL file with 10 verbs from the VerbNet put-9.1 class.
 Add morphological variants using UniMorph:
 
 ```bash
-bead resources import-unimorph \
+uv run bead resources import-unimorph \
     --language eng \
     --pos VERB \
     --features "V;PST" \
@@ -63,11 +63,10 @@ echo "cat,N,{\"animacy\":\"animate\"}" >> nouns.csv
 echo "book,N,{\"animacy\":\"inanimate\"}" >> nouns.csv
 echo "dog,N,{\"animacy\":\"animate\"}" >> nouns.csv
 
-bead resources create-lexicon \
-    --input nouns.csv \
+uv run bead resources create-lexicon lexicons/nouns.jsonl \
     --name nouns \
-    --language-code eng \
-    --output lexicons/nouns.jsonl
+    --from-csv nouns.csv \
+    --language-code eng
 ```
 
 ## Stage 2: Templates
@@ -79,14 +78,14 @@ Generate sentence templates and fill them with lexical items.
 Create templates from patterns:
 
 ```bash
-bead resources generate-templates \
-    --from-pattern "{det} {subj} {verb} {det} {obj}" \
-    --slot subj:required \
-    --slot verb:required \
-    --slot obj:required \
-    --slot det:optional \
-    --description "Basic transitive frame" \
-    --output templates/basic_transitive.jsonl
+uv run bead resources generate-templates templates/basic_transitive.jsonl \
+    --pattern "{det} {subj} {verb} {det} {obj}" \
+    --name basic_transitive \
+    --slot subj:true \
+    --slot verb:true \
+    --slot obj:true \
+    --slot det:false \
+    --description "Basic transitive frame"
 ```
 
 The command auto-detects slots from `{placeholder}` syntax and creates a template with specified requirements.
@@ -96,11 +95,10 @@ The command auto-detects slots from `{placeholder}` syntax and creates a templat
 Fill templates with lexical items:
 
 ```bash
-bead templates fill \
-    --template templates/basic_transitive.jsonl \
-    --lexicon lexicons/nouns.jsonl lexicons/verbs.jsonl \
-    --strategy exhaustive \
-    --output filled_templates/transitive_filled.jsonl
+uv run bead templates fill templates/basic_transitive.jsonl \
+    lexicons/nouns.jsonl lexicons/verbs.jsonl \
+    filled_templates/transitive_filled.jsonl \
+    --strategy exhaustive
 ```
 
 The `exhaustive` strategy generates all valid combinations respecting slot constraints.
@@ -114,7 +112,7 @@ Create experimental items from filled templates.
 Create 2-alternative forced-choice items from filled templates:
 
 ```bash
-bead items create-forced-choice-from-texts \
+uv run bead items create-forced-choice-from-texts \
     --texts-file filled_templates/transitive_filled.jsonl \
     --n-alternatives 2 \
     --output items/2afc_pairs.jsonl
@@ -127,7 +125,7 @@ This creates all possible pairs of alternatives from the filled templates.
 Verify items match the task type requirements:
 
 ```bash
-bead items validate-for-task-type \
+uv run bead items validate-for-task-type \
     --items items/2afc_pairs.jsonl \
     --task-type forced_choice
 ```
@@ -143,7 +141,7 @@ Partition items into experimental lists with constraints.
 Define a uniqueness constraint on verbs:
 
 ```bash
-bead lists create-uniqueness \
+uv run bead lists create-uniqueness \
     --property-expression "item.metadata.verb" \
     --priority 5 \
     --output constraints/list_constraints.jsonl
@@ -156,12 +154,10 @@ This ensures each list has unique verbs (no duplicate verbs within a list).
 Divide items into 10 lists:
 
 ```bash
-bead lists partition \
-    --items items/2afc_pairs.jsonl \
+uv run bead lists partition items/2afc_pairs.jsonl lists/ \
     --n-lists 10 \
     --list-constraints constraints/list_constraints.jsonl \
-    --strategy balanced \
-    --output lists/
+    --strategy balanced
 ```
 
 Output shows partition statistics:
@@ -181,14 +177,11 @@ Generate a jsPsych 8.x experiment for JATOS deployment.
 Create experiment with balanced list distribution:
 
 ```bash
-bead deployment generate \
-    --lists lists/ \
-    --items items/2afc_pairs.jsonl \
+uv run bead deployment generate lists/ items/2afc_pairs.jsonl experiment/ \
     --experiment-type forced_choice \
     --title "Argument Structure Acceptability" \
     --instructions "Choose the more natural sentence." \
-    --distribution-strategy balanced \
-    --output experiment/
+    --distribution-strategy balanced
 ```
 
 The `balanced` strategy assigns participants to the least-used list, ensuring even distribution.
@@ -198,10 +191,8 @@ The `balanced` strategy assigns participants to the least-used list, ensuring ev
 Package experiment for JATOS upload:
 
 ```bash
-bead deployment export-jatos \
-    --experiment experiment/ \
-    --study-title "Argument Structure Study" \
-    --output argument_structure.jzip
+uv run bead deployment export-jatos experiment/ argument_structure.jzip \
+    --title "Argument Structure Study"
 ```
 
 ### Deploy to JATOS Server
@@ -209,11 +200,9 @@ bead deployment export-jatos \
 Upload directly to a JATOS server:
 
 ```bash
-bead deployment upload-jatos \
-    --file argument_structure.jzip \
-    --server https://jatos.example.com \
-    --username researcher \
-    --password yourpassword
+uv run bead deployment upload-jatos argument_structure.jzip \
+    --jatos-url https://jatos.example.com \
+    --api-token your-api-token
 ```
 
 Participants can now access the experiment via the JATOS study link.
@@ -227,10 +216,10 @@ Train a model on collected responses using active learning.
 After participants complete the experiment, download responses from JATOS:
 
 ```bash
-bead training collect-data \
-    --server https://jatos.example.com \
-    --study-id 123 \
-    --output responses/raw_responses.jsonl
+uv run bead training collect-data responses/raw_responses.jsonl \
+    --jatos-url https://jatos.example.com \
+    --api-token your-api-token \
+    --study-id 123
 ```
 
 ### Train GLMM Model
@@ -238,15 +227,14 @@ bead training collect-data \
 Train a Generalized Linear Mixed Model with random intercepts:
 
 ```bash
-bead models train-model \
+uv run bead models train-model \
     --task-type forced_choice \
     --items items/2afc_pairs.jsonl \
-    --data responses/raw_responses.jsonl \
+    --labels responses/raw_responses.jsonl \
+    --participant-ids responses/participant_ids.txt \
     --model-name bert-base-uncased \
     --mixed-effects-mode random_intercepts \
-    --participant-intercept \
-    --item-intercept \
-    --output models/argument_structure_model/
+    --output-dir models/argument_structure_model/
 ```
 
 The model accounts for participant and item variability using random effects.
@@ -256,18 +244,18 @@ The model accounts for participant and item variability using random effects.
 Evaluate whether model performance converges to human agreement:
 
 ```bash
-bead active-learning check-convergence \
+uv run bead active-learning check-convergence \
     --predictions predictions.jsonl \
     --human-labels responses/raw_responses.jsonl \
     --metric krippendorff_alpha \
-    --threshold 0.80
+    --threshold 0.85
 ```
 
 Expected output:
 
 ```
-Krippendorff's alpha: 0.823
-✓ Convergence threshold met (0.80)
+Krippendorff's alpha: 0.87
+Convergence threshold met (0.85)
 ```
 
 ## Next Steps

@@ -34,7 +34,7 @@ bead implements a 6-stage pipeline for linguistic experiment design:
 ## Installation
 
 ```bash
-pip install bead
+uv pip install bead
 ```
 
 For development installation:
@@ -42,9 +42,7 @@ For development installation:
 ```bash
 git clone https://github.com/aaronstevenwhite/bead.git
 cd bead
-python3.13 -m venv .venv
-source .venv/bin/activate
-pip install -e ".[dev,api,training]"
+uv sync --all-extras
 ```
 
 ## Requirements

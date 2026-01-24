@@ -11,7 +11,7 @@ List constraints apply to individual lists. Eight constraint types address commo
 Ensure property values appear at most once per list:
 
 ```bash
-bead lists create-uniqueness \
+uv run bead lists create-uniqueness \
     --property-expression "item['verb']" \
     --priority 5 \
     --output constraints/unique_verbs.jsonl
@@ -24,7 +24,7 @@ Each list contains each verb at most once.
 Balance distribution of property values:
 
 ```bash
-bead lists create-balance \
+uv run bead lists create-balance \
     --property-expression "item['condition']" \
     --target-counts "control=10,experimental=10" \
     --tolerance 0.1 \
@@ -39,7 +39,7 @@ Tolerance allows ±10% deviation from target counts.
 Ensure property values span quantile ranges:
 
 ```bash
-bead lists create-quantile \
+uv run bead lists create-quantile \
     --property-expression "item['word_length']" \
     --n-quantiles 4 \
     --priority 3 \
@@ -53,7 +53,7 @@ Each list includes items from all four word length quartiles.
 Apply quantile constraints within groups:
 
 ```bash
-bead lists create-grouped-quantile \
+uv run bead lists create-grouped-quantile \
     --property-expression "item['frequency']" \
     --group-by-expression "item['condition']" \
     --n-quantiles 3 \
@@ -68,7 +68,7 @@ Each condition has balanced frequency distribution across tertiles.
 Require minimum unique values:
 
 ```bash
-bead lists create-diversity \
+uv run bead lists create-diversity \
     --property-expression "item['verb_class']" \
     --min-unique 10 \
     --priority 3 \
@@ -82,7 +82,7 @@ Each list must include at least 10 different verb classes.
 Constrain list size:
 
 ```bash
-bead lists create-size \
+uv run bead lists create-size \
     --min-size 40 \
     --max-size 60 \
     --priority 5 \
@@ -100,7 +100,7 @@ Batch constraints apply across all lists collectively. Four constraint types ens
 Ensure all target values appear somewhere:
 
 ```bash
-bead lists create-batch-coverage \
+uv run bead lists create-batch-coverage \
     --property-expression "item['template_id']" \
     --target-values "0,1,2,3,4,5,6,7,8,9" \
     --min-coverage 1.0 \
@@ -115,7 +115,7 @@ All 10 templates appear in at least one list.
 Balance property values across batch:
 
 ```bash
-bead lists create-batch-balance \
+uv run bead lists create-batch-balance \
     --property-expression "item['condition']" \
     --target-distribution "control=0.5,experimental=0.5" \
     --tolerance 0.05 \
@@ -130,7 +130,7 @@ Across all lists, conditions appear in 50/50 ratio (±5%).
 Limit values per list:
 
 ```bash
-bead lists create-batch-diversity \
+uv run bead lists create-batch-diversity \
     --property-expression "item['target_word']" \
     --max-lists-per-value 3 \
     --priority 3 \
@@ -144,7 +144,7 @@ Each target word appears in at most 3 lists.
 Ensure minimum occurrences:
 
 ```bash
-bead lists create-batch-min-occurrence \
+uv run bead lists create-batch-min-occurrence \
     --property-expression "item['construction']" \
     --min-occurrences 5 \
     --priority 4 \
@@ -160,7 +160,7 @@ Divide items into experimental lists.
 ### Basic Partitioning
 
 ```bash
-bead lists partition items/2afc_pairs.jsonl lists/ \
+uv run bead lists partition items/2afc_pairs.jsonl lists/ \
     --n-lists 5 \
     --strategy balanced
 ```
@@ -180,7 +180,7 @@ Three strategies balance different goals:
 Example with stratified:
 
 ```bash
-bead lists partition items/2afc_pairs.jsonl lists/ \
+uv run bead lists partition items/2afc_pairs.jsonl lists/ \
     --n-lists 5 \
     --strategy stratified
 ```
@@ -191,15 +191,15 @@ After partitioning, validate and view statistics:
 
 ```bash
 # Partition items first
-bead lists partition items/2afc_pairs.jsonl lists/ \
+uv run bead lists partition items/2afc_pairs.jsonl lists/ \
     --n-lists 3 \
     --strategy balanced
 
 # Validate a list file
-bead lists validate lists/list_0.jsonl
+uv run bead lists validate lists/list_0.jsonl
 
 # Show statistics
-bead lists show-stats lists/
+uv run bead lists show-stats lists/
 ```
 
 Output includes:
@@ -230,12 +230,12 @@ Complete workflow from items to lists:
 
 ```bash
 # 1. Create list constraints
-bead lists create-uniqueness \
+uv run bead lists create-uniqueness \
     --property-expression "item['verb']" \
     --priority 5 \
     --output constraints/unique_verbs.jsonl
 
-bead lists create-balance \
+uv run bead lists create-balance \
     --property-expression "item['condition']" \
     --target-counts "control=20,experimental=20" \
     --tolerance 0.1 \
@@ -243,7 +243,7 @@ bead lists create-balance \
     --output constraints/balance_condition.jsonl
 
 # 2. Create batch constraint
-bead lists create-batch-coverage \
+uv run bead lists create-batch-coverage \
     --property-expression "item['template_id']" \
     --target-values "0,1,2,3,4,5" \
     --min-coverage 1.0 \
@@ -251,17 +251,17 @@ bead lists create-batch-coverage \
     --output constraints/batch_coverage.jsonl
 
 # 3. Partition with constraints
-bead lists partition items/2afc_pairs.jsonl lists/ \
+uv run bead lists partition items/2afc_pairs.jsonl lists/ \
     --n-lists 5 \
     --list-constraints constraints/unique_verbs.jsonl constraints/balance_condition.jsonl \
     --batch-constraints constraints/batch_coverage.jsonl \
     --strategy balanced
 
 # 4. Validate a list file
-bead lists validate lists/list_0.jsonl
+uv run bead lists validate lists/list_0.jsonl
 
 # 5. View statistics
-bead lists show-stats lists/
+uv run bead lists show-stats lists/
 ```
 
 ## Next Steps

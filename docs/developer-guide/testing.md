@@ -96,38 +96,38 @@ tests/
 
 **All tests**:
 ```bash
-pytest tests/
+uv run pytest tests/
 ```
 
 **Specific module**:
 ```bash
-pytest tests/resources/
-pytest tests/lists/
+uv run uv run pytest tests/resources/
+uv run uv run pytest tests/lists/
 ```
 
 **Specific file**:
 ```bash
-pytest tests/resources/test_lexical_item.py
+uv run uv run uv run pytest tests/resources/test_lexical_item.py
 ```
 
 **Specific test**:
 ```bash
-pytest tests/resources/test_lexical_item.py::TestLexicalItemCreation::test_create_with_all_fields
+uv run uv run uv run uv run pytest tests/resources/test_lexical_item.py::TestLexicalItemCreation::test_create_with_all_fields
 ```
 
 **With verbose output**:
 ```bash
-pytest tests/ -v
+uv run uv run pytest tests/ -v
 ```
 
 **Stop on first failure**:
 ```bash
-pytest tests/ -x
+uv run uv run pytest tests/ -x
 ```
 
 **Show print statements**:
 ```bash
-pytest tests/ -s
+uv run uv run pytest tests/ -s
 ```
 
 ## Fixtures
@@ -289,7 +289,7 @@ bead uses pytest-cov to measure code coverage. Target >90% coverage for all modu
 
 **Run with coverage**:
 ```bash
-pytest tests/ --cov=bead --cov-report=term-missing
+uv run uv run pytest tests/ --cov=bead --cov-report=term-missing
 ```
 
 Output shows coverage per file with uncovered line numbers:
@@ -316,7 +316,7 @@ The "Missing" column shows line numbers not covered by tests.
 Generate visual coverage report:
 
 ```bash
-pytest tests/ --cov=bead --cov-report=html
+uv run uv run pytest tests/ --cov=bead --cov-report=html
 ```
 
 Open htmlcov/index.html in a browser. This shows:
@@ -673,7 +673,7 @@ def add(a: int, b: int) -> int:
 Run doctests with pytest:
 
 ```bash
-pytest --doctest-modules bead/
+uv run pytest --doctest-modules bead/
 ```
 
 This executes all `>>>` examples in docstrings and verifies output matches.
@@ -740,7 +740,7 @@ def test_openai_integration():
 Run tests excluding slow tests:
 
 ```bash
-pytest tests/ -m "not slow"
+uv run uv run pytest tests/ -m "not slow"
 ```
 
 ## Continuous Integration
@@ -752,10 +752,10 @@ Tests run automatically in CI on every push and pull request.
 The CI workflow (if configured) runs:
 
 1. Install Python 3.13
-2. Install dependencies: `pip install -e ".[dev,api,training]"`
-3. Run linters: `ruff check bead/`
-4. Run type checker: `pyright bead/`
-5. Run tests: `pytest tests/ --cov=bead`
+2. Install dependencies: `uv sync --all-extras`
+3. Run linters: `uv run ruff check bead/`
+4. Run type checker: `uv run pyright bead/`
+5. Run tests: `uv run pytest tests/ --cov=bead`
 6. Upload coverage to Codecov (optional)
 
 ### Required Checks for Pull Requests
@@ -828,7 +828,7 @@ def sample_new_feature_data():
 ### 4. Run Tests Locally
 
 ```bash
-pytest tests/lists/test_new_feature.py -v
+uv run uv run uv run pytest tests/lists/test_new_feature.py -v
 ```
 
 Verify all tests pass and coverage is >90%.
@@ -849,7 +849,7 @@ Follow these testing practices:
 6. **Test edge cases and errors**, not just happy paths
 7. **Use parametrize** for testing multiple inputs
 8. **Include doctest examples** in docstrings
-9. **Run tests before committing**: `pytest tests/`
-10. **Check coverage**: `pytest tests/ --cov=bead --cov-report=term-missing`
+9. **Run tests before committing**: `uv run pytest tests/`
+10. **Check coverage**: `uv run uv run pytest tests/ --cov=bead --cov-report=term-missing`
 
 For architecture details, see [architecture.md](architecture.md). For contribution guidelines, see [contributing.md](contributing.md). For development setup, see [setup.md](setup.md).

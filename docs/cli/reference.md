@@ -7,15 +7,15 @@ The bead CLI provides commands for all stages of the experimental pipeline, from
 The CLI uses a hierarchical command structure:
 
 ```bash
-bead [GLOBAL_OPTIONS] COMMAND_GROUP COMMAND [OPTIONS] [ARGUMENTS]
+uv run bead [GLOBAL_OPTIONS] COMMAND_GROUP COMMAND [OPTIONS] [ARGUMENTS]
 ```
 
 All commands support `--help` for detailed usage information:
 
 ```bash
-bead --help                    # Show all command groups
-bead resources --help          # Show all resource commands
-bead resources create-lexicon --help  # Show specific command help
+uv run bead --help                    # Show all command groups
+uv run bead resources --help          # Show all resource commands
+uv run bead resources create-lexicon --help  # Show specific command help
 ```
 
 ## Global Options
@@ -35,16 +35,16 @@ These options apply to all bead commands:
 
 ```bash
 # Use custom config file
-bead --config-file my-config.yaml config show
+uv run bead --config-file my-config.yaml config show
 
 # Use development profile
-bead --profile dev resources list-lexicons
+uv run bead --profile dev resources list-lexicons
 
 # Verbose output for debugging
-bead --verbose templates fill template.jsonl lexicon.jsonl filled.jsonl
+uv run bead --verbose templates fill template.jsonl lexicon.jsonl filled.jsonl
 
 # Quiet mode for scripts
-bead --quiet lists partition items.jsonl lists/ --n-lists 5
+uv run bead --quiet lists partition items.jsonl lists/ --n-lists 5
 ```
 
 ## Command Groups
@@ -68,16 +68,16 @@ Initialize a new bead project with directory structure and default configuration
 
 ```bash
 # Create new project
-bead init my-experiment
+uv run bead init my-experiment
 
 # Initialize in current directory
-bead init
+uv run bead init
 
 # Use development profile
-bead init my-experiment --profile dev
+uv run bead init my-experiment --profile dev
 
 # Overwrite existing directory
-bead init my-experiment --force
+uv run bead init my-experiment --force
 ```
 
 **Generated Structure:**
@@ -117,29 +117,29 @@ Configuration management commands.
 
 ```bash
 # Show current configuration
-bead config show
+uv run bead config show
 
 # Show specific key
-bead config show --key paths.data_dir
+uv run bead config show --key paths.data_dir
 
 # Show as JSON
-bead config show --format json
+uv run bead config show --format json
 
 # Validate configuration file
-bead config validate
+uv run bead config validate
 
 # Export with comments
-bead config export --output my-config.yaml --comments
+uv run bead config export --output my-config.yaml --comments
 
 # List available profiles
-bead config profiles
+uv run bead config profiles
 
 # Merge configurations
-bead config merge base.yaml overrides.yaml --output merged.yaml
+uv run bead config merge base.yaml overrides.yaml --output merged.yaml
 
 # Create configuration templates
-bead config create-active-learning --output al_config.yaml
-bead config create-model --output model_config.yaml
+uv run bead config create-active-learning --output al_config.yaml
+uv run bead config create-model --output model_config.yaml
 ```
 
 ### resources (Stage 1)
@@ -168,30 +168,30 @@ Lexicon and template management commands.
 
 ```bash
 # Create lexicon from CSV
-bead resources create-lexicon lexicon.jsonl --name verbs \
+uv run bead resources create-lexicon lexicon.jsonl --name verbs \
     --from-csv verbs.csv --language-code eng
 
 # Create template
-bead resources create-template template.jsonl --name transitive \
+uv run bead resources create-template template.jsonl --name transitive \
     --template-string "{subject} {verb} {object}" \
     --slot subject:true --slot verb:true --slot object:false
 
 # Generate templates from pattern
-bead resources generate-templates template.jsonl \
+uv run bead resources generate-templates template.jsonl \
     --pattern "{subject} {verb} {object}" \
     --name simple_transitive
 
 # List lexicons in directory
-bead resources list-lexicons --directory lexicons/
+uv run bead resources list-lexicons --directory lexicons/
 
 # Validate lexicon
-bead resources validate-lexicon lexicon.jsonl
+uv run bead resources validate-lexicon lexicon.jsonl
 
 # Import from VerbNet
-bead resources import-verbnet verbs.jsonl --classes motion-51.1
+uv run bead resources import-verbnet verbs.jsonl --classes motion-51.1
 
 # Create constraint
-bead resources create-constraint --expression "item['pos'] == 'verb'" \
+uv run bead resources create-constraint --expression "item['pos'] == 'verb'" \
     --output constraints.jsonl
 ```
 
@@ -218,15 +218,15 @@ Template filling commands using various strategies.
 
 ```bash
 # Exhaustive filling (all combinations)
-bead templates fill template.jsonl lexicon.jsonl filled.jsonl \
+uv run bead templates fill template.jsonl lexicon.jsonl filled.jsonl \
     --strategy exhaustive
 
 # Random sampling
-bead templates fill template.jsonl lexicon.jsonl filled.jsonl \
+uv run bead templates fill template.jsonl lexicon.jsonl filled.jsonl \
     --strategy random --max-combinations 100 --random-seed 42
 
 # Stratified sampling
-bead templates fill template.jsonl lexicon.jsonl filled.jsonl \
+uv run bead templates fill template.jsonl lexicon.jsonl filled.jsonl \
     --strategy stratified --max-combinations 100 \
     --grouping-property pos --random-seed 42
 ```
@@ -235,22 +235,22 @@ bead templates fill template.jsonl lexicon.jsonl filled.jsonl \
 
 ```bash
 # Estimate combinations before filling
-bead templates estimate-combinations template.jsonl lexicon.jsonl
+uv run bead templates estimate-combinations template.jsonl lexicon.jsonl
 
 # Show statistics
-bead templates show-stats filled.jsonl
+uv run bead templates show-stats filled.jsonl
 
 # Filter by criteria
-bead templates filter-filled filled.jsonl filtered.jsonl \
+uv run bead templates filter-filled filled.jsonl filtered.jsonl \
     --min-length 10 --template-name active
 
 # Merge multiple files
-bead templates merge-filled file1.jsonl file2.jsonl merged.jsonl \
+uv run bead templates merge-filled file1.jsonl file2.jsonl merged.jsonl \
     --deduplicate
 
 # Export formats
-bead templates export-csv filled.jsonl filled.csv
-bead templates export-json filled.jsonl filled.json --pretty
+uv run bead templates export-csv filled.jsonl filled.csv
+uv run bead templates export-json filled.jsonl filled.json --pretty
 ```
 
 ### items (Stage 3)
@@ -284,35 +284,35 @@ Item construction commands with task-type-specific creation functions.
 
 ```bash
 # Basic item construction from templates
-bead items construct \
+uv run bead items construct \
     --item-template templates.jsonl \
     --filled-templates filled.jsonl \
     --output items.jsonl
 
 # With constraints
-bead items construct \
+uv run bead items construct \
     --item-template templates.jsonl \
     --filled-templates filled.jsonl \
     --constraints constraints.jsonl \
     --output items.jsonl
 
 # With caching
-bead items construct \
+uv run bead items construct \
     --item-template templates.jsonl \
     --filled-templates filled.jsonl \
     --output items.jsonl \
     --cache-dir .cache/models
 
 # Create forced-choice items from texts
-bead items create-forced-choice-from-texts texts.txt items.jsonl \
+uv run bead items create-forced-choice-from-texts texts.txt items.jsonl \
     --n-alternatives 2 --group-by line
 
 # Create Likert items
-bead items create-ordinal-scale-from-texts sentences.txt items.jsonl \
+uv run bead items create-ordinal-scale-from-texts sentences.txt items.jsonl \
     --scale-min 1 --scale-max 7
 
 # Create NLI items
-bead items create-nli items.jsonl \
+uv run bead items create-nli items.jsonl \
     --premise "All dogs bark" \
     --hypothesis "Some dogs bark"
 ```
@@ -321,22 +321,22 @@ bead items create-nli items.jsonl \
 
 ```bash
 # List items
-bead items list --directory items/
+uv run bead items list --directory items/
 
 # Validate items
-bead items validate items.jsonl
+uv run bead items validate items.jsonl
 
 # Validate for specific task type
-bead items validate-for-task-type items.jsonl --task-type forced_choice
+uv run bead items validate-for-task-type items.jsonl --task-type forced_choice
 
 # Show statistics
-bead items show-stats items.jsonl
+uv run bead items show-stats items.jsonl
 
 # Infer task type
-bead items infer-task-type items.jsonl
+uv run bead items infer-task-type items.jsonl
 
 # Get task type requirements
-bead items get-task-requirements forced_choice
+uv run bead items get-task-requirements forced_choice
 ```
 
 ### lists (Stage 4)
@@ -366,19 +366,19 @@ List partitioning commands with constraint creation.
 
 ```bash
 # Balanced partitioning
-bead lists partition items.jsonl lists/ --n-lists 5 \
+uv run bead lists partition items.jsonl lists/ --n-lists 5 \
     --strategy balanced --random-seed 42
 
 # Random partitioning
-bead lists partition items.jsonl lists/ --n-lists 5 \
+uv run bead lists partition items.jsonl lists/ --n-lists 5 \
     --strategy random
 
 # Stratified partitioning
-bead lists partition items.jsonl lists/ --n-lists 5 \
+uv run bead lists partition items.jsonl lists/ --n-lists 5 \
     --strategy stratified
 
 # Dry run preview
-bead lists partition items.jsonl lists/ --n-lists 5 \
+uv run bead lists partition items.jsonl lists/ --n-lists 5 \
     --strategy balanced --dry-run
 ```
 
@@ -386,17 +386,17 @@ bead lists partition items.jsonl lists/ --n-lists 5 \
 
 ```bash
 # List constraints (per-list)
-bead lists create-uniqueness --property "verb_lemma" \
+uv run bead lists create-uniqueness --property "verb_lemma" \
     --output constraints.jsonl
 
-bead lists create-balance --property "condition" \
+uv run bead lists create-balance --property "condition" \
     --tolerance 0.1 --output constraints.jsonl
 
 # Batch constraints (across all lists)
-bead lists create-batch-coverage --property "template_id" \
+uv run bead lists create-batch-coverage --property "template_id" \
     --min-coverage 1.0 --output constraints.jsonl
 
-bead lists create-batch-balance --property "verb_type" \
+uv run bead lists create-batch-balance --property "verb_type" \
     --tolerance 0.15 --output constraints.jsonl
 ```
 
@@ -404,13 +404,13 @@ bead lists create-batch-balance --property "verb_type" \
 
 ```bash
 # List available lists
-bead lists list --directory lists/
+uv run bead lists list --directory lists/
 
 # Validate list
-bead lists validate lists/list_0.jsonl
+uv run bead lists validate lists/list_0.jsonl
 
 # Show statistics
-bead lists show-stats lists/
+uv run bead lists show-stats lists/
 ```
 
 ### deployment (Stage 5)
@@ -444,25 +444,25 @@ Experiment generation and deployment commands for jsPsych/JATOS.
 
 ```bash
 # Basic generation with balanced distribution
-bead deployment generate lists/ items.jsonl experiment/ \
+uv run bead deployment generate lists/ items.jsonl experiment/ \
     --experiment-type forced_choice \
     --title "Acceptability Study" \
     --distribution-strategy balanced
 
 # Quota-based distribution
-bead deployment generate lists/ items.jsonl experiment/ \
+uv run bead deployment generate lists/ items.jsonl experiment/ \
     --experiment-type forced_choice \
     --distribution-strategy quota_based \
     --distribution-config '{"participants_per_list": 25, "allow_overflow": false}'
 
 # Stratified distribution
-bead deployment generate lists/ items.jsonl experiment/ \
+uv run bead deployment generate lists/ items.jsonl experiment/ \
     --experiment-type forced_choice \
     --distribution-strategy stratified \
     --distribution-config '{"factors": ["condition", "verb_type"]}'
 
 # Debug mode (always use same list)
-bead deployment generate lists/ items.jsonl experiment/ \
+uv run bead deployment generate lists/ items.jsonl experiment/ \
     --experiment-type forced_choice \
     --distribution-strategy balanced \
     --debug-mode --debug-list-index 0
@@ -483,11 +483,11 @@ bead deployment generate lists/ items.jsonl experiment/ \
 
 ```bash
 # Apply UI theme
-bead deployment ui customize experiment/ \
+uv run bead deployment ui customize experiment/ \
     --theme dark --primary-color "#1976D2"
 
 # Generate custom CSS
-bead deployment ui generate-css experiment/css/custom.css \
+uv run bead deployment ui generate-css experiment/css/custom.css \
     --theme dark --primary-color "#1976D2"
 ```
 
@@ -495,14 +495,14 @@ bead deployment ui generate-css experiment/css/custom.css \
 
 ```bash
 # Configure rating scale
-bead deployment trials configure-rating \
+uv run bead deployment trials configure-rating \
     --min-value 1 --max-value 7 \
     --min-label "Completely unnatural" \
     --max-label "Completely natural" \
     --output rating_config.json
 
 # Configure choice trials
-bead deployment trials configure-choice \
+uv run bead deployment trials configure-choice \
     --button-html '<button class="choice-btn">%choice%</button>' \
     --output choice_config.json
 ```
@@ -511,17 +511,17 @@ bead deployment trials configure-choice \
 
 ```bash
 # Export to .jzip
-bead deployment export-jatos experiment/ study.jzip \
+uv run bead deployment export-jatos experiment/ study.jzip \
     --title "My Study" \
     --description "Description text"
 
 # Upload to JATOS server
-bead deployment upload-jatos study.jzip \
+uv run bead deployment upload-jatos study.jzip \
     --jatos-url https://jatos.example.com \
     --api-token YOUR_API_TOKEN
 
 # Validate experiment
-bead deployment validate experiment/
+uv run bead deployment validate experiment/
 ```
 
 ### models
@@ -546,14 +546,14 @@ GLMM model training commands for all 8 task types.
 
 ```bash
 # Train forced choice model with fixed effects
-bead models train-model \
+uv run bead models train-model \
     --task-type forced_choice \
     --items items.jsonl \
     --labels labels.jsonl \
     --output-dir models/fc_model/
 
 # Train with random intercepts
-bead models train-model \
+uv run bead models train-model \
     --task-type ordinal_scale \
     --items items.jsonl \
     --labels labels.jsonl \
@@ -562,13 +562,13 @@ bead models train-model \
     --output-dir models/os_model/
 
 # Make predictions
-bead models predict \
+uv run bead models predict \
     --model-dir models/fc_model/ \
     --items test_items.jsonl \
     --output predictions.jsonl
 
 # Predict probabilities
-bead models predict-proba \
+uv run bead models predict-proba \
     --model-dir models/fc_model/ \
     --items test_items.jsonl \
     --output probabilities.jsonl
@@ -596,7 +596,7 @@ Active learning commands for convergence detection.
 
 ```bash
 # Check convergence
-bead active-learning check-convergence \
+uv run bead active-learning check-convergence \
     --predictions predictions.jsonl \
     --human-labels labels.jsonl \
     --metric krippendorff_alpha \
@@ -622,26 +622,26 @@ Data collection and model evaluation commands.
 
 ```bash
 # Collect data from JATOS
-bead training collect-data results.jsonl \
+uv run bead training collect-data results.jsonl \
     --jatos-url https://jatos.example.com \
     --api-token TOKEN --study-id 123
 
 # Show data statistics
-bead training show-data-stats results.jsonl
+uv run bead training show-data-stats results.jsonl
 
 # Compute agreement
-bead training compute-agreement results.jsonl \
+uv run bead training compute-agreement results.jsonl \
     --metric krippendorff_alpha
 
 # Cross-validation
-bead training cross-validate items.jsonl labels.jsonl \
+uv run bead training cross-validate items.jsonl labels.jsonl \
     --n-folds 5 --task-type forced_choice
 
 # Evaluate model
-bead training evaluate model_dir/ test_data.jsonl
+uv run bead training evaluate model_dir/ test_data.jsonl
 
 # Generate learning curve
-bead training learning-curve items.jsonl labels.jsonl \
+uv run bead training learning-curve items.jsonl labels.jsonl \
     --output learning_curve.png
 ```
 
@@ -670,20 +670,20 @@ Simulation framework for testing active learning strategies.
 
 ```bash
 # List available annotators
-bead simulate list-annotators
+uv run bead simulate list-annotators
 
 # List noise models
-bead simulate list-noise-models
+uv run bead simulate list-noise-models
 
 # Create configuration
-bead simulate configure \
+uv run bead simulate configure \
     --strategy lm_score \
     --noise-type temperature \
     --temperature 1.5 \
     --output simulation_config.yaml
 
 # Run simulation
-bead simulate run \
+uv run bead simulate run \
     --items items.jsonl \
     --templates templates.jsonl \
     --annotator lm_score \
@@ -691,7 +691,7 @@ bead simulate run \
     --output results.jsonl
 
 # Analyze results
-bead simulate analyze results.jsonl \
+uv run bead simulate analyze results.jsonl \
     --metrics agreement accuracy convergence \
     --output analysis.json
 ```
@@ -724,31 +724,31 @@ High-level workflow commands for complete pipeline execution.
 
 ```bash
 # Run all stages
-bead workflow run --config bead.yaml
+uv run bead workflow run --config bead.yaml
 
 # Run specific stages
-bead workflow run --stages resources,templates,items
+uv run bead workflow run --stages resources,templates,items
 
 # Start from items stage
-bead workflow run --from-stage items
+uv run bead workflow run --from-stage items
 
 # Dry run to preview
-bead workflow run --dry-run
+uv run bead workflow run --dry-run
 
 # Initialize from template
-bead workflow init acceptability-study
+uv run bead workflow init acceptability-study
 
 # Check status
-bead workflow status
+uv run bead workflow status
 
 # Resume interrupted workflow
-bead workflow resume
+uv run bead workflow resume
 
 # Rollback to deployment stage
-bead workflow rollback deployment
+uv run bead workflow rollback deployment
 
 # List available templates
-bead workflow list-templates
+uv run bead workflow list-templates
 ```
 
 ### completion
@@ -759,21 +759,42 @@ Shell completion setup.
 
 | Command | Description |
 |---------|-------------|
-| `install` | Install shell completion |
-| `uninstall` | Remove shell completion |
-| `show` | Show completion script |
+| `bash` | Generate bash completion script |
+| `zsh` | Generate zsh completion script |
+| `fish` | Generate fish completion script |
+| `install` | Auto-detect shell and install completion |
 
 **Examples:**
 
 ```bash
-# Install for bash
-bead completion install --shell bash
+# Generate bash completion
+uv run bead completion bash > ~/.bash_completion.d/bead
 
-# Install for zsh
-bead completion install --shell zsh
+# Generate zsh completion
+uv run bead completion zsh > ~/.zsh/completion/_bead
 
-# Show completion script
-bead completion show --shell bash
+# Generate fish completion
+uv run bead completion fish > ~/.config/fish/completions/bead.fish
+
+# Auto-install for current shell
+uv run bead completion install
+```
+
+### shell
+
+Interactive shell commands.
+
+**Commands:**
+
+| Command | Description |
+|---------|-------------|
+| `repl` | Start interactive REPL shell |
+
+**Examples:**
+
+```bash
+# Start interactive shell
+uv run bead shell repl
 ```
 
 ## Common Workflows
@@ -784,31 +805,31 @@ Build experiment from scratch:
 
 ```bash
 # Stage 1: Create resources
-bead resources create-lexicon lexicons/verbs.jsonl --name verbs \
+uv run bead resources create-lexicon lexicons/verbs.jsonl --name verbs \
     --from-csv data/verbs.csv --language-code eng
 
-bead resources create-template templates/transitive.jsonl \
+uv run bead resources create-template templates/transitive.jsonl \
     --name transitive \
     --template-string "{subject} {verb} {object}"
 
 # Stage 2: Fill templates
-bead templates fill templates/transitive.jsonl \
+uv run bead templates fill templates/transitive.jsonl \
     lexicons/verbs.jsonl \
     filled_templates/filled.jsonl \
     --strategy exhaustive
 
 # Stage 3: Construct items
-bead items construct \
+uv run bead items construct \
     --item-template item_templates/templates.jsonl \
     --filled-templates filled_templates/filled.jsonl \
     --output items/items.jsonl
 
 # Stage 4: Partition into lists
-bead lists partition items/items.jsonl lists/ \
+uv run bead lists partition items/items.jsonl lists/ \
     --n-lists 5 --strategy balanced --random-seed 42
 
 # Stage 5: Generate experiment
-bead deployment generate lists/ items/items.jsonl experiment/ \
+uv run bead deployment generate lists/ items/items.jsonl experiment/ \
     --experiment-type forced_choice \
     --title "Acceptability Study" \
     --distribution-strategy balanced
@@ -820,26 +841,26 @@ Train model with convergence detection:
 
 ```bash
 # Collect initial data
-bead training collect-data data/initial_labels.jsonl \
+uv run bead training collect-data data/initial_labels.jsonl \
     --jatos-url https://jatos.example.com \
     --api-token TOKEN --study-id 123
 
 # Train initial model
-bead models train-model \
+uv run bead models train-model \
     --task-type forced_choice \
     --items items/items.jsonl \
     --labels data/initial_labels.jsonl \
     --output-dir models/model_v1/
 
 # Check convergence
-bead active-learning check-convergence \
+uv run bead active-learning check-convergence \
     --predictions models/model_v1/predictions.jsonl \
     --human-labels data/initial_labels.jsonl \
     --metric krippendorff_alpha \
     --threshold 0.8
 
 # Generate learning curve
-bead training learning-curve items/items.jsonl data/all_labels.jsonl \
+uv run bead training learning-curve items/items.jsonl data/all_labels.jsonl \
     --output plots/learning_curve.png
 ```
 
@@ -849,17 +870,17 @@ Test strategies before deployment:
 
 ```bash
 # List available annotators
-bead simulate list-annotators
+uv run bead simulate list-annotators
 
 # Create simulation configuration
-bead simulate configure \
+uv run bead simulate configure \
     --strategy lm_score \
     --noise-type temperature \
     --temperature 0.7 \
     --output sims/config.yaml
 
 # Run simulation
-bead simulate run \
+uv run bead simulate run \
     --items items/items.jsonl \
     --templates templates/templates.jsonl \
     --annotator lm_score \
@@ -867,7 +888,7 @@ bead simulate run \
     --output sims/results.jsonl
 
 # Analyze results
-bead simulate analyze sims/results.jsonl \
+uv run bead simulate analyze sims/results.jsonl \
     --metrics agreement accuracy convergence \
     --output sims/evaluation.json
 ```
@@ -878,26 +899,26 @@ Deploy to JATOS server:
 
 ```bash
 # Generate experiment
-bead deployment generate lists/ items/items.jsonl experiment/ \
+uv run bead deployment generate lists/ items/items.jsonl experiment/ \
     --experiment-type forced_choice \
     --title "Acceptability Study" \
     --description "Judge sentence acceptability" \
     --distribution-strategy balanced
 
 # Customize UI
-bead deployment ui customize experiment/ \
+uv run bead deployment ui customize experiment/ \
     --theme dark --primary-color "#1976D2"
 
 # Validate before export
-bead deployment validate experiment/
+uv run bead deployment validate experiment/
 
 # Export to .jzip
-bead deployment export-jatos experiment/ acceptability_study.jzip \
+uv run bead deployment export-jatos experiment/ acceptability_study.jzip \
     --title "Acceptability Study" \
     --description "Version 1.0"
 
 # Upload to JATOS
-bead deployment upload-jatos acceptability_study.jzip \
+uv run bead deployment upload-jatos acceptability_study.jzip \
     --jatos-url https://jatos.example.com \
     --api-token YOUR_API_TOKEN
 ```
@@ -908,22 +929,22 @@ Use YAML configuration for entire pipeline:
 
 ```bash
 # Create project with config
-bead init my-experiment --profile prod
+uv run bead init my-experiment --profile prod
 
 # Edit config file (bead.yaml)
 # Specify all pipeline parameters
 
 # Validate configuration
-bead config validate
+uv run bead config validate
 
 # Run entire pipeline from config
-bead workflow run --config bead.yaml
+uv run bead workflow run --config bead.yaml
 
 # Check pipeline status
-bead workflow status
+uv run bead workflow status
 
 # Resume if interrupted
-bead workflow resume
+uv run bead workflow resume
 ```
 
 ## Tips and Best Practices
@@ -934,16 +955,16 @@ Use profiles for different environments:
 
 ```bash
 # Development: verbose output, small samples
-bead --profile dev templates fill ... --max-combinations 10
+uv run bead --profile dev templates fill ... --max-combinations 10
 
 # Production: optimized, full datasets
-bead --profile prod workflow run --config bead.yaml
+uv run bead --profile prod workflow run --config bead.yaml
 
 # Show configuration with specific key
-bead config show --key paths.data_dir
+uv run bead config show --key paths.data_dir
 
 # Export with comments for documentation
-bead config export --output full-config.yaml --comments
+uv run bead config export --output full-config.yaml --comments
 ```
 
 ### Error Handling
@@ -952,30 +973,30 @@ Use validation commands before expensive operations:
 
 ```bash
 # Validate inputs before filling
-bead resources validate-lexicon lexicon.jsonl
-bead resources validate-template template.jsonl
+uv run bead resources validate-lexicon lexicon.jsonl
+uv run bead resources validate-template template.jsonl
 
 # Estimate before exhaustive filling
-bead templates estimate-combinations template.jsonl lexicon.jsonl
+uv run bead templates estimate-combinations template.jsonl lexicon.jsonl
 
 # Dry-run before partitioning
-bead lists partition items.jsonl lists/ --n-lists 5 --dry-run
+uv run bead lists partition items.jsonl lists/ --n-lists 5 --dry-run
 
 # Validate before deployment
-bead deployment validate experiment/
+uv run bead deployment validate experiment/
 ```
 
 ### Performance Optimization
 
 ```bash
 # Use caching for repeated operations
-bead items construct ... --cache-dir .cache/models
+uv run bead items construct ... --cache-dir .cache/models
 
 # Use random sampling for large spaces
-bead templates fill ... --strategy random --max-combinations 1000
+uv run bead templates fill ... --strategy random --max-combinations 1000
 
 # Preview with dry-run before expensive operations
-bead workflow run --dry-run
+uv run bead workflow run --dry-run
 ```
 
 ### Reproducibility
@@ -984,13 +1005,13 @@ Always set random seeds:
 
 ```bash
 # Template filling
-bead templates fill ... --strategy random --random-seed 42
+uv run bead templates fill ... --strategy random --random-seed 42
 
 # List partitioning
-bead lists partition ... --random-seed 42
+uv run bead lists partition ... --random-seed 42
 
 # Model training
-bead models train-model ... --random-seed 42
+uv run bead models train-model ... --random-seed 42
 ```
 
 ### Debugging
@@ -999,17 +1020,17 @@ Use verbose mode and dry-runs:
 
 ```bash
 # Verbose output
-bead --verbose templates fill ...
+uv run bead --verbose templates fill ...
 
 # Dry-run preview
-bead lists partition ... --dry-run
-bead workflow run --dry-run
+uv run bead lists partition ... --dry-run
+uv run bead workflow run --dry-run
 
 # Debug mode for deployment
-bead deployment generate ... --debug-mode --debug-list-index 0
+uv run bead deployment generate ... --debug-mode --debug-list-index 0
 
 # Show configuration for debugging
-bead config show --format json --no-redact
+uv run bead config show --format json --no-redact
 ```
 
 ### File Organization
@@ -1034,14 +1055,14 @@ project/
 
 ```bash
 # Check status before resuming
-bead workflow status
+uv run bead workflow status
 
 # Resume interrupted workflow
-bead workflow resume
+uv run bead workflow resume
 
 # Rollback if needed
-bead workflow rollback deployment
+uv run bead workflow rollback deployment
 
 # Run specific stages only
-bead workflow run --stages items,lists,deployment
+uv run bead workflow run --stages items,lists,deployment
 ```

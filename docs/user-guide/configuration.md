@@ -671,7 +671,7 @@ Manage configurations via the command line:
 ### Validate Configuration
 
 ```bash
-bead config validate --config config.yaml --strict
+uv run bead config validate --config config.yaml --strict
 ```
 
 Validates configuration structure, required fields, and path existence.
@@ -679,7 +679,7 @@ Validates configuration structure, required fields, and path existence.
 ### Merge Configurations
 
 ```bash
-bead config merge --base base.yaml --override overrides.yaml --output merged.yaml
+uv run bead config merge --base base.yaml --override overrides.yaml --output merged.yaml
 ```
 
 Merges multiple configuration files (later configs override earlier ones).
@@ -687,7 +687,7 @@ Merges multiple configuration files (later configs override earlier ones).
 ### Create Model Configuration
 
 ```bash
-bead config create-model --task-type forced_choice --base-model bert-base-uncased
+uv run bead config create-model --task-type forced_choice --base-model bert-base-uncased
 ```
 
 Generates model configuration section with task-specific defaults.
@@ -695,7 +695,7 @@ Generates model configuration section with task-specific defaults.
 ### Create Active Learning Configuration
 
 ```bash
-bead config create-active-learning --selection-strategy uncertainty --budget 1000
+uv run bead config create-active-learning --selection-strategy uncertainty --budget 1000
 ```
 
 Generates active learning configuration section.
@@ -706,7 +706,7 @@ The following command is planned but not yet implemented:
 
 ```bash
 # Planned (not yet available)
-bead config create-deployment --distribution-strategy balanced
+uv run bead config create-deployment --distribution-strategy balanced
 ```
 
 ## Next Steps

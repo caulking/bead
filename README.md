@@ -55,24 +55,20 @@ The name "bead" refers to the small, decorative elements that form part of windo
 ### Requirements
 
 - Python 3.13 or higher
-- pip or uv for package management
+- [uv](https://docs.astral.sh/uv/) for package management
 
 ### Basic Installation
 
 ```bash
-# Create and activate virtual environment
-python3.13 -m venv .venv
-source .venv/bin/activate  # On macOS/Linux
-# OR
-.venv\Scripts\activate     # On Windows
+# Install uv if you don't have it
+curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # Install bead
-pip install bead
+uv pip install bead
 
-# Install optional dependencies
-pip install bead[api]       # OpenAI, Anthropic, Google APIs
-pip install bead[training]  # PyTorch Lightning, TensorBoard
-pip install bead[dev]       # Development tools (pytest, ruff, pyright)
+# Install with optional dependencies
+uv pip install bead[api]       # OpenAI, Anthropic, Google APIs
+uv pip install bead[training]  # PyTorch Lightning, TensorBoard
 ```
 
 ### Development Installation
@@ -82,17 +78,15 @@ pip install bead[dev]       # Development tools (pytest, ruff, pyright)
 git clone https://github.com/aaronstevenwhite/bead.git
 cd bead
 
-# Create virtual environment
-python3.13 -m venv .venv
-source .venv/bin/activate
-
-# Install in editable mode with all dependencies
-pip install -e ".[dev,api,training]"
+# Install all dependencies (creates .venv automatically)
+uv sync --all-extras
 
 # Verify installation
-bead --version
-pytest tests/
+uv run bead --version
+uv run pytest tests/
 ```
+
+**Important:** Always use `uv run` to execute commands. Do not activate the virtual environment manually.
 
 ---
 
@@ -286,10 +280,10 @@ Every object tracks comprehensive metadata:
 class BeadBaseModel(BaseModel):
     """Base model for all bead objects."""
 
-    id: UUID                # UUIDv7 (time-ordered)
-    created_at: datetime    # ISO 8601 timestamp
-    modified_at: datetime   # Auto-updated
-    metadata: dict[str, Any]  # Custom metadata
+    id: UUID                    # UUIDv7 (time-ordered)
+    created_at: datetime        # ISO 8601 timestamp
+    modified_at: datetime       # Auto-updated
+    metadata: dict[str, JsonValue]  # Custom metadata
 ```
 
 Metadata flows through pipeline:
@@ -1267,41 +1261,39 @@ For complete API documentation, see the [API Reference](docs/api-reference/).
 git clone https://github.com/aaronstevenwhite/bead.git
 cd bead
 
-# Create virtual environment
-python3.13 -m venv .venv
-source .venv/bin/activate
-
-# Install development dependencies
-pip install -e ".[dev,api,training]"
+# Install all dependencies (creates .venv automatically)
+uv sync --all-extras
 ```
+
+**Important:** Always use `uv run` to execute commands. Do not activate the virtual environment manually.
 
 ### Run Tests
 
 ```bash
 # Run all tests with coverage
-pytest tests/ --cov=bead --cov-report=html
+uv run pytest tests/ --cov=bead --cov-report=html
 
 # Run specific test module
-pytest tests/lists/test_partitioner_batch.py -v
+uv run pytest tests/lists/test_partitioner_batch.py -v
 
 # Run with parallel execution
-pytest tests/ -n auto
+uv run pytest tests/ -n auto
 ```
 
 ### Code Quality
 
 ```bash
 # Lint with ruff
-ruff check bead/
+uv run ruff check bead/
 
 # Format with ruff
-ruff format bead/
+uv run ruff format bead/
 
 # Type check with pyright
-pyright bead/
+uv run pyright bead/
 
 # All checks
-ruff check bead/ && ruff format bead/ && pyright bead/
+uv run ruff check bead/ && uv run ruff format bead/ && uv run pyright bead/
 ```
 
 ### Project Structure
@@ -1407,4 +1399,4 @@ MIT License. See [LICENSE](LICENSE) for details.
 
 ---
 
-**Built with ❤️ for linguistic research**
+**Built for linguistic research**

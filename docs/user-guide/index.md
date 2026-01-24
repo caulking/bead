@@ -18,12 +18,12 @@ This guide shows how to use bead for linguistic judgment experiments. Bead provi
 **Example:**
 ```bash
 # Complete pipeline in 6 commands
-bead resources import-verbnet --output lexicons/verbs.jsonl
-bead templates fill templates.jsonl lexicons/*.jsonl filled.jsonl
-bead items construct --filled-templates filled.jsonl items.jsonl
-bead lists partition items.jsonl lists/ --n-lists 5
-bead deployment generate lists/ items.jsonl experiment/
-bead training collect-data results.jsonl
+uv run bead resources import-verbnet --output lexicons/verbs.jsonl
+uv run bead templates fill templates.jsonl lexicons/*.jsonl filled.jsonl
+uv run bead items construct --filled-templates filled.jsonl items.jsonl
+uv run bead lists partition items.jsonl lists/ --n-lists 5
+uv run bead deployment generate lists/ items.jsonl experiment/
+uv run bead training collect-data results.jsonl
 ```
 
 ## API Approach
@@ -87,7 +87,7 @@ Before using either approach, familiarize yourself with these concepts:
 
 ## Getting Help
 
-- **CLI Reference**: Run `bead --help` or `bead <command> --help`
+- **CLI Reference**: Run `uv run bead --help` or `uv run bead <command> --help`
 - **API Reference**: See module docstrings and the gallery examples in `gallery/eng/argument_structure/`
 - **Examples**: Browse `gallery/` directory for complete working examples
 

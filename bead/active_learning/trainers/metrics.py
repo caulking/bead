@@ -1,7 +1,7 @@
 """Metrics computation using HuggingFace evaluate library.
 
-This module provides metric computation functions for use with HuggingFace Trainer,
-leveraging the evaluate library for standardized, well-tested metrics.
+This module provides metric computation functions for use with HuggingFace Trainer.
+It uses the evaluate library for standardized, well-tested metrics.
 """
 
 from __future__ import annotations

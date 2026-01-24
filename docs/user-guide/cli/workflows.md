@@ -8,12 +8,12 @@ The bead pipeline consists of 6 stages:
 
 | Stage | Purpose | CLI Command Group |
 |-------|---------|-------------------|
-| 1 | Create lexicons and templates | `bead resources` |
-| 2 | Fill templates with items | `bead templates` |
-| 3 | Construct experimental items | `bead items` |
-| 4 | Partition into experiment lists | `bead lists` |
-| 5 | Generate jsPsych/JATOS experiments | `bead deployment` |
-| 6 | Collect data and train models | `bead training` |
+| 1 | Create lexicons and templates | `uv run bead resources` |
+| 2 | Fill templates with items | `uv run bead templates` |
+| 3 | Construct experimental items | `uv run bead items` |
+| 4 | Partition into experiment lists | `uv run bead lists` |
+| 5 | Generate jsPsych/JATOS experiments | `uv run bead deployment` |
+| 6 | Collect data and train models | `uv run bead training` |
 
 ## Example: Argument Structure Experiment
 
@@ -37,7 +37,7 @@ argument_structure/
 Import verbs from VerbNet:
 
 ```bash
-bead resources import-verbnet \
+uv run bead resources import-verbnet \
   --verb-class "break-45.1" \
   --limit 20 \
   --output lexicons/verbnet_verbs.jsonl
@@ -46,7 +46,7 @@ bead resources import-verbnet \
 Create custom lexicon from CSV:
 
 ```bash
-bead resources create-lexicon lexicons/bleached_nouns.jsonl \
+uv run bead resources create-lexicon lexicons/bleached_nouns.jsonl \
   --name bleached_nouns \
   --from-csv resources/bleached_nouns.csv \
   --language-code eng
@@ -55,7 +55,7 @@ bead resources create-lexicon lexicons/bleached_nouns.jsonl \
 Generate templates from pattern:
 
 ```bash
-bead resources generate-templates templates/transitive.jsonl \
+uv run bead resources generate-templates templates/transitive.jsonl \
   --pattern "{det} {noun} {verb} {det2} {noun2}" \
   --name transitive \
   --language-code eng \
@@ -67,7 +67,7 @@ bead resources generate-templates templates/transitive.jsonl \
 Fill templates with random strategy:
 
 ```bash
-bead templates fill templates/transitive.jsonl lexicons/verbnet_verbs.jsonl lexicons/bleached_nouns.jsonl filled_templates/all_combinations.jsonl \
+uv run bead templates fill templates/transitive.jsonl lexicons/verbnet_verbs.jsonl lexicons/bleached_nouns.jsonl filled_templates/all_combinations.jsonl \
   --strategy random \
   --max-combinations 100 \
   --random-seed 42
@@ -78,7 +78,7 @@ bead templates fill templates/transitive.jsonl lexicons/verbnet_verbs.jsonl lexi
 Create forced-choice items from filled templates:
 
 ```bash
-bead items create-forced-choice-from-texts \
+uv run bead items create-forced-choice-from-texts \
   --texts-file filled_templates/all_combinations.jsonl \
   --n-alternatives 2 \
   --sample 10 \
@@ -88,7 +88,7 @@ bead items create-forced-choice-from-texts \
 Create Likert scale items:
 
 ```bash
-bead items create-likert-7 \
+uv run bead items create-likert-7 \
   --text "The sentence is acceptable" \
   --output items/likert_items.jsonl
 ```
@@ -96,7 +96,7 @@ bead items create-likert-7 \
 Validate items for task type:
 
 ```bash
-bead items validate-for-task-type items/2afc_pairs.jsonl \
+uv run bead items validate-for-task-type items/2afc_pairs.jsonl \
   --task-type forced_choice
 ```
 
@@ -105,7 +105,7 @@ bead items validate-for-task-type items/2afc_pairs.jsonl \
 Partition items into balanced lists:
 
 ```bash
-bead lists partition items/2afc_pairs.jsonl lists/ \
+uv run bead lists partition items/2afc_pairs.jsonl lists/ \
   --n-lists 5 \
   --strategy balanced
 ```
@@ -114,14 +114,14 @@ With constraints for balance and coverage:
 
 ```bash
 # Create uniqueness constraint
-bead lists create-uniqueness \
+uv run bead lists create-uniqueness \
   --property-expression "item['verb']" \
   --output constraints/unique_verbs.jsonl
 ```
 
 ```bash
 # Create batch coverage constraint
-bead lists create-batch-coverage \
+uv run bead lists create-batch-coverage \
   --property-expression "item['template_id']" \
   --target-values "0,1,2" \
   --min-coverage 1.0 \
@@ -131,7 +131,7 @@ bead lists create-batch-coverage \
 <!--pytest.mark.skip(reason="requires items from previous pipeline stages")-->
 ```bash
 # Partition with constraints
-bead lists partition items/2afc_pairs.jsonl lists/ \
+uv run bead lists partition items/2afc_pairs.jsonl lists/ \
   --n-lists 5 \
   --strategy balanced \
   --list-constraints constraints/unique_verbs.jsonl \
@@ -142,7 +142,7 @@ View list statistics:
 
 <!--pytest.mark.skip(reason="requires lists from previous pipeline stages")-->
 ```bash
-bead lists show-stats lists/
+uv run bead lists show-stats lists/
 ```
 
 ### Stage 5: Deploy Experiment
@@ -151,7 +151,7 @@ Generate jsPsych experiment:
 
 <!--pytest.mark.skip(reason="requires lists and items from previous pipeline stages")-->
 ```bash
-bead deployment generate lists/ items/2afc_pairs.jsonl deployment/local \
+uv run bead deployment generate lists/ items/2afc_pairs.jsonl deployment/local \
   --experiment-type forced_choice \
   --title "Argument Structure Judgments" \
   --instructions "Choose the more natural sentence." \
@@ -162,7 +162,7 @@ Export to JATOS format:
 
 <!--pytest.mark.skip(reason="requires deployment from previous step")-->
 ```bash
-bead deployment export-jatos deployment/local deployment/study.jzip \
+uv run bead deployment export-jatos deployment/local deployment/study.jzip \
   --title "Argument Structure Judgments" \
   --description "Acceptability ratings for verb-frame combinations"
 ```
@@ -173,7 +173,7 @@ Collect data from JATOS:
 
 <!--pytest.mark.skip(reason="requires external JATOS server")-->
 ```bash
-bead training collect-data results.jsonl \
+uv run bead training collect-data results.jsonl \
   --jatos-url https://jatos.example.com \
   --api-token your-api-token \
   --study-id 123
@@ -182,13 +182,13 @@ bead training collect-data results.jsonl \
 View data statistics:
 
 ```bash
-bead training show-data-stats results.jsonl
+uv run bead training show-data-stats results.jsonl
 ```
 
 Compute inter-annotator agreement:
 
 ```bash
-bead training compute-agreement \
+uv run bead training compute-agreement \
   --annotations results.jsonl \
   --metric krippendorff_alpha \
   --data-type ordinal
@@ -200,14 +200,14 @@ Run complete pipeline with one command:
 
 <!--pytest.mark.skip(reason="requires full project configuration")-->
 ```bash
-bead workflow run --config config.yaml
+uv run bead workflow run --config config.yaml
 ```
 
 Run specific stages:
 
 <!--pytest.mark.skip(reason="requires full project configuration")-->
 ```bash
-bead workflow run \
+uv run bead workflow run \
   --config config.yaml \
   --stages resources,templates,items
 ```
@@ -216,14 +216,14 @@ Resume interrupted workflow:
 
 <!--pytest.mark.skip(reason="requires prior workflow state")-->
 ```bash
-bead workflow resume
+uv run bead workflow resume
 ```
 
 Check workflow status:
 
 <!--pytest.mark.skip(reason="requires prior workflow state")-->
 ```bash
-bead workflow status
+uv run bead workflow status
 ```
 
 ## Configuration File
@@ -258,7 +258,7 @@ Load configuration:
 
 <!--pytest.mark.skip(reason="requires full project configuration")-->
 ```bash
-bead --config-file config.yaml workflow run
+uv run bead --config-file config.yaml workflow run
 ```
 
 ## Next Steps

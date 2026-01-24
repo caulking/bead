@@ -1,7 +1,7 @@
 """Mixed effects trainer for HuggingFace models.
 
 This module provides a custom Trainer that handles participant-level
-random effects (intercepts and slopes) while using HuggingFace's Trainer
+random effects (intercepts and slopes) while using HuggingFace Trainer
 infrastructure for optimization, checkpointing, and device management.
 """
 
@@ -29,7 +29,7 @@ class MixedEffectsTrainer(Trainer):
     """HuggingFace Trainer with mixed effects support.
 
     Extends HuggingFace Trainer to handle participant-level random effects
-    (random intercepts and random slopes) while leveraging Trainer's
+    (random intercepts and random slopes) while using Trainer's
     optimization, checkpointing, and device management.
 
     The key innovation is overriding compute_loss to apply participant-specific

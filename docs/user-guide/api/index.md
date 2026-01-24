@@ -21,10 +21,10 @@ See [CLI guide](../cli/index.md) for command-line workflows.
 
 ```bash
 # Install with API dependencies
-pip install -e ".[api]"
+uv sync --extra api
 
 # Or with all dependencies
-pip install -e ".[api,training]"
+uv sync --all-extras
 ```
 
 ## Quick Start

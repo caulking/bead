@@ -11,7 +11,7 @@ Lexicons store collections of lexical items (words or phrases) with linguistic f
 Convert CSV files to JSONL format:
 
 ```bash
-bead resources create-lexicon lexicons/test_nouns.jsonl \
+uv run bead resources create-lexicon lexicons/test_nouns.jsonl \
     --name test_nouns \
     --from-csv resources/bleached_nouns.csv \
     --language-code eng
@@ -24,13 +24,13 @@ The CSV file must include a `lemma` column. Optional columns: `pos`, `form`, and
 Verify lexicon format:
 
 ```bash
-bead resources validate-lexicon lexicons/bleached_nouns.jsonl
+uv run bead resources validate-lexicon lexicons/bleached_nouns.jsonl
 ```
 
 ### Validating Different Lexicons
 
 ```bash
-bead resources validate-lexicon lexicons/verbnet_verbs.jsonl
+uv run bead resources validate-lexicon lexicons/verbnet_verbs.jsonl
 ```
 
 ### Listing Available Lexicons
@@ -38,7 +38,7 @@ bead resources validate-lexicon lexicons/verbnet_verbs.jsonl
 View all lexicons in a directory:
 
 ```bash
-bead resources list-lexicons --directory lexicons/
+uv run bead resources list-lexicons --directory lexicons/
 ```
 
 ## Working with External Resources
@@ -48,7 +48,7 @@ The CLI supports importing from VerbNet, UniMorph, PropBank, and FrameNet. These
 ### VerbNet Import
 
 ```bash
-bead resources import-verbnet \
+uv run bead resources import-verbnet \
     --verb-class put-9.1 \
     --limit 5 \
     --output lexicons/verbs.jsonl
@@ -57,7 +57,7 @@ bead resources import-verbnet \
 ### UniMorph Import
 
 ```bash
-bead resources import-unimorph \
+uv run bead resources import-unimorph \
     --language-code eng \
     --pos VERB \
     --features "V;PST" \
@@ -68,7 +68,7 @@ bead resources import-unimorph \
 ### PropBank Import
 
 ```bash
-bead resources import-propbank \
+uv run bead resources import-propbank \
     --frameset eat.01 \
     --output lexicons/eat.jsonl
 ```
@@ -76,7 +76,7 @@ bead resources import-propbank \
 ### FrameNet Import
 
 ```bash
-bead resources import-framenet \
+uv run bead resources import-framenet \
     --frame Ingestion \
     --output lexicons/ingestion.jsonl
 ```
@@ -90,7 +90,7 @@ Templates define sentence patterns with slots for lexical items.
 Generate a template from a pattern string:
 
 ```bash
-bead resources generate-templates templates/transitive.jsonl \
+uv run bead resources generate-templates templates/transitive.jsonl \
     --pattern "{subj} {verb} {obj}" \
     --name transitive \
     --language-code eng
@@ -99,7 +99,7 @@ bead resources generate-templates templates/transitive.jsonl \
 ### With Slot Specifications
 
 ```bash
-bead resources generate-templates templates/detailed_transitive.jsonl \
+uv run bead resources generate-templates templates/detailed_transitive.jsonl \
     --pattern "{det} {subj} {verb} {obj}" \
     --name detailed_transitive \
     --slot subj:true \
@@ -113,7 +113,7 @@ bead resources generate-templates templates/detailed_transitive.jsonl \
 Generate variations from existing templates:
 
 ```bash
-bead resources generate-template-variants templates/generic_frames.jsonl templates/variants.jsonl \
+uv run bead resources generate-template-variants templates/generic_frames.jsonl templates/variants.jsonl \
     --name-pattern "{base_name}_v{index}" \
     --max-variants 3
 ```
@@ -127,7 +127,7 @@ Constraints restrict which lexical items can fill template slots.
 Whitelist specific values:
 
 ```bash
-bead resources create-constraint constraints/motion.jsonl \
+uv run bead resources create-constraint constraints/motion.jsonl \
     --type extensional \
     --slot verb \
     --values "run,walk,jump"
@@ -138,7 +138,7 @@ bead resources create-constraint constraints/motion.jsonl \
 Use DSL expressions for feature-based filtering:
 
 ```bash
-bead resources create-constraint constraints/verbs.jsonl \
+uv run bead resources create-constraint constraints/verbs.jsonl \
     --type intensional \
     --slot verb \
     --expression "self.pos == 'VERB'"
@@ -147,7 +147,7 @@ bead resources create-constraint constraints/verbs.jsonl \
 ### Complex Conditions
 
 ```bash
-bead resources create-constraint constraints/animate.jsonl \
+uv run bead resources create-constraint constraints/animate.jsonl \
     --type intensional \
     --slot noun \
     --expression "self.pos == 'NOUN' and self.features.animacy == 'animate'"
@@ -158,7 +158,7 @@ bead resources create-constraint constraints/animate.jsonl \
 Define relationships across slots:
 
 ```bash
-bead resources create-constraint constraints/different.jsonl \
+uv run bead resources create-constraint constraints/different.jsonl \
     --type relational \
     --relation "subject.lemma != object.lemma" \
     --description "Different arguments"
@@ -167,7 +167,7 @@ bead resources create-constraint constraints/different.jsonl \
 ### Agreement Constraints
 
 ```bash
-bead resources create-constraint constraints/agreement.jsonl \
+uv run bead resources create-constraint constraints/agreement.jsonl \
     --type relational \
     --relation "subject.features.number == verb.features.number" \
     --description "Subject-verb agreement"
@@ -178,11 +178,11 @@ bead resources create-constraint constraints/agreement.jsonl \
 Verify resources before using them:
 
 ```bash
-bead resources validate-lexicon lexicons/bleached_nouns.jsonl
+uv run bead resources validate-lexicon lexicons/bleached_nouns.jsonl
 ```
 
 ```bash
-bead resources validate-template templates/generic_frames.jsonl
+uv run bead resources validate-template templates/generic_frames.jsonl
 ```
 
 ## Listing Resources
@@ -190,11 +190,11 @@ bead resources validate-template templates/generic_frames.jsonl
 View available resources:
 
 ```bash
-bead resources list-lexicons --directory lexicons/
+uv run bead resources list-lexicons --directory lexicons/
 ```
 
 ```bash
-bead resources list-templates --directory templates/
+uv run bead resources list-templates --directory templates/
 ```
 
 ## Cache Management

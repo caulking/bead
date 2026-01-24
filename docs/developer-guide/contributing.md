@@ -282,12 +282,12 @@ Write clear, technical documentation:
 
 **Run pydocstyle** (NumPy convention):
 ```bash
-.venv/bin/pydocstyle bead/module.py
+uv run pydocstyle bead/module.py
 ```
 
 **Run darglint** (signature consistency):
 ```bash
-.venv/bin/darglint bead/module.py
+uv run darglint bead/module.py
 ```
 
 Pre-commit hooks run these automatically, but you should run them manually during development.
@@ -309,7 +309,7 @@ ValueError: Must provide at least 2 items for ranking
 
 Run doctests:
 ```bash
-pytest --doctest-modules bead/items/ranking.py
+uv run pytest --doctest-modules bead/items/ranking.py
 ```
 
 ## Code Style
@@ -320,17 +320,17 @@ bead enforces strict code style using ruff and pyright.
 
 **Check for issues**:
 ```bash
-ruff check bead/
+uv run ruff check bead/
 ```
 
 **Auto-fix issues**:
 ```bash
-ruff check bead/ --fix
+uv run ruff check bead/ --fix
 ```
 
 **Format code**:
 ```bash
-ruff format bead/
+uv run ruff format bead/
 ```
 
 **Configuration** (from pyproject.toml):
@@ -343,7 +343,7 @@ ruff format bead/
 
 **Check types**:
 ```bash
-pyright bead/
+uv run pyright bead/
 ```
 
 **Type hint requirements**:
@@ -375,13 +375,13 @@ def partition_items(
 Run all quality checks before committing:
 
 ```bash
-ruff check bead/ && ruff format bead/ && pyright bead/
+uv run ruff check bead/ && uv run ruff format bead/ && uv run pyright bead/
 ```
 
 Or create a shell alias:
 
 ```bash
-alias bead-lint="ruff check bead/ && ruff format bead/ && pyright bead/"
+alias bead-lint="uv run ruff check bead/ && uv run ruff format bead/ && uv run pyright bead/"
 ```
 
 All checks must pass with zero errors and zero warnings.
@@ -446,7 +446,7 @@ class TestCreateRankingItem:
 Run tests with coverage:
 
 ```bash
-pytest tests/items/test_ranking.py --cov=bead.items.ranking --cov-report=term-missing
+uv run pytest tests/items/test_ranking.py --cov=bead.items.ranking --cov-report=term-missing
 ```
 
 Target >90% coverage. If coverage is below 90%:
@@ -471,17 +471,17 @@ def sample_ranking_items() -> list[str]:
 
 **Run your new tests**:
 ```bash
-pytest tests/items/test_ranking.py -v
+uv run pytest tests/items/test_ranking.py -v
 ```
 
 **Run all tests**:
 ```bash
-pytest tests/
+uv run pytest tests/
 ```
 
 **Run with coverage**:
 ```bash
-pytest tests/ --cov=bead --cov-report=term-missing
+uv run pytest tests/ --cov=bead --cov-report=term-missing
 ```
 
 All tests must pass before opening a pull request.
@@ -946,7 +946,7 @@ def create_ranking_command(
 **2. Test command**:
 
 ```bash
-bead items create-ranking --help
+uv run bead items create-ranking --help
 ```
 
 **3. Update documentation**: Add to `docs/cli/reference.md`

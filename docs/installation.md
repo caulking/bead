@@ -10,7 +10,7 @@
 Install the latest stable release:
 
 ```bash
-pip install bead
+uv pip install bead
 ```
 
 ## Install from Source
@@ -20,17 +20,15 @@ For the latest development version:
 ```bash
 git clone https://github.com/aaronstevenwhite/bead.git
 cd bead
-python3.13 -m venv .venv
-source .venv/bin/activate
-pip install -e "."
+uv sync
 ```
 
 ## Development Installation
 
-For contributing to bead, install with development dependencies:
+For contributing to bead, install with all development dependencies:
 
 ```bash
-pip install -e ".[dev,api,training]"
+uv sync --all-extras
 ```
 
 This installs:
@@ -43,28 +41,28 @@ This installs:
 Check that bead is installed correctly:
 
 ```bash
-python -c "import bead; print(bead.__version__)"
+uv run python -c "import bead; print(bead.__version__)"
 ```
 
 Or use the CLI:
 
 ```bash
-bead --version
+uv run bead --version
 ```
 
 ## Optional Dependencies
 
-Install specific adapters as needed:
+Install specific dependency groups as needed:
 
 ```bash
 # HuggingFace models for template filling and active learning
-pip install bead[api]
+uv sync --extra api
 
 # Active learning with PyTorch
-pip install bead[training]
+uv sync --extra training
 
 # All dependencies
-pip install bead[dev,api,training]
+uv sync --all-extras
 ```
 
 ## Troubleshooting
@@ -84,22 +82,13 @@ pyenv install 3.13.0
 pyenv local 3.13.0
 ```
 
-### Virtual Environment
-
-Always use a virtual environment to avoid conflicts:
-
-```bash
-python3.13 -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-```
-
 ### Common Issues
 
 **Issue**: `ModuleNotFoundError: No module named 'bead'`
-**Solution**: Ensure you activated the virtual environment where bead is installed.
+**Solution**: Ensure you are using `uv run` to execute Python commands.
 
 **Issue**: `ImportError` for optional dependencies
-**Solution**: Install the required extra, e.g., `pip install bead[api]`
+**Solution**: Install the required extra, e.g., `uv sync --extra api`
 
 ## Next Steps
 

@@ -377,22 +377,22 @@ The same workflow using the CLI:
 
 ```bash
 # Stage 1: Resources
-bead resources from-csv resources/nouns.csv --output lexicons/nouns.jsonl
+uv run bead resources from-csv resources/nouns.csv --output lexicons/nouns.jsonl
 
 # Stage 2: Templates
-bead templates fill templates.jsonl lexicons/*.jsonl output/filled.jsonl \\
+uv run bead templates fill templates.jsonl lexicons/*.jsonl output/filled.jsonl \\
   --strategy exhaustive
 
 # Stage 3: Items
-bead items create-forced-choice output/filled.jsonl \\
+uv run bead items create-forced-choice output/filled.jsonl \\
   --output output/items.jsonl --n-alternatives 2
 
 # Stage 4: Lists
-bead lists create output/items.jsonl --output output/lists.jsonl \\
+uv run bead lists create output/items.jsonl --output output/lists.jsonl \\
   --n-lists 10 --strategy balanced
 
 # Stage 5: Deployment
-bead deployment generate output/lists.jsonl output/items.jsonl \\
+uv run bead deployment generate output/lists.jsonl output/items.jsonl \\
   --output deployment/ --platform jatos
 ```
 

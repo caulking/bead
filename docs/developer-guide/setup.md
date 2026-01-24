@@ -28,11 +28,9 @@ git --version  # Any recent version works
 
 **Package Manager**
 
-Either pip (included with Python) or uv (faster alternative):
+uv is required for package management:
 
 ```bash
-pip --version
-# OR
 uv --version
 ```
 
@@ -41,7 +39,6 @@ uv --version
 bead development works on macOS, Linux, and Windows. This guide uses Unix-style paths and commands. Windows users should adapt:
 
 - Use backslashes `\` for paths (or forward slashes `/` in PowerShell)
-- Use `.venv\Scripts\activate` instead of `source .venv/bin/activate`
 - Some bash commands may require Git Bash or WSL
 
 ## Clone Repository
@@ -69,82 +66,16 @@ bead/
 └── .gitignore              # Git ignore rules
 ```
 
-## Virtual Environment
-
-**IMPORTANT**: This project requires Python 3.13 and uses a virtual environment (`.venv`) for all development and testing. Always activate the venv before running any Python commands.
-
-### Create Virtual Environment
-
-```bash
-# Create .venv directory with Python 3.13
-python3.13 -m venv .venv
-```
-
-This creates a `.venv/` directory containing:
-- Python 3.13 interpreter
-- pip package manager
-- Isolated site-packages/
-
-**Note**: The `.venv/` directory is already in `.gitignore` and should not be committed.
-
-### Activate Virtual Environment
-
-**macOS/Linux**:
-```bash
-source .venv/bin/activate
-```
-
-**Windows**:
-```cmd
-.venv\Scripts\activate
-```
-
-**PowerShell**:
-```powershell
-.venv\Scripts\Activate.ps1
-```
-
-Your prompt should change to show `(.venv)` prefix:
-
-```
-(.venv) user@host:~/bead$
-```
-
-### Verify Activation
-
-```bash
-which python  # macOS/Linux: should show /path/to/bead/.venv/bin/python
-where python  # Windows: should show C:\path\to\bead\.venv\Scripts\python.exe
-
-python --version  # Should show Python 3.13.x
-```
-
-**Critical**: Always activate `.venv` before:
-- Running tests: `pytest tests/`
-- Running bead CLI: `bead --help`
-- Installing packages: `pip install ...`
-- Running any Python scripts
-
-Otherwise you'll pollute your system Python or encounter version compatibility issues.
-
-### Deactivate (when done)
-
-```bash
-deactivate
-```
-
 ## Development Dependencies
 
-Install bead in editable mode with all development dependencies.
-
-### Install Command
+Install bead with all development dependencies using uv:
 
 ```bash
-pip install -e ".[dev,api,training]"
+uv sync --all-extras
 ```
 
 This command:
-- Installs bead in editable mode (`-e`): Changes to source code take effect immediately
+- Installs bead in editable mode: Changes to source code take effect immediately
 - Installs base dependencies (Pydantic, PyYAML, Click, etc.)
 - Installs `dev` group: pytest, ruff, pyright, pytest-cov, pytest-mock
 - Installs `api` group: openai, anthropic, google-generativeai
@@ -191,42 +122,34 @@ This command:
 
 ```bash
 # Check bead CLI installed
-bead --version
+uv run bead --version
 # Output: bead, version 0.1.0
 
 # Check development tools
-pytest --version
+uv run pytest --version
 # Output: pytest 7.4.x
 
-ruff --version
+uv run ruff --version
 # Output: ruff 0.x.x
 
-pyright --version
+uv run pyright --version
 # Output: pyright 1.1.x
 ```
 
 If any command fails, the dependency didn't install correctly. Try:
 
 ```bash
-pip install -e ".[dev,api,training]" --force-reinstall
+uv sync --all-extras --reinstall
 ```
 
 ## Pre-commit Hooks
 
 Install pre-commit hooks to automatically check code quality before commits.
 
-### Install pre-commit
-
-Pre-commit is included in the `dev` dependency group, but you can install it explicitly:
-
-```bash
-pip install pre-commit
-```
-
 ### Install Hooks
 
 ```bash
-pre-commit install
+uv run pre-commit install
 ```
 
 This installs git hooks in .git/hooks/ that run automatically before each commit.
@@ -268,7 +191,7 @@ Checks docstring parameters match function signatures.
 Test hooks without making a commit:
 
 ```bash
-pre-commit run --all-files
+uv run pre-commit run --all-files
 ```
 
 This runs pydocstyle and darglint on all Python files. Expected output:
@@ -298,7 +221,7 @@ bead uses ruff for linting/formatting and pyright for type checking.
 
 **Check for issues**:
 ```bash
-ruff check bead/
+uv run ruff check bead/
 ```
 
 This reports:
@@ -316,14 +239,14 @@ This reports:
 
 **Auto-fix issues**:
 ```bash
-ruff check bead/ --fix
+uv run ruff check bead/ --fix
 ```
 
 Many issues can be fixed automatically.
 
 **Format code**:
 ```bash
-ruff format bead/
+uv run ruff format bead/
 ```
 
 This reformats code to 88-character line length (black-compatible).
@@ -346,7 +269,7 @@ convention = "numpy"
 
 **Check types**:
 ```bash
-pyright bead/
+uv run pyright bead/
 ```
 
 This performs static type analysis, catching:
@@ -383,30 +306,27 @@ Adapters are excluded because external APIs (OpenAI, HuggingFace) have dynamic t
 Run all quality checks before committing:
 
 ```bash
-ruff check bead/ && ruff format bead/ && pyright bead/
+uv run ruff check bead/ && uv run ruff format bead/ && uv run pyright bead/
 ```
 
 Or create a shell alias:
 
 ```bash
-alias bead-lint="ruff check bead/ && ruff format bead/ && pyright bead/"
+alias bead-lint="uv run ruff check bead/ && uv run ruff format bead/ && uv run pyright bead/"
 ```
 
 ## Running Tests
 
-**IMPORTANT**: Always activate the `.venv` before running tests. Tests require Python 3.13.
+Run tests using uv:
 
 ```bash
-source .venv/bin/activate  # Activate venv first
-pytest tests/
+uv run pytest tests/
 ```
 
 ### Run All Tests
 
 ```bash
-# Ensure venv is activated
-source .venv/bin/activate
-pytest tests/
+uv run pytest tests/
 ```
 
 This runs all 143 test files. Expected output:
@@ -432,28 +352,28 @@ tests/resources/test_lexical_item.py .........................            [  8%]
 Test a specific module:
 
 ```bash
-pytest tests/resources/
-pytest tests/lists/
-pytest tests/items/
+uv run pytest tests/resources/
+uv run pytest tests/lists/
+uv run pytest tests/items/
 ```
 
 Test a specific file:
 
 ```bash
-pytest tests/resources/test_lexical_item.py
+uv run pytest tests/resources/test_lexical_item.py
 ```
 
 Test a specific test class or function:
 
 ```bash
-pytest tests/resources/test_lexical_item.py::TestLexicalItemCreation
-pytest tests/resources/test_lexical_item.py::TestLexicalItemCreation::test_create_with_all_fields
+uv run pytest tests/resources/test_lexical_item.py::TestLexicalItemCreation
+uv run pytest tests/resources/test_lexical_item.py::TestLexicalItemCreation::test_create_with_all_fields
 ```
 
 ### Run with Verbose Output
 
 ```bash
-pytest tests/ -v
+uv run pytest tests/ -v
 ```
 
 Shows each test name as it runs:
@@ -467,7 +387,7 @@ tests/data/test_base.py::TestBeadBaseModel::test_auto_id PASSED          [  0%]
 ### Run with Coverage
 
 ```bash
-pytest tests/ --cov=bead --cov-report=term-missing
+uv run pytest tests/ --cov=bead --cov-report=term-missing
 ```
 
 This shows code coverage with line numbers of uncovered code:
@@ -487,7 +407,7 @@ TOTAL                                   8547    512    94%
 Generate HTML coverage report:
 
 ```bash
-pytest tests/ --cov=bead --cov-report=html
+uv run pytest tests/ --cov=bead --cov-report=html
 ```
 
 Open htmlcov/index.html in a browser to see visual coverage report.
@@ -495,7 +415,7 @@ Open htmlcov/index.html in a browser to see visual coverage report.
 ### Stop on First Failure
 
 ```bash
-pytest tests/ -x
+uv run pytest tests/ -x
 ```
 
 Stops after the first failing test (useful for debugging).
@@ -503,7 +423,7 @@ Stops after the first failing test (useful for debugging).
 ### Run Tests in Parallel
 
 ```bash
-pytest tests/ -n auto
+uv run pytest tests/ -n auto
 ```
 
 Runs tests in parallel using all CPU cores (requires pytest-xdist, not included by default).
@@ -588,42 +508,42 @@ Run these commands to verify your development environment is fully functional:
 ### 1. Check CLI
 
 ```bash
-bead --version
+uv run bead --version
 # Expected: bead, version 0.1.0
 ```
 
 ### 2. Run Quick Test
 
 ```bash
-pytest tests/data/test_base.py -v
+uv run pytest tests/data/test_base.py -v
 # Expected: All tests pass
 ```
 
 ### 3. Check Linting
 
 ```bash
-ruff check bead/data/base.py
+uv run ruff check bead/data/base.py
 # Expected: No issues (or minor warnings)
 ```
 
 ### 4. Check Types
 
 ```bash
-pyright bead/data/base.py
+uv run pyright bead/data/base.py
 # Expected: 0 errors, 0 warnings
 ```
 
 ### 5. Test Pre-commit
 
 ```bash
-pre-commit run --all-files
+uv run pre-commit run --all-files
 # Expected: pydocstyle and darglint pass
 ```
 
 ### 6. Import bead
 
 ```bash
-python -c "from bead.resources import LexicalItem; print(LexicalItem.__name__)"
+uv run python -c "from bead.resources import LexicalItem; print(LexicalItem.__name__)"
 # Expected: LexicalItem
 ```
 
@@ -633,7 +553,7 @@ If all checks pass, your development environment is ready.
 
 ### Python Version Issues
 
-**Problem**: `pip install` fails with "Requires Python >=3.13"
+**Problem**: `uv sync` fails with "Requires Python >=3.13"
 
 **Solution**: Install Python 3.13:
 ```bash
@@ -648,46 +568,31 @@ pyenv local 3.13.0
 # Download from python.org
 ```
 
-### Virtual Environment Not Activated
-
-**Problem**: `which python` shows system Python, not .venv
-
-**Solution**: Activate virtual environment:
-```bash
-source .venv/bin/activate  # macOS/Linux
-.venv\Scripts\activate      # Windows
-```
-
 ### Module Import Errors
 
 **Problem**: `ModuleNotFoundError: No module named 'bead'`
 
-**Solution**: Install in editable mode:
+**Solution**: Ensure you are using `uv run` to execute Python commands:
 ```bash
-pip install -e ".[dev,api,training]"
+uv run python -c "import bead"
 ```
 
 ### Pre-commit Hook Failures
 
 **Problem**: Pre-commit hooks fail with "command not found"
 
-**Solution**: Install pre-commit in virtual environment:
+**Solution**: Install pre-commit hooks:
 ```bash
-.venv/bin/pip install pre-commit
-.venv/bin/pre-commit install
+uv run pre-commit install
 ```
 
 ### Pyright Not Found
 
 **Problem**: `pyright: command not found`
 
-**Solution**: Install via pip (included in dev dependencies) or npm:
+**Solution**: Run via uv (included in dev dependencies):
 ```bash
-# Via pip (recommended)
-pip install pyright
-
-# Via npm (if you have Node.js)
-npm install -g pyright
+uv run pyright bead/
 ```
 
 ### Test Failures on Clean Install
@@ -695,19 +600,10 @@ npm install -g pyright
 **Problem**: Tests fail immediately after cloning
 
 **Solution**:
-1. Ensure Python 3.13+ is active
-2. Reinstall dependencies: `pip install -e ".[dev,api,training]" --force-reinstall`
+1. Ensure Python 3.13+ is available
+2. Reinstall dependencies: `uv sync --all-extras --reinstall`
 3. Clear pytest cache: `rm -rf .pytest_cache`
-4. Run tests again: `pytest tests/`
-
-### Permission Denied on Windows
-
-**Problem**: `PermissionError` when installing packages
-
-**Solution**: Run PowerShell as Administrator or use `--user` flag:
-```powershell
-pip install -e ".[dev,api,training]" --user
-```
+4. Run tests again: `uv run pytest tests/`
 
 ## Next Steps
 
