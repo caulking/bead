@@ -1,0 +1,51 @@
+{
+  "name": "@bead/jspsych-deployment",
+  "version": "0.1.0",
+  "description": "TypeScript plugins and utilities for bead jsPsych experiment deployment",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./plugins/*": {
+      "import": "./dist/plugins/*.js",
+      "types": "./dist/plugins/*.d.ts"
+    },
+    "./lib/*": {
+      "import": "./dist/lib/*.js",
+      "types": "./dist/lib/*.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "build:watch": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome lint src",
+    "lint:fix": "biome lint --write src",
+    "format": "biome format --check src",
+    "format:fix": "biome format --write src",
+    "check": "biome check src",
+    "check:fix": "biome check --write src",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@slopit/adapter-jspsych": "^0.1.0",
+    "@slopit/behavioral": "^0.1.0",
+    "@slopit/core": "^0.1.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.0",
+    "@types/node": "^22.0.0",
+    "jsdom": "^25.0.0",
+    "jspsych": "^8.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.0.0"
+  },
+  "peerDependencies": {
+    "jspsych": "^8.0.0"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}
