@@ -65,6 +65,30 @@ uv sync --extra training
 uv sync --all-extras
 ```
 
+## TypeScript Development (jsPsych Plugins)
+
+If you need to modify or rebuild the jsPsych plugins, install Node.js dependencies:
+
+```bash
+# Install pnpm (if not installed)
+npm install -g pnpm
+
+# Install TypeScript dependencies
+cd bead/deployment/jspsych
+pnpm install
+
+# Build TypeScript to JavaScript
+pnpm build
+
+# Run type checking
+pnpm typecheck
+
+# Run linting (Biome)
+pnpm check
+```
+
+The compiled JavaScript is output to `bead/deployment/jspsych/dist/`.
+
 ## Troubleshooting
 
 ### Python Version

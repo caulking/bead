@@ -297,6 +297,21 @@ deployment:
     randomize_order: true
     randomize_choices: true
 
+  # Behavioral capture with slopit (optional)
+  slopit:
+    enabled: false  # Set to true to enable behavioral capture
+    keystroke:
+      enabled: true
+    focus:
+      enabled: true
+    paste:
+      enabled: true
+      prevent: false  # Set true to block paste events
+    target_selectors:
+      likert_rating: ".bead-rating-button"
+      forced_choice: ".bead-choice-button"
+      cloze: ".bead-cloze-field"
+
   participants:
     n_per_list: 30
     qualifications:

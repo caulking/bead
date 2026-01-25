@@ -190,6 +190,73 @@ strategy = ListDistributionStrategy(
 )
 ```
 
+## Behavioral Capture with Slopit
+
+The deployment system optionally integrates [slopit](https://github.com/aaronstevenwhite/slopit) for capturing behavioral signals during experiments, including keystroke dynamics, focus patterns, and paste detection.
+
+### Basic Configuration
+
+Enable behavioral capture in ExperimentConfig:
+
+```python
+from bead.deployment.jspsych.config import ExperimentConfig, SlopitIntegrationConfig
+
+config = ExperimentConfig(
+    experiment_type="forced_choice",
+    title="Study with Behavioral Capture",
+    description="Captures keystrokes and focus events",
+    instructions="Select the more natural sentence.",
+    slopit=SlopitIntegrationConfig(
+        enabled=True,
+        keystroke=KeystrokeCaptureConfig(enabled=True),
+        focus=FocusCaptureConfig(enabled=True),
+        paste=PasteCaptureConfig(enabled=True, prevent=False),
+    ),
+)
+```
+
+### Configuration Options
+
+**KeystrokeCaptureConfig**:
+- `enabled`: Enable keystroke capture (default: `True` when slopit enabled)
+
+**FocusCaptureConfig**:
+- `enabled`: Enable focus/blur event capture (default: `True` when slopit enabled)
+
+**PasteCaptureConfig**:
+- `enabled`: Enable paste event capture (default: `True` when slopit enabled)
+- `prevent`: Prevent paste operations (default: `False`)
+
+**Target Selectors**: Map task types to CSS selectors for capture:
+
+```python
+slopit=SlopitIntegrationConfig(
+    enabled=True,
+    target_selectors={
+        "likert_rating": ".bead-rating-button",
+        "slider_rating": ".bead-slider",
+        "forced_choice": ".bead-choice-button",
+        "cloze": ".bead-cloze-field",
+    },
+)
+```
+
+### Data Output
+
+When slopit is enabled, behavioral data is included in the trial results:
+
+```json
+{
+  "response": "A",
+  "rt": 1234,
+  "behavioral_events": [
+    {"type": "focus", "timestamp": 100, "target": ".bead-choice-button"},
+    {"type": "keydown", "timestamp": 150, "key": "1"},
+    {"type": "keyup", "timestamp": 200, "key": "1"}
+  ]
+}
+```
+
 ## Experiment Configuration
 
 **ExperimentConfig** parameters:
