@@ -199,6 +199,10 @@ class JsPsychExperimentGenerator:
         self._generate_config_file()
         self._copy_list_distributor_script()
 
+        # Copy slopit bundle if enabled
+        if self.config.slopit.enabled:
+            self._copy_slopit_bundle()
+
         return self.output_dir
 
     def _validate_item_references(
@@ -383,27 +387,27 @@ class JsPsychExperimentGenerator:
             ) from e
 
     def _copy_list_distributor_script(self) -> None:
-        """Copy list_distributor.js template to js/ directory.
+        """Copy list_distributor.js from compiled dist/ to js/ directory.
 
         Raises
         ------
         FileNotFoundError
-            If list_distributor.js template is not found.
+            If list_distributor.js is not found in dist/.
         OSError
             If copying fails.
         """
-        template_path = Path(__file__).parent / "templates" / "list_distributor.js"
+        dist_path = Path(__file__).parent / "dist" / "lib" / "list-distributor.js"
         output_path = self.output_dir / "js" / "list_distributor.js"
 
-        if not template_path.exists():
+        if not dist_path.exists():
             raise FileNotFoundError(
-                f"list_distributor.js template not found at {template_path}. "
-                f"This file is required for batch mode. "
-                f"Ensure bead is installed correctly."
+                f"list-distributor.js not found at {dist_path}. "
+                f"Ensure TypeScript is compiled. "
+                f"Run 'npm run build' in the jspsych directory."
             )
 
         try:
-            output_path.write_text(template_path.read_text())
+            output_path.write_text(dist_path.read_text())
         except OSError as e:
             raise OSError(
                 f"Failed to copy list_distributor.js to {output_path}: {e}. "
@@ -432,6 +436,7 @@ class JsPsychExperimentGenerator:
             title=self.config.title,
             ui_theme=self.config.ui_theme,
             use_jatos=self.config.use_jatos,
+            slopit_enabled=self.config.slopit.enabled,
         )
 
         output_file = self.output_dir / "index.html"
@@ -457,6 +462,16 @@ class JsPsychExperimentGenerator:
                 f"cc={self.config.prolific_completion_code}"
             )
 
+        # Prepare slopit config for template
+        slopit_config = None
+        if self.config.slopit.enabled:
+            slopit_config = {
+                "keystroke": self.config.slopit.keystroke.model_dump(),
+                "focus": self.config.slopit.focus.model_dump(),
+                "paste": self.config.slopit.paste.model_dump(),
+                "target_selectors": self.config.slopit.target_selectors,
+            }
+
         js_content = template.render(
             title=self.config.title,
             description=self.config.description,
@@ -464,6 +479,8 @@ class JsPsychExperimentGenerator:
             show_progress_bar=self.config.show_progress_bar,
             use_jatos=self.config.use_jatos,
             on_finish_url=on_finish_url,
+            slopit_enabled=self.config.slopit.enabled,
+            slopit_config=slopit_config,
         )
 
         output_file = self.output_dir / "js" / "experiment.js"
@@ -474,3 +491,37 @@ class JsPsychExperimentGenerator:
         output_file = self.output_dir / "data" / "config.json"
         json_str = self.config.model_dump_json(indent=2)
         output_file.write_text(json_str)
+
+    def _copy_slopit_bundle(self) -> None:
+        """Copy slopit bundle to js/ directory.
+
+        Copies the pre-built slopit bundle from the bead deployment dist
+        directory to the experiment output directory.
+
+        Raises
+        ------
+        FileNotFoundError
+            If slopit bundle is not found.
+        OSError
+            If copying fails.
+        """
+        # Look for slopit bundle in dist directory
+        dist_dir = Path(__file__).parent / "dist"
+        bundle_path = dist_dir / "slopit-bundle.js"
+
+        if not bundle_path.exists():
+            raise FileNotFoundError(
+                f"Slopit bundle not found at {bundle_path}. "
+                f"Ensure the slopit packages are built. "
+                f"Run 'npm run build' in the jspsych directory, or install "
+                f"bead with: pip install bead[behavioral-analysis]"
+            )
+
+        output_path = self.output_dir / "js" / "slopit-bundle.js"
+        try:
+            output_path.write_text(bundle_path.read_text())
+        except OSError as e:
+            raise OSError(
+                f"Failed to copy slopit bundle to {output_path}: {e}. "
+                f"Check write permissions."
+            ) from e

@@ -36,6 +36,11 @@
 
     <!-- List distribution system -->
     <script src="js/list_distributor.js"></script>
+
+    {% if slopit_enabled %}
+    <!-- Slopit behavioral capture -->
+    <script src="js/slopit-bundle.js"></script>
+    {% endif %}
 </head>
 <body class="theme-{{ ui_theme }}">
     <div id="jspsych-target"></div>

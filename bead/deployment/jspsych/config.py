@@ -10,6 +10,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from bead.config.deployment import SlopitIntegrationConfig
 from bead.deployment.distribution import ListDistributionStrategy
 
 # Type alias for experiment types
@@ -65,6 +66,10 @@ class ExperimentConfig(BaseModel):
         Prolific completion code for automatic redirect URL generation (default: None)
         When set, on_finish_url will be auto-generated as:
         https://app.prolific.co/submissions/complete?cc=<code>
+    slopit : SlopitIntegrationConfig
+        Slopit behavioral capture integration configuration (default: disabled).
+        When enabled, captures keystroke dynamics, focus patterns, and paste events
+        during experiment trials for AI-assisted response detection.
 
     Examples
     --------
@@ -109,6 +114,10 @@ class ExperimentConfig(BaseModel):
     minimum_duration_ms: int = Field(default=0, ge=0)
     use_jatos: bool = Field(default=True)
     prolific_completion_code: str | None = Field(default=None)
+    slopit: SlopitIntegrationConfig = Field(
+        default_factory=SlopitIntegrationConfig,
+        description="Slopit behavioral capture integration (opt-in, disabled by default)",
+    )
 
 
 class RatingScaleConfig(BaseModel):
