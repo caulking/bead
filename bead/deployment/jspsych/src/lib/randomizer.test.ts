@@ -6,13 +6,13 @@
 
 import { describe, expect, test } from "vitest";
 import {
+  type Trial,
+  type TrialMetadata,
   checkMinDistance,
   checkNoAdjacent,
   checkPrecedence,
   getPropertyValue,
   shuffle,
-  type Trial,
-  type TrialMetadata,
 } from "./randomizer.js";
 
 describe("shuffle (Fisher-Yates)", () => {

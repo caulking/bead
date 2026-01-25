@@ -18,7 +18,6 @@ function createMockJsPsych(): JsPsych {
       cancelKeyboardResponse: vi.fn(),
     },
     finishTrial: vi.fn(),
-    // Add required methods that may be accessed
   } as unknown as JsPsych;
 }
 
