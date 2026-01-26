@@ -349,4 +349,4 @@ print("Active learning loop initialized")
 
 - [Workflows](workflows.md): Complete end-to-end pipeline
 - [CLI reference](../cli/training.md): Command-line equivalents
-- [Gallery example](../../../gallery/eng/argument_structure/run_pipeline.py): Full working script
+- [Gallery example](https://github.com/caulking/bead/blob/main/gallery/eng/argument_structure/run_pipeline.py): Full working script

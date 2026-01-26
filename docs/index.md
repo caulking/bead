@@ -40,7 +40,7 @@ uv pip install bead
 For development installation:
 
 ```bash
-git clone https://github.com/aaronstevenwhite/bead.git
+git clone https://github.com/caulking/bead.git
 cd bead
 uv sync --all-extras
 ```

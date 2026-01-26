@@ -433,7 +433,7 @@ output_dir/
 
 ## Complete Example
 
-Real working example from [gallery/eng/argument_structure/generate_deployment.py](../../../gallery/eng/argument_structure/generate_deployment.py):
+Real working example from [gallery/eng/argument_structure/generate_deployment.py](https://github.com/caulking/bead/blob/main/gallery/eng/argument_structure/generate_deployment.py):
 
 ```python
 from pathlib import Path
@@ -538,4 +538,4 @@ print("JATOS package created")
 
 - [Training module](training.md): Active learning with convergence detection
 - [CLI reference](../cli/deployment.md): Command-line equivalents
-- [Gallery example](../../../gallery/eng/argument_structure/generate_deployment.py): Full working script
+- [Gallery example](https://github.com/caulking/bead/blob/main/gallery/eng/argument_structure/generate_deployment.py): Full working script

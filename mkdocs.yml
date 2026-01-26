@@ -1,8 +1,8 @@
 site_name: bead Documentation
 site_description: Framework for large-scale linguistic judgment experiments
-site_url: https://aaronstevenwhite.io/bead
-repo_url: https://github.com/aaronstevenwhite/bead
-repo_name: aaronstevenwhite/bead
+site_url: https://caulking.github.io/bead
+repo_url: https://github.com/caulking/bead
+repo_name: caulking/bead
 
 theme:
   name: material
@@ -44,16 +44,6 @@ plugins:
             members_order: source
             heading_level: 2
             line_length: 75
-          inventories:
-            - https://docs.pydantic.dev/latest/objects.inv
-            - https://numpy.org/doc/stable/objects.inv
-            - https://docs.scipy.org/doc/scipy/objects.inv
-            - https://scikit-learn.org/stable/objects.inv
-            - https://huggingface.co/docs/transformers/objects.inv
-            - https://huggingface.co/docs/datasets/objects.inv
-            - https://huggingface.co/docs/evaluate/objects.inv
-            - https://huggingface.co/docs/accelerate/objects.inv
-            - https://huggingface.co/docs/peft/objects.inv
           paths: [bead]
 
 markdown_extensions:
@@ -75,14 +65,27 @@ nav:
   - Installation: installation.md
   - Quick Start: quickstart.md
   - User Guide:
+    - Overview: user-guide/index.md
     - Core Concepts: user-guide/concepts.md
-    - Resources: user-guide/resources.md
-    - Templates: user-guide/templates.md
-    - Items: user-guide/items.md
-    - Lists: user-guide/lists.md
-    - Deployment: user-guide/deployment.md
-    - Active Learning: user-guide/active-learning.md
     - Configuration: user-guide/configuration.md
+    - CLI Guide:
+      - Overview: user-guide/cli/index.md
+      - Resources: user-guide/cli/resources.md
+      - Templates: user-guide/cli/templates.md
+      - Items: user-guide/cli/items.md
+      - Lists: user-guide/cli/lists.md
+      - Deployment: user-guide/cli/deployment.md
+      - Training: user-guide/cli/training.md
+      - Workflows: user-guide/cli/workflows.md
+    - API Guide:
+      - Overview: user-guide/api/index.md
+      - Resources: user-guide/api/resources.md
+      - Templates: user-guide/api/templates.md
+      - Items: user-guide/api/items.md
+      - Lists: user-guide/api/lists.md
+      - Deployment: user-guide/api/deployment.md
+      - Training: user-guide/api/training.md
+      - Workflows: user-guide/api/workflows.md
   - CLI Reference: cli/reference.md
   - API Reference:
     - bead.resources: api/resources.md

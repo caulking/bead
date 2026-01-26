@@ -2,7 +2,7 @@
 
 The `bead.resources` module provides lexicons, templates, and adapters for external linguistic databases.
 
-This guide walks through the EXACT workflow from [gallery/eng/argument_structure/generate_lexicons.py](../../../gallery/eng/argument_structure/generate_lexicons.py), showing how to extract VerbNet verbs, get morphological forms, and load controlled lexicons from CSV.
+This guide walks through the EXACT workflow from [gallery/eng/argument_structure/generate_lexicons.py](https://github.com/caulking/bead/blob/main/gallery/eng/argument_structure/generate_lexicons.py), showing how to extract VerbNet verbs, get morphological forms, and load controlled lexicons from CSV.
 
 ## Complete Lexicon Generation Workflow
 
@@ -202,7 +202,7 @@ for form in forms:
 # annihilated - {'pos': 'V', 'aspect': 'perfect'}
 ```
 
-See [gallery/eng/argument_structure/utils/morphology.py](../../../gallery/eng/argument_structure/utils/morphology.py:78-138) for implementation.
+See [gallery/eng/argument_structure/utils/morphology.py](https://github.com/caulking/bead/blob/main/gallery/eng/argument_structure/utils/morphology.py:78-138) for implementation.
 
 ## Loading Existing Lexicons
 
@@ -234,5 +234,5 @@ for _item_id, item in list(verb_lexicon.items.items())[:3]:
 
 For template generation and filling, see:
 - [Templates module](templates.md): Generate VerbNet templates and fill with lexicons
-- [Gallery example](../../../gallery/eng/argument_structure/generate_lexicons.py): Full working script
+- [Gallery example](https://github.com/caulking/bead/blob/main/gallery/eng/argument_structure/generate_lexicons.py): Full working script
 

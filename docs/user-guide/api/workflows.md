@@ -404,5 +404,5 @@ uv run bead deployment generate output/lists.jsonl output/items.jsonl \\
 ## Next Steps
 
 - See individual module documentation for detailed API reference
-- Explore [gallery/eng/argument_structure](../../../gallery/eng/argument_structure/) for production example
+- Explore [gallery/eng/argument_structure](https://github.com/caulking/bead/blob/main/gallery/eng/argument_structure/) for production example
 - Read [CLI workflows](../cli/workflows.md) for configuration-driven approach
