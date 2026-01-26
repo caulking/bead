@@ -20,8 +20,9 @@ repos:
           - --convention=numpy
           # D105: Missing docstring in magic method (acceptable)
           # D107: Missing docstring in __init__ (we document in class docstring)
-          - --add-ignore=D105,D107
-        exclude: ^(tests/|bead/dsl/parser\.py)
+          # D202: No blank lines allowed after docstring (conflicts with ruff format)
+          - --add-ignore=D105,D107,D202
+        exclude: ^(tests/|bead/dsl/parser\.py|gallery/)
 
   # Docstring-signature consistency validation
   - repo: https://github.com/terrencepreilly/darglint
