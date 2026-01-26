@@ -300,14 +300,13 @@ class FreeTextModel(ActiveLearningModel):
                 ).to(self.config.device)
 
                 # Tokenize targets (labels)
-                with self.tokenizer.as_target_tokenizer():
-                    targets = self.tokenizer(
-                        batch_labels,
-                        padding=True,
-                        truncation=True,
-                        max_length=self.config.max_output_length,
-                        return_tensors="pt",
-                    ).to(self.config.device)
+                targets = self.tokenizer(
+                    text_target=batch_labels,
+                    padding=True,
+                    truncation=True,
+                    max_length=self.config.max_output_length,
+                    return_tensors="pt",
+                ).to(self.config.device)
 
                 target_ids = targets["input_ids"]
                 # Replace pad token id with -100 for loss computation

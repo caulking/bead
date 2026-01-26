@@ -229,8 +229,8 @@ class OrdinalScaleModel(ActiveLearningModel):
         log_prob_unnorm = base_dist.log_prob(y)
 
         # Normalizer: log(Φ((high-μ)/σ) - Φ((low-μ)/σ))
-        alpha = (self.config.scale_min - mu.squeeze()) / sigma
-        beta = (self.config.scale_max - mu.squeeze()) / sigma
+        alpha = (self.config.scale.min - mu.squeeze()) / sigma
+        beta = (self.config.scale.max - mu.squeeze()) / sigma
         normalizer = base_dist.cdf(beta) - base_dist.cdf(alpha)
 
         # Clamp to avoid log(0)
@@ -280,10 +280,10 @@ class OrdinalScaleModel(ActiveLearningModel):
 
         # Validate all values are within bounds
         for i, val in enumerate(y_values):
-            if not (self.config.scale_min <= val <= self.config.scale_max):
+            if not (self.config.scale.min <= val <= self.config.scale.max):
                 raise ValueError(
                     f"Label at index {i} ({val}) is outside bounds "
-                    f"[{self.config.scale_min}, {self.config.scale_max}]"
+                    f"[{self.config.scale.min}, {self.config.scale.max}]"
                 )
 
         self._initialize_regression_head()
@@ -300,10 +300,10 @@ class OrdinalScaleModel(ActiveLearningModel):
 
             # Validate bounds for validation labels
             for i, val in enumerate(val_y_numeric):
-                if not (self.config.scale_min <= val <= self.config.scale_max):
+                if not (self.config.scale.min <= val <= self.config.scale.max):
                     raise ValueError(
                         f"Validation label at index {i} ({val}) is outside bounds "
-                        f"[{self.config.scale_min}, {self.config.scale_max}]"
+                        f"[{self.config.scale.min}, {self.config.scale.max}]"
                     )
 
         return items, y_values, participant_ids, validation_items, val_y_numeric
@@ -677,7 +677,7 @@ class OrdinalScaleModel(ActiveLearningModel):
                 mu = torch.stack(mu_list)
 
             # Clamp predictions to bounds
-            mu = torch.clamp(mu, self.config.scale_min, self.config.scale_max)
+            mu = torch.clamp(mu, self.config.scale.min, self.config.scale.max)
             predictions_array = mu.cpu().numpy()
 
         predictions = []

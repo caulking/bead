@@ -10,6 +10,10 @@ from pathlib import Path
 import pytest
 from pytest_examples import CodeExample, EvalExample, find_examples
 
+# Check if glazing data is available
+GLAZING_DATA_DIR = Path.home() / ".local" / "share" / "glazing" / "converted"
+GLAZING_DATA_AVAILABLE = (GLAZING_DATA_DIR / "verbnet.jsonl").exists()
+
 # Path to API documentation
 DOCS_DIR = Path(__file__).parent.parent / "docs" / "user-guide" / "api"
 
@@ -83,6 +87,10 @@ def test_api_docs_code_blocks(example: CodeExample, eval_example: EvalExample) -
     eval_example : EvalExample
         The evaluator fixture provided by pytest-examples
     """
+    # Skip glazing-related examples if glazing data is not available
+    if not GLAZING_DATA_AVAILABLE and "glazing" in example.source.lower():
+        pytest.skip("Glazing data not available (run 'glazing download' first)")
+
     # Ignore D100 (module docstrings), D102 (method docstrings), F821 (undefined),
     # F401 (unused imports), E402 (imports not at top), I001 (import sorting) -
     # isolated documentation snippets showing specific concepts, not complete scripts
