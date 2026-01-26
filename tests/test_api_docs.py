@@ -88,7 +88,11 @@ def test_api_docs_code_blocks(example: CodeExample, eval_example: EvalExample) -
         The evaluator fixture provided by pytest-examples
     """
     # Skip glazing-related examples if glazing data is not available
-    if not GLAZING_DATA_AVAILABLE and "glazing" in example.source.lower():
+    # Check for glazing imports or VerbNet/PropBank/FrameNet extractors that use glazing
+    glazing_indicators = ["glazing", "verbnet", "propbank", "framenet"]
+    if not GLAZING_DATA_AVAILABLE and any(
+        ind in example.source.lower() for ind in glazing_indicators
+    ):
         pytest.skip("Glazing data not available (run 'glazing download' first)")
 
     # Ignore D100 (module docstrings), D102 (method docstrings), F821 (undefined),
