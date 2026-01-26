@@ -122,7 +122,7 @@ class MixedEffectsTrainer(Trainer):
             train_dataset=train_dataset,
             eval_dataset=eval_dataset,
             data_collator=data_collator,
-            tokenizer=tokenizer,
+            processing_class=tokenizer,
             compute_metrics=compute_metrics,
         )
         self.random_effects_manager = random_effects_manager
