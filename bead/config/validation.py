@@ -32,7 +32,7 @@ def check_paths_exist(config: BeadConfig) -> list[str]:
     """
     errors: list[str] = []
 
-    # Check main paths if they should exist and are absolute
+    # check main paths if they should exist and are absolute
     if config.paths.data_dir.is_absolute() and not config.paths.data_dir.exists():
         errors.append(f"data_dir does not exist: {config.paths.data_dir}")
 
@@ -42,7 +42,7 @@ def check_paths_exist(config: BeadConfig) -> list[str]:
     if config.paths.cache_dir.is_absolute() and not config.paths.cache_dir.exists():
         errors.append(f"cache_dir does not exist: {config.paths.cache_dir}")
 
-    # Check resource paths
+    # check resource paths
     if (
         config.resources.lexicon_path is not None
         and config.resources.lexicon_path.is_absolute()
@@ -68,7 +68,7 @@ def check_paths_exist(config: BeadConfig) -> list[str]:
             f"constraints_path does not exist: {config.resources.constraints_path}"
         )
 
-    # Check training logging dir
+    # check training logging dir
     if (
         config.active_learning.trainer.logging_dir.is_absolute()
         and not config.active_learning.trainer.logging_dir.exists()
@@ -77,7 +77,7 @@ def check_paths_exist(config: BeadConfig) -> list[str]:
             f"logging_dir does not exist: {config.active_learning.trainer.logging_dir}"
         )
 
-    # Check logging file parent directory
+    # check logging file parent directory
     if (
         config.logging.file is not None
         and config.logging.file.is_absolute()
@@ -104,7 +104,7 @@ def check_resource_compatibility(config: BeadConfig) -> list[str]:
     """
     errors: list[str] = []
 
-    # Check that if templates_path is specified, lexicon_path should also be specified
+    # check that if templates_path is specified, lexicon_path should also be specified
     if (
         config.resources.templates_path is not None
         and config.resources.lexicon_path is None
@@ -137,7 +137,7 @@ def check_model_configuration(config: BeadConfig) -> list[str]:
 
     errors: list[str] = []
 
-    # Check CUDA availability if device is set to cuda
+    # check CUDA availability if device is set to cuda
     if config.items.model.device == "cuda":
         if torch is None:
             errors.append(
@@ -150,7 +150,7 @@ def check_model_configuration(config: BeadConfig) -> list[str]:
                 "Set device to 'cpu' or install CUDA."
             )
 
-    # Check MPS availability if device is set to mps
+    # check MPS availability if device is set to mps
     if config.items.model.device == "mps":
         if torch is None:
             errors.append(
@@ -181,17 +181,17 @@ def check_training_configuration(config: BeadConfig) -> list[str]:
     """
     errors: list[str] = []
 
-    # Check that batch size is positive
+    # check that batch size is positive
     if config.active_learning.forced_choice_model.batch_size <= 0:
         batch_size = config.active_learning.forced_choice_model.batch_size
         errors.append(f"Training batch size must be positive, got {batch_size}")
 
-    # Check that epochs is positive
+    # check that epochs is positive
     if config.active_learning.trainer.epochs <= 0:
         epochs = config.active_learning.trainer.epochs
         errors.append(f"Training epochs must be positive, got {epochs}")
 
-    # Check that learning rate is positive
+    # check that learning rate is positive
     if config.active_learning.forced_choice_model.learning_rate <= 0:
         lr = config.active_learning.forced_choice_model.learning_rate
         errors.append(f"Training learning rate must be positive, got {lr}")
@@ -214,7 +214,7 @@ def check_deployment_configuration(config: BeadConfig) -> list[str]:
     """
     errors: list[str] = []
 
-    # Check jsPsych version format if platform is jspsych
+    # check jsPsych version format if platform is jspsych
     if config.deployment.platform == "jspsych":
         version = config.deployment.jspsych_version
         if version is None:  # type: ignore[reportUnnecessaryComparison]
@@ -257,7 +257,7 @@ def validate_config(config: BeadConfig) -> list[str]:
     """
     errors: list[str] = []
 
-    # Run all validation checks
+    # run all validation checks
     errors.extend(check_paths_exist(config))
     errors.extend(check_resource_compatibility(config))
     errors.extend(check_model_configuration(config))

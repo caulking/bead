@@ -27,10 +27,10 @@ def generate_uuid() -> UUID:
     --------
     >>> uuid1 = generate_uuid()
     >>> uuid2 = generate_uuid()
-    >>> uuid1 < uuid2  # UUIDs are time-ordered
+    >>> uuid1 < uuid2  # uuids are time-ordered
     True
     """
-    # Convert uuid_utils.UUID to standard Python UUID for Pydantic compatibility
+    # convert uuid_utils.UUID to standard Python UUID for Pydantic compatibility
     uuid7 = uuid_utils.uuid7()
     return UUID(str(uuid7))
 
@@ -43,8 +43,8 @@ def extract_timestamp(uuid: UUID) -> int:
 
     Parameters
     ----------
-    uuid : UUID
-        The UUIDv7 to extract timestamp from
+    uuid
+        The UUIDv7 to extract timestamp from.
 
     Returns
     -------
@@ -57,12 +57,12 @@ def extract_timestamp(uuid: UUID) -> int:
     >>> uuid = generate_uuid()
     >>> timestamp = extract_timestamp(uuid)
     >>> current_time = int(time.time() * 1000)
-    >>> abs(timestamp - current_time) < 1000  # Within 1 second
+    >>> abs(timestamp - current_time) < 1000  # within 1 second
     True
     """
-    # UUIDv7 stores timestamp in first 48 bits (6 bytes)
-    # UUID.bytes gives us the UUID as 16 bytes
-    # Extract first 6 bytes and convert to milliseconds
+    # UUIDv7 stores timestamp in first 48 bits (6 bytes);
+    # UUID.bytes gives us the UUID as 16 bytes;
+    # extract first 6 bytes and convert to milliseconds
     timestamp_bytes = uuid.bytes[:6]
     timestamp_ms = int.from_bytes(timestamp_bytes, byteorder="big")
     return timestamp_ms
@@ -76,8 +76,8 @@ def is_valid_uuid7(uuid: UUID) -> bool:
 
     Parameters
     ----------
-    uuid : UUID
-        The UUID to validate
+    uuid
+        The UUID to validate.
 
     Returns
     -------

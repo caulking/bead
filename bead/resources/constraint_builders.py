@@ -92,15 +92,6 @@ class AgreementConstraintBuilder(ConstraintBuilder):
         *,
         agreement_rules: dict[str, list[str]] | None = None,
     ) -> None:
-        """Initialize agreement constraint builder.
-
-        Parameters
-        ----------
-        feature_name : str
-            Feature to enforce agreement on.
-        agreement_rules : dict[str, list[str]] | None
-            Equivalence classes for feature values.
-        """
         self.feature_name = feature_name
         self.agreement_rules = agreement_rules
 
@@ -132,7 +123,7 @@ class AgreementConstraintBuilder(ConstraintBuilder):
 
     def _build_exact_match(self, slot_names: tuple[str, ...]) -> Constraint:
         """Build exact match agreement constraint."""
-        # Create pairwise equality checks
+        # create pairwise equality checks
         pairs: list[str] = []
         for i, slot1 in enumerate(slot_names):
             for slot2 in slot_names[i + 1 :]:
@@ -149,16 +140,16 @@ class AgreementConstraintBuilder(ConstraintBuilder):
 
     def _build_with_rules(self, slot_names: tuple[str, ...]) -> Constraint:
         """Build agreement constraint with equivalence classes."""
-        # Build context with equivalence class sets
+        # build context with equivalence class sets
         context: dict[str, Any] = {}
         for canonical, variants in self.agreement_rules.items():  # type: ignore
             equiv_set = set(variants)
             context[f"equiv_{canonical}"] = equiv_set
 
-        # Build expression: check if all slots' values are in same equivalence class
+        # build expression: check if all slots' values are in same equivalence class
         equiv_checks: list[str] = []
         for canonical in self.agreement_rules.keys():  # type: ignore
-            # All slots must have values in this equivalence class
+            # all slots must have values in this equivalence class
             slot_checks: list[str] = [
                 f"{slot}.features.get('{self.feature_name}') in equiv_{canonical}"
                 for slot in slot_names
@@ -223,7 +214,7 @@ class ConditionalConstraintBuilder(ConstraintBuilder):
         -----
         Logical implication (IF A THEN B) is encoded as: (NOT A) OR B
         """
-        # Encode IF-THEN as: (NOT condition) OR requirement
+        # encode IF-THEN as: (NOT condition) OR requirement
         expression = f"not ({condition}) or ({requirement})"
 
         return Constraint(
@@ -310,7 +301,7 @@ class SetMembershipConstraintBuilder(ConstraintBuilder):
         ValueError
             If neither or both of allowed_values/forbidden_values provided.
         """
-        # Exactly one of allowed_values or forbidden_values must be provided
+        # exactly one of allowed_values or forbidden_values must be provided
         if (allowed_values is None) == (forbidden_values is None):
             raise ValueError(
                 "Exactly one of 'allowed_values' or 'forbidden_values' must be provided"

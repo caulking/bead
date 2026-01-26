@@ -8,7 +8,11 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from bead.items.adapters.huggingface import HuggingFaceLanguageModel
+from collections.abc import Callable
 from uuid import UUID, uuid4
 
 import numpy as np
@@ -81,17 +85,17 @@ class ItemScorer(ABC):
 
     def score_with_metadata(
         self, items: list[Item]
-    ) -> dict[UUID, dict[str, float | Any]]:
+    ) -> dict[UUID, dict[str, float | str]]:
         """Score items and return results with metadata.
 
         Parameters
         ----------
-        items : list[Item]
+        items
             Items to score.
 
         Returns
         -------
-        dict[UUID, dict[str, float | Any]]
+        dict[UUID, dict[str, float | str]]
             Dictionary mapping item UUIDs to score dictionaries.
             Each score dict contains at least a "score" key.
 
@@ -104,7 +108,7 @@ class ItemScorer(ABC):
         """
         scores = self.score_batch(items)
 
-        results: dict[UUID, dict[str, float | Any]] = {}
+        results: dict[UUID, dict[str, float | str]] = {}
         for item, score in zip(items, scores, strict=True):
             results[item.id] = {"score": score}
 
@@ -151,33 +155,18 @@ class LanguageModelScorer(ItemScorer):
         text_key: str = "text",
         model_version: str = "unknown",
     ) -> None:
-        """Initialize language model scorer.
-
-        Parameters
-        ----------
-        model_name : str
-            HuggingFace model identifier.
-        cache_dir : Path | str | None
-            Directory for caching model outputs.
-        device : str
-            Device to run model on.
-        text_key : str
-            Key in item.rendered_elements to extract text.
-        model_version : str
-            Version string for cache tracking.
-        """
         self.model_name = model_name
         self.cache_dir = Path(cache_dir) if cache_dir else None
         self.device = device
         self.text_key = text_key
         self.model_version = model_version
 
-        # Lazy loading of model and cache
-        self._model: Any = None
+        # lazy loading of model and cache
+        self._model: HuggingFaceLanguageModel | None = None
         self._cache: ModelOutputCache | None = None
 
     @property
-    def model(self) -> Any:
+    def model(self) -> HuggingFaceLanguageModel:
         """Get the model, loading if necessary.
 
         Returns
@@ -186,16 +175,16 @@ class LanguageModelScorer(ItemScorer):
             The language model adapter.
         """
         if self._model is None:
-            # Import here to avoid circular dependency
+            # import here to avoid circular dependency
             from bead.items.adapters.huggingface import (  # noqa: PLC0415
                 HuggingFaceLanguageModel,
             )
 
-            # Set up cache
+            # set up cache
             if self.cache_dir:
                 self._cache = ModelOutputCache(cache_dir=self.cache_dir)
             else:
-                # Create a no-op cache
+                # create a no-op cache
                 self._cache = ModelOutputCache(cache_dir=Path(".cache/temp"))
 
             self._model = HuggingFaceLanguageModel(
@@ -276,28 +265,28 @@ class LanguageModelScorer(ItemScorer):
 
     def score_with_metadata(
         self, items: list[Item]
-    ) -> dict[UUID, dict[str, float | Any]]:
+    ) -> dict[UUID, dict[str, float | str]]:
         """Score items and return results with additional metrics.
 
         Returns log probability and perplexity for each item.
 
         Parameters
         ----------
-        items : list[Item]
+        items
             Items to score.
 
         Returns
         -------
-        dict[UUID, dict[str, float | Any]]
+        dict[UUID, dict[str, float | str]]
             Dictionary with "score" (log prob) and "perplexity" for each item.
         """
         scores = self.score_batch(items)
 
-        results: dict[UUID, dict[str, float | Any]] = {}
+        results: dict[UUID, dict[str, float | str]] = {}
         for item, score in zip(items, scores, strict=True):
-            # Compute perplexity from log probability
-            # Perplexity = exp(-log_prob / num_tokens)
-            # For now, just include log_prob; perplexity computation
+            # compute perplexity from log probability
+            # perplexity = exp(-log_prob / num_tokens)
+            # for now, just include log_prob; perplexity computation
             # requires token count which we'd need to get from the model
             results[item.id] = {
                 "score": score,
@@ -339,27 +328,17 @@ class ForcedChoiceScorer(ItemScorer):
     def __init__(
         self,
         base_scorer: ItemScorer,
-        comparison_fn: Any | None = None,
+        comparison_fn: Callable[[list[float]], float] | None = None,
         option_prefix: str = "option",
     ) -> None:
-        """Initialize forced-choice scorer.
-
-        Parameters
-        ----------
-        base_scorer : ItemScorer
-            Scorer to use for individual options.
-        comparison_fn : callable | None
-            Function (list[float]) -> float for comparing option scores.
-            If None, uses standard deviation.
-        option_prefix : str
-            Prefix for option names in rendered_elements.
-        """
         self.base_scorer = base_scorer
         self.option_prefix = option_prefix
 
         if comparison_fn is None:
-            # Default: standard deviation of scores
-            self.comparison_fn = self._default_comparison
+            # default: standard deviation of scores
+            self.comparison_fn: Callable[[list[float]], float] = (
+                self._default_comparison
+            )
         else:
             self.comparison_fn = comparison_fn
 
@@ -389,22 +368,22 @@ class ForcedChoiceScorer(ItemScorer):
         ValueError
             If item doesn't contain option elements or has precomputed scores.
         """
-        # Try to get precomputed scores from metadata first
-        # Look for lm_score_0, lm_score_1, ... or lm_score_a, lm_score_b, ...
+        # try to get precomputed scores from metadata first
+        # look for lm_score_0, lm_score_1, ... or lm_score_a, lm_score_b, ...
         precomputed_scores = self._extract_precomputed_scores(item)
         if precomputed_scores:
             return self.comparison_fn(precomputed_scores)
 
-        # Otherwise score each option element
+        # otherwise score each option element
         option_scores: list[float] = []
         letters = "abcdefghijklmnopqrstuvwxyz"
 
         for letter in letters:
             option_name = f"{self.option_prefix}_{letter}"
             if option_name not in item.rendered_elements:
-                break  # No more options
+                break  # no more options
 
-            # Create temporary item for scoring this option
+            # create temporary item for scoring this option
             option_text = item.rendered_elements[option_name]
             temp_item = Item(
                 item_template_id=uuid4(),
@@ -440,8 +419,8 @@ class ForcedChoiceScorer(ItemScorer):
         scores: list[float] = []
         letters = "abcdefghijklmnopqrstuvwxyz"
 
-        # Try numeric indices first (lm_score_0, lm_score_1, ...)
-        for i in range(26):  # Max 26 options
+        # try numeric indices first (lm_score_0, lm_score_1, ...)
+        for i in range(26):  # max 26 options
             key = f"lm_score_{i}"
             if key in item.item_metadata:
                 metadata_val = item.item_metadata[key]
@@ -454,7 +433,7 @@ class ForcedChoiceScorer(ItemScorer):
         if scores:
             return scores
 
-        # Try letter indices (lm_score_a, lm_score_b, ...)
+        # try letter indices (lm_score_a, lm_score_b, ...)
         scores = []
         for letter in letters:
             key = f"lm_score_{letter}"

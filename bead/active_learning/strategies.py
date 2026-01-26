@@ -91,7 +91,7 @@ class SamplingStrategy(ABC):
         if k >= len(scores):
             return np.arange(len(scores))
 
-        # Get indices of top k scores (descending order)
+        # get indices of top k scores (descending order)
         return np.argsort(scores)[-k:][::-1]
 
 
@@ -144,11 +144,11 @@ class UncertaintySampling(SamplingStrategy):
         >>> scores[0] > scores[1]  # Uniform is more uncertain
         True
         """
-        # Add small epsilon to avoid log(0)
+        # add small epsilon to avoid log(0)
         epsilon = 1e-10
         probs_safe = np.clip(probabilities, epsilon, 1.0)
 
-        # Compute entropy: -∑(p * log(p))
+        # compute entropy: -∑(p * log(p))
         entropy = -np.sum(probs_safe * np.log(probs_safe), axis=1)
 
         return entropy
@@ -203,14 +203,14 @@ class MarginSampling(SamplingStrategy):
         >>> scores[0] > scores[1]  # First has smaller margin
         True
         """
-        # Sort probabilities in descending order
+        # sort probabilities in descending order
         sorted_probs = np.sort(probabilities, axis=1)
 
-        # Get top 2 probabilities
+        # get top 2 probabilities
         top1 = sorted_probs[:, -1]
         top2 = sorted_probs[:, -2]
 
-        # Compute margin: 1 - (p1 - p2)
+        # compute margin: 1 - (p1 - p2)
         margin = 1.0 - (top1 - top2)
 
         return margin
@@ -265,10 +265,10 @@ class LeastConfidenceSampling(SamplingStrategy):
         >>> scores[0] > scores[1]  # First is less confident
         True
         """
-        # Get maximum probability for each sample
+        # get maximum probability for each sample
         max_probs = np.max(probabilities, axis=1)
 
-        # Compute least confidence: 1 - max(p)
+        # compute least confidence: 1 - max(p)
         least_confidence = 1.0 - max_probs
 
         return least_confidence
@@ -307,13 +307,6 @@ class RandomSampling(SamplingStrategy):
     """
 
     def __init__(self, seed: int | None = None) -> None:
-        """Initialize random sampling strategy.
-
-        Parameters
-        ----------
-        seed : int | None
-            Random seed for reproducibility.
-        """
         self.rng = np.random.default_rng(seed)
 
     def compute_scores(self, probabilities: np.ndarray) -> np.ndarray:

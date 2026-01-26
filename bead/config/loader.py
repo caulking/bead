@@ -74,7 +74,7 @@ def load_yaml_file(path: Path | str) -> dict[str, Any]:
     try:
         with open(path) as f:
             content = yaml.safe_load(f)
-            # Handle empty files
+            # handle empty files
             return content if content is not None else {}
     except yaml.YAMLError as e:
         raise yaml.YAMLError(f"Failed to parse YAML file {path}: {e}") from e
@@ -124,15 +124,15 @@ def load_config(
     >>> config.logging.level
     'DEBUG'
     """
-    # Start with profile defaults
+    # start with profile defaults
     base_config: dict[str, Any] = get_profile(profile).model_dump()
 
-    # Merge with YAML file if provided
+    # merge with YAML file if provided
     if config_path is not None:
         yaml_config = load_yaml_file(config_path)
         base_config = merge_configs(base_config, yaml_config)
 
-    # Convert overrides with __ syntax to nested dicts
+    # convert overrides with __ syntax to nested dicts
     if overrides:
         override_dict: dict[str, Any] = {}
         for key, value in overrides.items():
@@ -145,5 +145,5 @@ def load_config(
             current[parts[-1]] = value
         base_config = merge_configs(base_config, override_dict)
 
-    # Construct and validate BeadConfig
+    # construct and validate BeadConfig
     return BeadConfig(**base_config)

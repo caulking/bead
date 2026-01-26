@@ -31,9 +31,9 @@ from bead.config.template import SlotStrategyConfig, TemplateConfig
 from bead.config.validation import validate_config
 
 __all__ = [
-    # Main config
+    # main config
     "BeadConfig",
-    # Config sections
+    # config sections
     "PathsConfig",
     "ResourceConfig",
     "SlotStrategyConfig",
@@ -44,25 +44,25 @@ __all__ = [
     "DeploymentConfig",
     "ActiveLearningConfig",
     "LoggingConfig",
-    # Defaults
+    # defaults
     "DEFAULT_CONFIG",
     "get_default_config",
-    # Profiles
+    # profiles
     "DEV_CONFIG",
     "PROD_CONFIG",
     "TEST_CONFIG",
     "PROFILES",
     "get_profile",
     "list_profiles",
-    # Loading
+    # loading
     "load_config",
     "load_yaml_file",
     "merge_configs",
-    # Environment
+    # environment
     "load_from_env",
-    # Validation
+    # validation
     "validate_config",
-    # Serialization
+    # serialization
     "to_yaml",
     "save_yaml",
 ]

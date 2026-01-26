@@ -38,15 +38,6 @@ class ModelOutputCache:
     """
 
     def __init__(self, cache_dir: Path, enabled: bool = True) -> None:
-        """Initialize cache.
-
-        Parameters
-        ----------
-        cache_dir : Path
-            Directory for cache files
-        enabled : bool
-            Enable caching
-        """
         self.cache_dir = cache_dir
         self.enabled = enabled
 
@@ -78,7 +69,7 @@ class ModelOutputCache:
         str
             SHA256 hex digest
         """
-        # Create deterministic key
+        # create deterministic key
         key_data = {
             "model_name": model_name,
             "input_text": input_text,
@@ -86,10 +77,10 @@ class ModelOutputCache:
             "top_k": top_k,
         }
 
-        # Serialize to JSON with sorted keys for determinism
+        # serialize to JSON with sorted keys for determinism
         key_json = json.dumps(key_data, sort_keys=True)
 
-        # Hash with SHA256
+        # hash with SHA256
         return hashlib.sha256(key_json.encode("utf-8")).hexdigest()
 
     def get(
@@ -131,7 +122,7 @@ class ModelOutputCache:
                 data = json.load(f)
                 return [(item["token"], item["log_prob"]) for item in data]
         except (json.JSONDecodeError, KeyError, OSError):
-            # Cache corruption - return None
+            # cache corruption; return None
             return None
 
     def set(
@@ -163,7 +154,7 @@ class ModelOutputCache:
         cache_key = self._compute_key(model_name, input_text, mask_position, top_k)
         cache_file = self.cache_dir / f"{cache_key}.json"
 
-        # Convert to serializable format
+        # convert to serializable format
         data = [
             {"token": token, "log_prob": log_prob} for token, log_prob in predictions
         ]
@@ -172,7 +163,7 @@ class ModelOutputCache:
             with open(cache_file, "w") as f:
                 json.dump(data, f, indent=2)
         except OSError:
-            # Silently fail on cache write errors
+            # silently fail on cache write errors
             pass
 
     def clear(self) -> None:

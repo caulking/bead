@@ -46,15 +46,6 @@ class GlazingAdapter(ResourceAdapter):
         resource: Literal["verbnet", "propbank", "framenet"] = "verbnet",
         cache: AdapterCache | None = None,
     ) -> None:
-        """Initialize glazing adapter.
-
-        Parameters
-        ----------
-        resource : Literal["verbnet", "propbank", "framenet"]
-            Which glazing resource to use. Default: "verbnet".
-        cache : AdapterCache | None
-            Optional cache instance.
-        """
         self.resource = resource
         self.cache = cache
         self._loader: VerbNetLoader | PropBankLoader | FrameNetLoader | None = None
@@ -126,7 +117,7 @@ class GlazingAdapter(ResourceAdapter):
         >>> "frames" in items[0].attributes  # doctest: +SKIP
         True
         """
-        # Check cache
+        # check cache
         cache_key = None
         if self.cache:
             cache_key = self.cache.make_key(
@@ -139,18 +130,18 @@ class GlazingAdapter(ResourceAdapter):
             if cached is not None:
                 return cached
 
-        # Fetch from glazing
+        # fetch from glazing
         try:
             items = self._fetch_from_resource(query, language_code, **kwargs)
 
-            # Cache result
+            # cache result
             if self.cache and cache_key:
                 self.cache.set(cache_key, items)
 
             return items
 
         except NotImplementedError:
-            # Re-raise NotImplementedError without wrapping
+            # re-raise NotImplementedError without wrapping
             raise
         except Exception as e:
             raise RuntimeError(
@@ -209,17 +200,17 @@ class GlazingAdapter(ResourceAdapter):
         include_frames = kwargs.get("include_frames", False)
         items: list[LexicalItem] = []
 
-        # Search through all verb classes
+        # search through all verb classes
         for verb_class in loader.classes.values():
             if not verb_class.members:
                 continue
 
             for member in verb_class.members:
-                # Filter by query if provided
+                # filter by query if provided
                 if query is not None and member.name != query:
                     continue
 
-                # Build attributes
+                # build attributes
                 attributes: dict[str, Any] = {
                     "verbnet_class": verb_class.id,
                     "themroles": [r.type for r in verb_class.themroles]
@@ -228,7 +219,7 @@ class GlazingAdapter(ResourceAdapter):
                     "frame_count": len(verb_class.frames) if verb_class.frames else 0,
                 }
 
-                # Add detailed frame information if requested
+                # add detailed frame information if requested
                 if include_frames and verb_class.frames:
                     frames_data = []
                     for frame in verb_class.frames:
@@ -237,7 +228,7 @@ class GlazingAdapter(ResourceAdapter):
                             "secondary": frame.description.secondary,
                         }
 
-                        # Extract syntax elements
+                        # extract syntax elements
                         if frame.syntax and hasattr(frame.syntax, "elements"):
                             syntax_elements = []
                             for element in frame.syntax.elements:
@@ -250,7 +241,7 @@ class GlazingAdapter(ResourceAdapter):
                         else:
                             frame_dict["syntax"] = []
 
-                        # Extract examples
+                        # extract examples
                         if frame.examples:
                             frame_dict["examples"] = [ex.text for ex in frame.examples]
                         else:
@@ -260,7 +251,7 @@ class GlazingAdapter(ResourceAdapter):
 
                     attributes["frames"] = frames_data
 
-                # Create LexicalItem for this verb class
+                # create LexicalItem for this verb class
                 features = {"pos": "VERB", **attributes}
                 item = LexicalItem(
                     lemma=member.name,
@@ -298,15 +289,15 @@ class GlazingAdapter(ResourceAdapter):
         include_frames = kwargs.get("include_frames", False)
         items: list[LexicalItem] = []
 
-        # If query is None, iterate through all framesets
+        # if query is None, iterate through all framesets
         if query is None:
-            # Get all framesets from PropBank
+            # get all framesets from PropBank
             for frameset in loader.framesets.values():
                 items.extend(
                     self._create_propbank_items(frameset, language_code, include_frames)
                 )
         else:
-            # Get specific frameset for the predicate
+            # get specific frameset for the predicate
             frameset = loader.get_frameset(query)
             if frameset:
                 items.extend(
@@ -345,7 +336,7 @@ class GlazingAdapter(ResourceAdapter):
                 "roleset_name": roleset.name if roleset.name else "",
             }
 
-            # Add detailed role information if requested
+            # add detailed role information if requested
             if include_frames and roleset.roles:
                 attributes["roles"] = [
                     {
@@ -356,14 +347,14 @@ class GlazingAdapter(ResourceAdapter):
                     for role in roleset.roles
                 ]
 
-                # Add examples if available
+                # add examples if available
                 if hasattr(roleset, "examples") and roleset.examples:
                     attributes["examples"] = [
                         ex.text for ex in roleset.examples if hasattr(ex, "text")
                     ]
 
-            # Create LexicalItem for each roleset
-            # Use predicate_lemma attribute from PropBank frameset
+            # create LexicalItem for each roleset
+            # use predicate_lemma attribute from PropBank frameset
             lemma = (
                 frameset.predicate_lemma
                 if hasattr(frameset, "predicate_lemma")
@@ -406,20 +397,20 @@ class GlazingAdapter(ResourceAdapter):
         include_frames = kwargs.get("include_frames", False)
         items: list[LexicalItem] = []
 
-        # Iterate through all frames and their lexical units
+        # iterate through all frames and their lexical units
         for frame in loader.frames:
             if not frame.lexical_units:
                 continue
 
             for lu in frame.lexical_units:
-                # Extract lemma from lexical unit name (format: "lemma.pos")
+                # extract lemma from lexical unit name (format: "lemma.pos")
                 lemma = lu.name.split(".")[0] if "." in lu.name else lu.name
 
-                # Filter by query if provided
+                # filter by query if provided
                 if query is not None and lemma != query:
                     continue
 
-                # Create LexicalItem for this lexical unit
+                # create LexicalItem for this lexical unit
                 item = self._create_framenet_item(
                     lu, frame, language_code, include_frames
                 )
@@ -448,14 +439,14 @@ class GlazingAdapter(ResourceAdapter):
         LexicalItem
             LexicalItem object for the lexical unit.
         """
-        # Extract lemma from lexical unit name (format: "lemma.pos")
+        # extract lemma from lexical unit name (format: "lemma.pos")
         lemma = lu.name.split(".")[0] if "." in lu.name else lu.name
 
-        # Map FrameNet POS to standard POS tags
+        # map FrameNet POS to standard POS tags
         pos_map = {"V": "VERB", "N": "NOUN", "A": "ADJ", "ADV": "ADV", "PREP": "ADP"}
         pos = pos_map.get(lu.pos, "VERB")
 
-        # Build attributes
+        # build attributes
         attributes: dict[str, Any] = {
             "framenet_frame": frame.name,
             "framenet_frame_id": frame.id,
@@ -463,15 +454,15 @@ class GlazingAdapter(ResourceAdapter):
             "lexical_unit_id": lu.id,
         }
 
-        # Add definition if available
+        # add definition if available
         if hasattr(lu, "definition") and lu.definition:
             attributes["definition"] = lu.definition
 
-        # Add detailed frame information if requested
+        # add detailed frame information if requested
         if include_frames:
             attributes["frame_definition"] = frame.definition
 
-            # Add frame elements (semantic roles)
+            # add frame elements (semantic roles)
             if frame.frame_elements:
                 attributes["frame_elements"] = [
                     {
@@ -508,9 +499,9 @@ class GlazingAdapter(ResourceAdapter):
         True
         """
         try:
-            # Check if glazing is initialized
+            # check if glazing is initialized
             glazing.check_initialization()
-            # Try to create a loader to verify data is accessible
+            # try to create a loader to verify data is accessible
             self._get_loader()
             return True
         except Exception:

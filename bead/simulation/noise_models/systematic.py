@@ -17,6 +17,14 @@ class SystematicNoiseModel(NoiseModel):
     - endpoint: Prefer endpoints on ordinal scales
     - midpoint: Prefer midpoint on ordinal scales
 
+    Parameters
+    ----------
+    bias_type
+        Type of bias ("length", "frequency", "position", "endpoint", "midpoint").
+        Default: "position".
+    bias_strength
+        Strength of bias (0.0-1.0). Default: 0.0.
+
     Examples
     --------
     >>> noise_model = SystematicNoiseModel(bias_type="position", bias_strength=0.3)
@@ -24,15 +32,6 @@ class SystematicNoiseModel(NoiseModel):
     """
 
     def __init__(self, bias_type: str = "position", bias_strength: float = 0.0) -> None:
-        """Initialize systematic noise model.
-
-        Parameters
-        ----------
-        bias_type : str
-            Type of bias ("length", "frequency", "position", "endpoint", "midpoint").
-        bias_strength : float
-            Strength of bias (0.0-1.0).
-        """
         self.bias_type = bias_type
         self.bias_strength = bias_strength
 
@@ -69,19 +68,19 @@ class SystematicNoiseModel(NoiseModel):
 
         task_type = strategy.supported_task_type
 
-        # Position bias for choice tasks
+        # position bias for choice tasks
         is_choice_task = task_type in ["forced_choice", "categorical"]
         if is_choice_task and self.bias_type == "position":
             return self._apply_position_bias(value, template, rng)
 
-        # Endpoint/midpoint bias for ordinal scales
+        # endpoint/midpoint bias for ordinal scales
         elif task_type == "ordinal_scale":
             if self.bias_type == "endpoint":
                 return self._apply_endpoint_bias(value, template, rng)
             elif self.bias_type == "midpoint":
                 return self._apply_midpoint_bias(value, template, rng)
 
-        # No bias for other combinations
+        # no bias for other combinations
         return value
 
     def _apply_position_bias(
@@ -92,7 +91,7 @@ class SystematicNoiseModel(NoiseModel):
         if not options or len(options) < 2:
             return value
 
-        # Bias toward first option
+        # bias toward first option
         if rng.random() < self.bias_strength:
             return options[0]
 
@@ -108,7 +107,7 @@ class SystematicNoiseModel(NoiseModel):
         else:
             min_val, max_val = 1, 7
 
-        # Bias toward endpoints (min or max)
+        # bias toward endpoints (min or max)
         if rng.random() < self.bias_strength:
             return min_val if rng.random() < 0.5 else max_val
 
@@ -126,7 +125,7 @@ class SystematicNoiseModel(NoiseModel):
 
         midpoint = (min_val + max_val) // 2
 
-        # Bias toward midpoint
+        # bias toward midpoint
         if rng.random() < self.bias_strength:
             return midpoint
 

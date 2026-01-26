@@ -108,25 +108,24 @@ class OrdinalScaleStrategy(SimulationStrategy):
         min_val, max_val = scale_bounds
         scale_range = max_val - min_val
 
-        # Extract model output (expecting single score)
+        # extract model output (expecting single score)
         scores = self.extract_model_outputs(item, model_output_key, required_count=1)
 
         if scores is None:
-            # Fallback to uniform random across scale
+            # fallback to uniform random across scale
             return int(rng.randint(min_val, max_val + 1))
 
-        # Map LM score to scale position
-        # Use sigmoid to map unbounded score to [0, 1]
+        # map LM score to scale position; use sigmoid to map unbounded score to [0, 1]
         score = scores[0]
         sigmoid_score = 1.0 / (1.0 + np.exp(-score))
 
-        # Map [0, 1] to scale range
+        # map [0, 1] to scale range
         continuous_rating = min_val + sigmoid_score * scale_range
 
-        # Round to nearest integer
+        # round to nearest integer
         rating = int(np.round(continuous_rating))
 
-        # Clamp to scale bounds (in case of rounding issues)
+        # clamp to scale bounds (in case of rounding issues)
         rating = max(min_val, min(max_val, rating))
 
         return rating

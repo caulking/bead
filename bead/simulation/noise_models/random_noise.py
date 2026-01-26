@@ -15,6 +15,13 @@ class RandomNoiseModel(NoiseModel):
     - Uniform noise for numeric values
     - Random flipping for choice tasks
 
+    Parameters
+    ----------
+    noise_type
+        Type of noise ("gaussian" or "uniform"). Default: "gaussian".
+    strength
+        Noise strength (stddev for gaussian, range for uniform). Default: 1.0.
+
     Examples
     --------
     >>> noise_model = RandomNoiseModel(noise_type="gaussian", strength=0.5)
@@ -22,15 +29,6 @@ class RandomNoiseModel(NoiseModel):
     """
 
     def __init__(self, noise_type: str = "gaussian", strength: float = 1.0) -> None:
-        """Initialize random noise model.
-
-        Parameters
-        ----------
-        noise_type : str
-            Type of noise ("gaussian" or "uniform").
-        strength : float
-            Noise strength (stddev for gaussian, range for uniform).
-        """
         self.noise_type = noise_type
         self.strength = strength
 
@@ -59,11 +57,11 @@ class RandomNoiseModel(NoiseModel):
         if self.strength == 0.0:
             return value
 
-        # Apply noise based on value type
+        # apply noise based on value type
         if isinstance(value, (int, float)) and not isinstance(value, bool):
             return self._add_numeric_noise(value, rng)
         else:
-            # For non-numeric, return as-is
+            # for non-numeric, return as-is
             return value
 
     def _add_numeric_noise(
@@ -77,7 +75,7 @@ class RandomNoiseModel(NoiseModel):
         else:
             noisy_value = value
 
-        # Preserve type
+        # preserve type
         if isinstance(value, int):
             return int(round(noisy_value))
         else:

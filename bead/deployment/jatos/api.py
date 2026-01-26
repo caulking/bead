@@ -7,26 +7,33 @@ via the REST API.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
 import requests
+
+from bead.data.base import JsonValue
 
 
 class JATOSClient:
     """Client for JATOS REST API.
 
-    Supports:
-    - Uploading study packages (.jzip)
-    - Listing studies
-    - Deleting studies
-    - Getting study results
+    Supports uploading study packages (.jzip), listing studies, deleting
+    studies, and retrieving study results.
+
+    Parameters
+    ----------
+    base_url
+        Base URL for JATOS instance (e.g., "https://jatos.example.com").
+    api_token
+        API token for authentication.
 
     Attributes
     ----------
     base_url : str
-        Base URL for JATOS instance (e.g., https://jatos.example.com).
+        Base URL for JATOS instance (trailing slash removed).
     api_token : str
         API token for authentication.
+    session : requests.Session
+        HTTP session with authentication headers configured.
 
     Examples
     --------
@@ -35,21 +42,12 @@ class JATOSClient:
     """
 
     def __init__(self, base_url: str, api_token: str) -> None:
-        """Initialize JATOS API client.
-
-        Parameters
-        ----------
-        base_url : str
-            Base URL for JATOS instance.
-        api_token : str
-            API token for authentication.
-        """
         self.base_url = base_url.rstrip("/")
         self.api_token = api_token
         self.session = requests.Session()
         self.session.headers.update({"Authorization": f"Bearer {api_token}"})
 
-    def upload_study(self, jzip_path: Path) -> dict[str, Any]:
+    def upload_study(self, jzip_path: Path) -> dict[str, JsonValue]:
         """Upload study package to JATOS.
 
         POST /api/v1/studies
@@ -61,7 +59,7 @@ class JATOSClient:
 
         Returns
         -------
-        dict[str, Any]
+        dict[str, JsonValue]
             Response with study ID, UUID, and URL.
 
         Raises
@@ -89,14 +87,14 @@ class JATOSClient:
         response.raise_for_status()
         return response.json()
 
-    def list_studies(self) -> list[dict[str, Any]]:
+    def list_studies(self) -> list[dict[str, JsonValue]]:
         """List all studies.
 
         GET /api/v1/studies
 
         Returns
         -------
-        list[dict[str, Any]]
+        list[dict[str, JsonValue]]
             List of study dictionaries.
 
         Raises
@@ -115,7 +113,7 @@ class JATOSClient:
         response.raise_for_status()
         return response.json()
 
-    def get_study(self, study_id: int) -> dict[str, Any]:
+    def get_study(self, study_id: int) -> dict[str, JsonValue]:
         """Get study details.
 
         GET /api/v1/studies/{study_id}
@@ -127,7 +125,7 @@ class JATOSClient:
 
         Returns
         -------
-        dict[str, Any]
+        dict[str, JsonValue]
             Study details dictionary.
 
         Raises

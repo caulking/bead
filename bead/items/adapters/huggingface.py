@@ -9,7 +9,7 @@ This module provides adapters for HuggingFace Transformers models:
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import TYPE_CHECKING
 
 import numpy as np
 import psutil
@@ -36,6 +36,9 @@ from transformers import (
 from bead.adapters.huggingface import DeviceType, HuggingFaceAdapterMixin
 from bead.items.adapters.base import ModelAdapter
 from bead.items.cache import ModelOutputCache
+
+if TYPE_CHECKING:
+    from transformers.models.auto.configuration_auto import AutoConfig
 
 logger = logging.getLogger(__name__)
 
@@ -90,7 +93,7 @@ class HuggingFaceLanguageModel(HuggingFaceAdapterMixin, ModelAdapter):
 
         if self._tokenizer is None:
             self._tokenizer = AutoTokenizer.from_pretrained(self.model_name)
-            # Set padding token for models that don't have one
+            # set padding token for models that don't have one
             if self._tokenizer.pad_token is None:
                 self._tokenizer.pad_token = self._tokenizer.eos_token
 
@@ -129,24 +132,24 @@ class HuggingFaceLanguageModel(HuggingFaceAdapterMixin, ModelAdapter):
         if cached is not None:
             return cached
 
-        # Tokenize
+        # tokenize
         inputs = self.tokenizer(
             text, return_tensors="pt", padding=True, truncation=True
         )
         input_ids = inputs["input_ids"].to(self.device)
         attention_mask = inputs["attention_mask"].to(self.device)
 
-        # Compute loss (negative log-likelihood)
+        # compute loss (negative log-likelihood)
         with torch.no_grad():
             outputs = self.model(
                 input_ids=input_ids, attention_mask=attention_mask, labels=input_ids
             )
             loss = outputs.loss.item()
 
-        # Loss is negative log-likelihood per token, convert to total log prob
+        # loss is negative log-likelihood per token, convert to total log prob
         log_prob = -loss * input_ids.size(1)
 
-        # Cache result
+        # cache result
         self.cache.set(
             self.model_name,
             "log_probability",
@@ -171,24 +174,24 @@ class HuggingFaceLanguageModel(HuggingFaceAdapterMixin, ModelAdapter):
         int
             Recommended batch size.
         """
-        # Estimate model size
+        # estimate model size
         model_params = sum(
             p.numel() * p.element_size() for p in self.model.parameters()
         )
 
         if self.device == "cuda":
             try:
-                # Get GPU memory
+                # get GPU memory
                 free_memory, _ = torch.cuda.mem_get_info(self.device)
 
-                # Conservative estimate: allow model + 4x model size for activations
-                # Reserve 20% for safety margin
+                # conservative estimate: allow model + 4x model size for activations
+                # reserve 20% for safety margin
                 available_for_batch = (free_memory * 0.8) - model_params
-                memory_per_item = model_params * 4  # Very rough estimate
+                memory_per_item = model_params * 4  # very rough estimate
 
                 batch_size = int(available_for_batch / memory_per_item)
 
-                # Clamp between reasonable bounds
+                # clamp between reasonable bounds
                 batch_size = max(8, min(batch_size, 256))
 
                 free_gb = free_memory / 1e9
@@ -207,19 +210,19 @@ class HuggingFaceLanguageModel(HuggingFaceAdapterMixin, ModelAdapter):
 
         elif self.device == "mps":
             try:
-                # MPS (Apple Silicon) - use system RAM as proxy
-                # MPS shares unified memory with system
+                # mps (Apple Silicon) - use system RAM as proxy
+                # mps shares unified memory with system
                 available_memory = psutil.virtual_memory().available
 
-                # Reserve 4GB for system + model
+                # reserve 4GB for system + model
                 available_for_batch = max(
                     0, available_memory - (4 * 1024**3) - model_params
                 )
-                memory_per_item = model_params * 3  # MPS is more efficient than CUDA
+                memory_per_item = model_params * 3  # mps is more efficient than CUDA
 
                 batch_size = int(available_for_batch / memory_per_item)
 
-                # Clamp between reasonable bounds
+                # clamp between reasonable bounds
                 batch_size = max(8, min(batch_size, 256))
 
                 avail_gb = available_memory / 1e9
@@ -236,18 +239,18 @@ class HuggingFaceLanguageModel(HuggingFaceAdapterMixin, ModelAdapter):
 
         else:  # CPU
             try:
-                # CPU - check available RAM
+                # cpu - check available RAM
                 available_memory = psutil.virtual_memory().available
 
-                # Reserve 2GB for system + model
+                # reserve 2GB for system + model
                 available_for_batch = max(
                     0, available_memory - (2 * 1024**3) - model_params
                 )
-                memory_per_item = model_params * 2  # CPU has less overhead than GPU
+                memory_per_item = model_params * 2  # cpu has less overhead than GPU
 
                 batch_size = int(available_for_batch / memory_per_item)
 
-                # Clamp between reasonable bounds
+                # clamp between reasonable bounds
                 batch_size = max(4, min(batch_size, 128))
 
                 avail_gb = available_memory / 1e9
@@ -291,11 +294,11 @@ class HuggingFaceLanguageModel(HuggingFaceAdapterMixin, ModelAdapter):
         >>> len(log_probs) == len(texts)
         True
         """
-        # Infer batch size if not provided
+        # infer batch size if not provided
         if batch_size is None:
             batch_size = self._infer_optimal_batch_size()
 
-        # Check cache for all texts
+        # check cache for all texts
         results: list[float | None] = []
         uncached_indices: list[int] = []
         uncached_texts: list[str] = []
@@ -305,16 +308,16 @@ class HuggingFaceLanguageModel(HuggingFaceAdapterMixin, ModelAdapter):
             if cached is not None:
                 results.append(cached)
             else:
-                results.append(None)  # Placeholder
+                results.append(None)  # placeholder
                 uncached_indices.append(i)
                 uncached_texts.append(text)
 
-        # If everything was cached, return immediately
+        # if everything was cached, return immediately
         if not uncached_texts:
             logger.info(f"All {len(texts)} texts found in cache")
             return [r for r in results if r is not None]
 
-        # Log cache statistics
+        # log cache statistics
         n_cached = len(texts) - len(uncached_texts)
         cache_rate = (n_cached / len(texts)) * 100 if texts else 0
         logger.info(
@@ -322,7 +325,7 @@ class HuggingFaceLanguageModel(HuggingFaceAdapterMixin, ModelAdapter):
             f"processing {len(uncached_texts)} uncached with batch_size={batch_size}"
         )
 
-        # Process uncached texts in batches with progress tracking
+        # process uncached texts in batches with progress tracking
         uncached_scores: list[float] = []
 
         with Progress(
@@ -344,7 +347,7 @@ class HuggingFaceLanguageModel(HuggingFaceAdapterMixin, ModelAdapter):
                 uncached_scores.extend(batch_scores)
                 progress.update(task, advance=len(batch_texts))
 
-        # Merge cached and newly computed results
+        # merge cached and newly computed results
         uncached_iter = iter(uncached_scores)
         final_results: list[float] = []
         for result in results:
@@ -370,7 +373,7 @@ class HuggingFaceLanguageModel(HuggingFaceAdapterMixin, ModelAdapter):
         """
         batch_scores: list[float] = []
 
-        # Tokenize batch
+        # tokenize batch
         inputs = self.tokenizer(
             batch_texts,
             return_tensors="pt",
@@ -380,7 +383,7 @@ class HuggingFaceLanguageModel(HuggingFaceAdapterMixin, ModelAdapter):
         input_ids = inputs["input_ids"].to(self.device)
         attention_mask = inputs["attention_mask"].to(self.device)
 
-        # Compute losses for batch
+        # compute losses for batch
         with torch.no_grad():
             outputs = self.model(
                 input_ids=input_ids,
@@ -388,36 +391,36 @@ class HuggingFaceLanguageModel(HuggingFaceAdapterMixin, ModelAdapter):
                 labels=input_ids,
             )
 
-            # For batched inputs, we need to compute loss per item
-            # The model returns average loss across batch, so we need
+            # for batched inputs, we need to compute loss per item
+            # the model returns average loss across batch, so we need
             # to compute per-item losses manually
             logits = outputs.logits  # [batch, seq_len, vocab]
 
-            # Shift for causal LM: predict next token
+            # shift for causal LM: predict next token
             shift_logits = logits[..., :-1, :].contiguous()
             shift_labels = input_ids[..., 1:].contiguous()
             shift_attention = attention_mask[..., 1:].contiguous()
 
-            # Compute log probabilities per token
+            # compute log probabilities per token
             log_probs_per_token = torch.nn.functional.log_softmax(shift_logits, dim=-1)
 
-            # Gather log probs for actual tokens
+            # gather log probs for actual tokens
             gathered_log_probs = torch.gather(
                 log_probs_per_token,
                 dim=-1,
                 index=shift_labels.unsqueeze(-1),
             ).squeeze(-1)
 
-            # Mask padding tokens and sum per sequence
+            # mask padding tokens and sum per sequence
             masked_log_probs = gathered_log_probs * shift_attention
             sequence_log_probs = masked_log_probs.sum(dim=1)
 
-        # Convert to list and cache
+        # convert to list and cache
         for text, log_prob_tensor in zip(batch_texts, sequence_log_probs, strict=True):
             log_prob = log_prob_tensor.item()
             batch_scores.append(log_prob)
 
-            # Cache result
+            # cache result
             self.cache.set(
                 self.model_name,
                 "log_probability",
@@ -443,29 +446,29 @@ class HuggingFaceLanguageModel(HuggingFaceAdapterMixin, ModelAdapter):
         float
             Perplexity of the text (positive value).
         """
-        # Check cache
+        # check cache
         cached = self.cache.get(self.model_name, "perplexity", text=text)
         if cached is not None:
             return cached
 
-        # Tokenize
+        # tokenize
         inputs = self.tokenizer(
             text, return_tensors="pt", padding=True, truncation=True
         )
         input_ids = inputs["input_ids"].to(self.device)
         attention_mask = inputs["attention_mask"].to(self.device)
 
-        # Compute loss
+        # compute loss
         with torch.no_grad():
             outputs = self.model(
                 input_ids=input_ids, attention_mask=attention_mask, labels=input_ids
             )
             loss = outputs.loss.item()
 
-        # Perplexity is exp(loss)
+        # perplexity is exp(loss)
         perplexity = np.exp(loss)
 
-        # Cache result
+        # cache result
         self.cache.set(
             self.model_name,
             "perplexity",
@@ -491,34 +494,34 @@ class HuggingFaceLanguageModel(HuggingFaceAdapterMixin, ModelAdapter):
         np.ndarray
             Embedding vector for the text.
         """
-        # Check cache
+        # check cache
         cached = self.cache.get(self.model_name, "embedding", text=text)
         if cached is not None:
             return cached
 
-        # Tokenize
+        # tokenize
         inputs = self.tokenizer(
             text, return_tensors="pt", padding=True, truncation=True
         )
         input_ids = inputs["input_ids"].to(self.device)
         attention_mask = inputs["attention_mask"].to(self.device)
 
-        # Get hidden states
+        # get hidden states
         with torch.no_grad():
             outputs = self.model(
                 input_ids=input_ids,
                 attention_mask=attention_mask,
                 output_hidden_states=True,
             )
-            hidden_states = outputs.hidden_states[-1]  # Last layer
+            hidden_states = outputs.hidden_states[-1]  # last layer
 
-        # Mean pooling (weighted by attention mask)
+        # mean pooling (weighted by attention mask)
         mask_expanded = attention_mask.unsqueeze(-1).expand(hidden_states.size())
         sum_hidden = torch.sum(hidden_states * mask_expanded, dim=1)
         sum_mask = torch.clamp(mask_expanded.sum(dim=1), min=1e-9)
         embedding = (sum_hidden / sum_mask).squeeze(0).cpu().numpy()
 
-        # Cache result
+        # cache result
         self.cache.set(
             self.model_name,
             "embedding",
@@ -627,22 +630,22 @@ class HuggingFaceMaskedLanguageModel(HuggingFaceAdapterMixin, ModelAdapter):
         float
             Pseudo-log-probability of the text.
         """
-        # Check cache
+        # check cache
         cached = self.cache.get(self.model_name, "log_probability", text=text)
         if cached is not None:
             return cached
 
-        # Tokenize
+        # tokenize
         inputs = self.tokenizer(text, return_tensors="pt", truncation=True)
         input_ids = inputs["input_ids"].to(self.device)
 
-        # Compute pseudo-log-likelihood by masking each token
+        # compute pseudo-log-likelihood by masking each token
         total_log_prob = 0.0
         num_tokens = input_ids.size(1)
 
         with torch.no_grad():
             for i in range(num_tokens):
-                # Skip special tokens
+                # skip special tokens
                 if input_ids[0, i] in [
                     self.tokenizer.cls_token_id,
                     self.tokenizer.sep_token_id,
@@ -650,20 +653,20 @@ class HuggingFaceMaskedLanguageModel(HuggingFaceAdapterMixin, ModelAdapter):
                 ]:
                     continue
 
-                # Create masked version
+                # create masked version
                 masked_input = input_ids.clone()
                 original_token = masked_input[0, i].item()
                 masked_input[0, i] = self.tokenizer.mask_token_id
 
-                # Get prediction
+                # get prediction
                 outputs = self.model(masked_input)
-                logits = outputs.logits[0, i]  # Logits for masked position
+                logits = outputs.logits[0, i]  # logits for masked position
 
-                # Compute log probability of original token
+                # compute log probability of original token
                 log_probs = torch.nn.functional.log_softmax(logits, dim=-1)
                 total_log_prob += log_probs[original_token].item()
 
-        # Cache result
+        # cache result
         self.cache.set(
             self.model_name,
             "log_probability",
@@ -687,15 +690,15 @@ class HuggingFaceMaskedLanguageModel(HuggingFaceAdapterMixin, ModelAdapter):
         float
             Perplexity of the text (positive value).
         """
-        # Check cache
+        # check cache
         cached = self.cache.get(self.model_name, "perplexity", text=text)
         if cached is not None:
             return cached
 
-        # Get log probability
+        # get log probability
         log_prob = self.compute_log_probability(text)
 
-        # Count non-special tokens
+        # count non-special tokens
         inputs = self.tokenizer(text, return_tensors="pt", truncation=True)
         input_ids = inputs["input_ids"]
         num_tokens = sum(
@@ -709,10 +712,10 @@ class HuggingFaceMaskedLanguageModel(HuggingFaceAdapterMixin, ModelAdapter):
             ]
         )
 
-        # Perplexity is exp(-log_prob / num_tokens)
+        # perplexity is exp(-log_prob / num_tokens)
         perplexity = np.exp(-log_prob / max(num_tokens, 1))
 
-        # Cache result
+        # cache result
         self.cache.set(
             self.model_name,
             "perplexity",
@@ -738,30 +741,30 @@ class HuggingFaceMaskedLanguageModel(HuggingFaceAdapterMixin, ModelAdapter):
         np.ndarray
             Embedding vector for the text.
         """
-        # Check cache
+        # check cache
         cached = self.cache.get(self.model_name, "embedding", text=text)
         if cached is not None:
             return cached
 
-        # Tokenize
+        # tokenize
         inputs = self.tokenizer(
             text, return_tensors="pt", padding=True, truncation=True
         )
         input_ids = inputs["input_ids"].to(self.device)
         attention_mask = inputs["attention_mask"].to(self.device)
 
-        # Get hidden states
+        # get hidden states
         with torch.no_grad():
             outputs = self.model(
                 input_ids=input_ids,
                 attention_mask=attention_mask,
                 output_hidden_states=True,
             )
-            # Use [CLS] token from last layer
+            # use [CLS] token from last layer
             hidden_states = outputs.hidden_states[-1]
             cls_embedding = hidden_states[0, 0].cpu().numpy()
 
-        # Cache result
+        # cache result
         self.cache.set(
             self.model_name,
             "embedding",
@@ -860,12 +863,12 @@ class HuggingFaceNLI(HuggingFaceAdapterMixin, ModelAdapter):
         if self._tokenizer is None:
             self._tokenizer = AutoTokenizer.from_pretrained(self.model_name)
 
-    def _build_label_mapping(self, id2label: dict[Any, Any]) -> dict[str, str]:
+    def _build_label_mapping(self, id2label: dict[int, str]) -> dict[str, str]:
         """Build mapping from model label IDs to standard NLI labels.
 
         Parameters
         ----------
-        id2label : dict
+        id2label
             Mapping from label IDs to label strings from model config.
 
         Returns
@@ -875,9 +878,9 @@ class HuggingFaceNLI(HuggingFaceAdapterMixin, ModelAdapter):
         """
         mapping: dict[str, str] = {}
         for idx, label in id2label.items():
-            # Normalize label to lowercase
+            # normalize label to lowercase
             normalized = label.lower()
-            # Map to standard labels
+            # map to standard labels
             if "entail" in normalized:
                 mapping[str(idx)] = "entailment"
             elif "neutral" in normalized:
@@ -885,7 +888,7 @@ class HuggingFaceNLI(HuggingFaceAdapterMixin, ModelAdapter):
             elif "contradict" in normalized:
                 mapping[str(idx)] = "contradiction"
             else:
-                # Keep original if we can't map it
+                # keep original if we can't map it
                 mapping[str(idx)] = normalized
         return mapping
 
@@ -950,21 +953,21 @@ class HuggingFaceNLI(HuggingFaceAdapterMixin, ModelAdapter):
         np.ndarray
             Embedding vector for the text.
         """
-        # Check cache
+        # check cache
         cached = self.cache.get(self.model_name, "embedding", text=text)
         if cached is not None:
             return cached
 
-        # Tokenize
+        # tokenize
         inputs = self.tokenizer(
             text, return_tensors="pt", padding=True, truncation=True
         )
         input_ids = inputs["input_ids"].to(self.device)
         attention_mask = inputs["attention_mask"].to(self.device)
 
-        # Get hidden states (using base model if available)
+        # get hidden states (using base model if available)
         with torch.no_grad():
-            # Try to access base model for embeddings
+            # try to access base model for embeddings
             if hasattr(self.model, "roberta"):
                 base_model = self.model.roberta
             elif hasattr(self.model, "deberta"):
@@ -972,7 +975,7 @@ class HuggingFaceNLI(HuggingFaceAdapterMixin, ModelAdapter):
             elif hasattr(self.model, "bert"):
                 base_model = self.model.bert
             else:
-                # Fallback: use full model with output_hidden_states
+                # fallback: use full model with output_hidden_states
                 outputs = self.model(
                     input_ids=input_ids,
                     attention_mask=attention_mask,
@@ -989,12 +992,12 @@ class HuggingFaceNLI(HuggingFaceAdapterMixin, ModelAdapter):
                 )
                 return embedding
 
-            # Use base model
+            # use base model
             outputs = base_model(input_ids=input_ids, attention_mask=attention_mask)
-            # Use [CLS] token
+            # use [CLS] token
             embedding = outputs.last_hidden_state[0, 0].cpu().numpy()
 
-        # Cache result
+        # cache result
         self.cache.set(
             self.model_name,
             "embedding",
@@ -1021,14 +1024,14 @@ class HuggingFaceNLI(HuggingFaceAdapterMixin, ModelAdapter):
             Dictionary with keys "entailment", "neutral", "contradiction"
             mapping to probability scores that sum to ~1.0.
         """
-        # Check cache
+        # check cache
         cached = self.cache.get(
             self.model_name, "nli", premise=premise, hypothesis=hypothesis
         )
         if cached is not None:
             return cached
 
-        # Tokenize premise-hypothesis pair
+        # tokenize premise-hypothesis pair
         inputs = self.tokenizer(
             premise,
             hypothesis,
@@ -1039,26 +1042,26 @@ class HuggingFaceNLI(HuggingFaceAdapterMixin, ModelAdapter):
         input_ids = inputs["input_ids"].to(self.device)
         attention_mask = inputs["attention_mask"].to(self.device)
 
-        # Get logits
+        # get logits
         with torch.no_grad():
             outputs = self.model(input_ids=input_ids, attention_mask=attention_mask)
             logits = outputs.logits[0]
 
-        # Convert to probabilities
+        # convert to probabilities
         probs = torch.nn.functional.softmax(logits, dim=-1).cpu().numpy()
 
-        # Map to standard labels
+        # map to standard labels
         scores: dict[str, float] = {}
         for idx, prob in enumerate(probs):
             label = self._label_mapping.get(str(idx), str(idx))
             scores[label] = float(prob)
 
-        # Ensure we have all three standard labels
+        # ensure we have all three standard labels
         for label in ["entailment", "neutral", "contradiction"]:
             if label not in scores:
                 scores[label] = 0.0
 
-        # Cache result
+        # cache result
         self.cache.set(
             self.model_name,
             "nli",

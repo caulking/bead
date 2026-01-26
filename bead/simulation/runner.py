@@ -20,6 +20,11 @@ class SimulationRunner:
     - Correlated annotators (shared noise component)
     - Mixed strategies (some LM-based, some random)
 
+    Parameters
+    ----------
+    config
+        Configuration for simulation.
+
     Examples
     --------
     >>> from bead.config.simulation import (  # doctest: +SKIP
@@ -38,16 +43,9 @@ class SimulationRunner:
     """
 
     def __init__(self, config: SimulationRunnerConfig) -> None:
-        """Initialize runner.
-
-        Parameters
-        ----------
-        config : SimulationRunnerConfig
-            Configuration for simulation.
-        """
         self.config = config
 
-        # Create annotators from configs
+        # create annotators from configs
         from bead.simulation.annotators.base import (  # noqa: PLC0415
             SimulatedAnnotator,
         )
@@ -56,11 +54,11 @@ class SimulationRunner:
             SimulatedAnnotator.from_config(cfg) for cfg in config.annotator_configs
         ]
 
-        # If n_annotators > len(annotator_configs), replicate first config
+        # if n_annotators > len(annotator_configs), replicate first config
         if config.n_annotators > len(self.annotators):
             base_config = config.annotator_configs[0]
             for i in range(len(self.annotators), config.n_annotators):
-                # Create new config with different seed
+                # create new config with different seed
                 new_config = base_config.model_copy()
                 new_config.random_state = (base_config.random_state or 0) + i
                 self.annotators.append(SimulatedAnnotator.from_config(new_config))
@@ -89,7 +87,7 @@ class SimulationRunner:
                 ...
             }
         """
-        # Collect annotations from each annotator
+        # collect annotations from each annotator
         results: dict[str, list[str | int | float | list[str]]] = {
             "item_ids": [str(item.id) for item in items]
         }
@@ -98,7 +96,7 @@ class SimulationRunner:
             annotations = annotator.annotate_batch(items, templates)
             results[f"annotator_{i}"] = [annotations[str(item.id)] for item in items]
 
-        # Save if configured
+        # save if configured
         if self.config.save_path:
             self.save_results(results)
 
@@ -122,7 +120,7 @@ class SimulationRunner:
         path.parent.mkdir(parents=True, exist_ok=True)
 
         if self.config.output_format == "jsonl":
-            # Write JSONL format
+            # write JSONL format
             with open(path, "w") as f:
                 for i in range(len(results["item_ids"])):
                     row = {
@@ -134,12 +132,12 @@ class SimulationRunner:
                     f.write(json.dumps(row) + "\n")
 
         elif self.config.output_format == "dict":
-            # Write JSON format
+            # write JSON format
             with open(path, "w") as f:
                 json.dump(results, f, indent=2)
 
         elif self.config.output_format == "dataframe":
-            # Write CSV format (optional dependency)
+            # write CSV format (optional dependency)
             import pandas as pd  # noqa: PLC0415
 
             df = pd.DataFrame(results)

@@ -22,7 +22,7 @@ from pydantic import Field, field_validator, model_validator
 from bead.data.base import BeadBaseModel
 from bead.resources.constraints import ContextValue
 
-# Type alias for list constraint types
+# type alias for list constraint types
 ListConstraintType = Literal[
     "uniqueness",  # No duplicate property values
     "conditional_uniqueness",  # Conditional uniqueness based on DSL expression
@@ -34,7 +34,7 @@ ListConstraintType = Literal[
     "ordering",  # Presentation order constraints (runtime enforcement)
 ]
 
-# Type alias for batch constraint types
+# type alias for batch constraint types
 BatchConstraintType = Literal[
     "coverage",  # All values appear somewhere in batch
     "balance",  # Balanced distribution across entire batch
@@ -631,18 +631,18 @@ class SizeConstraint(BeadBaseModel):
         ValueError
             If validation fails.
         """
-        # Check that at least one parameter is set
+        # check that at least one parameter is set
         if self.exact_size is None and self.min_size is None and self.max_size is None:
             raise ValueError(
                 "Must specify at least one of: min_size, max_size, exact_size"
             )
 
-        # Check that exact_size is not used with min/max
+        # check that exact_size is not used with min/max
         if self.exact_size is not None:
             if self.min_size is not None or self.max_size is not None:
                 raise ValueError("exact_size cannot be used with min_size or max_size")
 
-        # Check that min <= max if both are set
+        # check that min <= max if both are set
         if self.min_size is not None and self.max_size is not None:
             if self.min_size > self.max_size:
                 raise ValueError("min_size must be <= max_size")
@@ -766,7 +766,7 @@ class OrderingConstraint(BeadBaseModel):
         return self
 
 
-# Discriminated union for all list constraints
+# discriminated union for all list constraints
 ListConstraint = Annotated[
     UniquenessConstraint
     | ConditionalUniquenessConstraint
@@ -781,7 +781,7 @@ ListConstraint = Annotated[
 
 
 # ============================================================================
-# Batch-Level Constraints
+# batch-level constraints
 # ============================================================================
 
 
@@ -1057,7 +1057,7 @@ class BatchMinOccurrenceConstraint(BeadBaseModel):
         return v.strip()
 
 
-# Discriminated union for all batch constraints
+# discriminated union for all batch constraints
 BatchConstraint = Annotated[
     BatchCoverageConstraint
     | BatchBalanceConstraint

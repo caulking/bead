@@ -32,30 +32,30 @@ class CacheBackend(ABC):
     """
 
     @abstractmethod
-    def get(self, key: str) -> dict[str, Any] | None:
+    def get(self, key: str) -> dict[str, object] | None:
         """Retrieve cache entry by key.
 
         Parameters
         ----------
-        key : str
+        key
             Cache key to retrieve.
 
         Returns
         -------
-        dict[str, Any] | None
+        dict[str, object] | None
             Cache entry data if found, None otherwise.
         """
         pass
 
     @abstractmethod
-    def set(self, key: str, data: dict[str, Any]) -> None:
+    def set(self, key: str, data: dict[str, object]) -> None:
         """Store cache entry with key.
 
         Parameters
         ----------
-        key : str
+        key
             Cache key.
-        data : dict[str, Any]
+        data
             Cache entry data to store.
         """
         pass
@@ -66,7 +66,7 @@ class CacheBackend(ABC):
 
         Parameters
         ----------
-        key : str
+        key
             Cache key to delete.
         """
         pass
@@ -117,17 +117,17 @@ class FilesystemBackend(CacheBackend):
         self.cache_dir = cache_dir
         self.cache_dir.mkdir(parents=True, exist_ok=True)
 
-    def get(self, key: str) -> dict[str, Any] | None:
+    def get(self, key: str) -> dict[str, object] | None:
         """Retrieve cache entry from filesystem.
 
         Parameters
         ----------
-        key : str
+        key
             Cache key.
 
         Returns
         -------
-        dict[str, Any] | None
+        dict[str, object] | None
             Cache entry data if found, None otherwise.
         """
         cache_file = self.cache_dir / f"{key}.json"
@@ -140,14 +140,14 @@ class FilesystemBackend(CacheBackend):
             logger.warning(f"Failed to read cache file {cache_file}: {e}")
             return None
 
-    def set(self, key: str, data: dict[str, Any]) -> None:
+    def set(self, key: str, data: dict[str, object]) -> None:
         """Store cache entry to filesystem.
 
         Parameters
         ----------
-        key : str
+        key
             Cache key.
-        data : dict[str, Any]
+        data
             Cache entry data.
         """
         cache_file = self.cache_dir / f"{key}.json"
@@ -162,7 +162,7 @@ class FilesystemBackend(CacheBackend):
 
         Parameters
         ----------
-        key : str
+        key
             Cache key to delete.
         """
         cache_file = self.cache_dir / f"{key}.json"
@@ -210,31 +210,31 @@ class InMemoryBackend(CacheBackend):
     """
 
     def __init__(self) -> None:
-        self._cache: dict[str, dict[str, Any]] = {}
+        self._cache: dict[str, dict[str, object]] = {}
 
-    def get(self, key: str) -> dict[str, Any] | None:
+    def get(self, key: str) -> dict[str, object] | None:
         """Retrieve cache entry from memory.
 
         Parameters
         ----------
-        key : str
+        key
             Cache key.
 
         Returns
         -------
-        dict[str, Any] | None
+        dict[str, object] | None
             Cache entry data if found, None otherwise.
         """
         return self._cache.get(key)
 
-    def set(self, key: str, data: dict[str, Any]) -> None:
+    def set(self, key: str, data: dict[str, object]) -> None:
         """Store cache entry in memory.
 
         Parameters
         ----------
-        key : str
+        key
             Cache key.
-        data : dict[str, Any]
+        data
             Cache entry data.
         """
         self._cache[key] = data
@@ -244,7 +244,7 @@ class InMemoryBackend(CacheBackend):
 
         Parameters
         ----------
-        key : str
+        key
             Cache key to delete.
         """
         self._cache.pop(key, None)
@@ -338,50 +338,53 @@ class ModelOutputCache:
         else:
             raise ValueError(f"Unknown backend: {backend}")
 
-    def generate_cache_key(self, model_name: str, operation: str, **inputs: Any) -> str:
+    def generate_cache_key(
+        self, model_name: str, operation: str, **inputs: str | int | float | bool | None
+    ) -> str:
         """Generate deterministic cache key from inputs.
 
         Parameters
         ----------
-        model_name : str
+        model_name
             Model identifier.
-        operation : str
-            Operation type.
-        **inputs : Any
-            Input parameters.
+        operation
+            Operation type (e.g., "log_probability", "embedding").
+        **inputs
+            Input parameters for the operation (text, premise, hypothesis).
 
         Returns
         -------
         str
             SHA-256 hex digest as cache key.
         """
-        # Create deterministic dict with sorted keys
+        # create deterministic dict with sorted keys
         key_data = {
             "model_name": model_name,
             "operation": operation,
             "inputs": self._serialize_for_hash(inputs),
         }
 
-        # JSON with sorted keys for determinism
+        # json with sorted keys for determinism
         key_json = json.dumps(key_data, sort_keys=True)
 
-        # SHA-256 hash
+        # sha-256 hash
         return hashlib.sha256(key_json.encode("utf-8")).hexdigest()
 
-    def _serialize_for_hash(self, obj: Any) -> Any:
+    def _serialize_for_hash(self, obj: object) -> object:
         """Serialize object for deterministic hashing.
 
-        Converts numpy arrays to lists, sorts dict keys, etc.
+        Converts numpy arrays to lists and sorts dict keys.
 
         Parameters
         ----------
-        obj : Any
-            Object to serialize.
+        obj
+            Object to serialize. Accepts numpy arrays, dicts, lists, tuples,
+            and primitive types.
 
         Returns
         -------
-        Any
-            Serializable version of object.
+        object
+            JSON-serializable version of the object.
         """
         if isinstance(obj, np.ndarray):
             return obj.tolist()
@@ -392,17 +395,18 @@ class ModelOutputCache:
         else:
             return obj
 
-    def _serialize_result(self, result: Any) -> Any:
+    def _serialize_result(self, result: object) -> object:
         """Serialize result for storage.
 
         Parameters
         ----------
-        result : Any
-            Result to serialize.
+        result
+            Result to serialize. Accepts numpy arrays, dicts, lists, tuples,
+            and primitive types.
 
         Returns
         -------
-        Any
+        object
             JSON-serializable version of result.
         """
         if isinstance(result, np.ndarray):
@@ -423,13 +427,13 @@ class ModelOutputCache:
 
         Parameters
         ----------
-        result : Any
-            Serialized result.
+        result
+            Serialized result from cache storage.
 
         Returns
         -------
         Any
-            Deserialized result.
+            Deserialized result with numpy arrays restored.
         """
         if isinstance(result, dict):
             if result.get("__type__") == "ndarray":  # type: ignore[union-attr]
@@ -441,17 +445,19 @@ class ModelOutputCache:
         else:
             return result
 
-    def get(self, model_name: str, operation: str, **inputs: Any) -> Any:
+    def get(
+        self, model_name: str, operation: str, **inputs: str | int | float | bool | None
+    ) -> Any:
         """Retrieve cached result.
 
         Parameters
         ----------
-        model_name : str
+        model_name
             Model identifier.
-        operation : str
+        operation
             Operation type (e.g., "log_probability", "nli", "embedding").
-        **inputs : Any
-            Input parameters for the operation.
+        **inputs
+            Input parameters for the operation (text, premise, hypothesis).
 
         Returns
         -------
@@ -467,38 +473,38 @@ class ModelOutputCache:
         if entry is None:
             return None
 
-        # Deserialize and return result
+        # deserialize and return result
         return self._deserialize_result(entry["result"])
 
     def set(
         self,
         model_name: str,
         operation: str,
-        result: Any,
+        result: float | dict[str, float] | list[float] | np.ndarray,
         model_version: str | None = None,
-        **inputs: Any,
+        **inputs: str | int | float | bool | None,
     ) -> None:
         """Store result in cache.
 
         Parameters
         ----------
-        model_name : str
+        model_name
             Model identifier.
-        operation : str
+        operation
             Operation type (e.g., "log_probability", "nli", "embedding").
-        result : Any
-            Result to cache.
-        model_version : str | None
+        result
+            Result to cache (log probability, NLI scores, embedding, etc.).
+        model_version
             Optional model version string for tracking.
-        **inputs : Any
-            Input parameters for the operation.
+        **inputs
+            Input parameters for the operation (text, premise, hypothesis).
         """
         if not self.enabled:
             return
 
         cache_key = self.generate_cache_key(model_name, operation, **inputs)
 
-        # Create cache entry with metadata
+        # create cache entry with metadata
         entry = {
             "cache_key": cache_key,
             "timestamp": datetime.now(UTC).isoformat(),
@@ -511,17 +517,19 @@ class ModelOutputCache:
 
         self._backend.set(cache_key, entry)
 
-    def invalidate(self, model_name: str, operation: str, **inputs: Any) -> None:
+    def invalidate(
+        self, model_name: str, operation: str, **inputs: str | int | float | bool | None
+    ) -> None:
         """Invalidate specific cache entry.
 
         Parameters
         ----------
-        model_name : str
+        model_name
             Model identifier.
-        operation : str
+        operation
             Operation type.
-        **inputs : Any
-            Input parameters.
+        **inputs
+            Input parameters for the operation.
         """
         cache_key = self.generate_cache_key(model_name, operation, **inputs)
         self._backend.delete(cache_key)
@@ -534,14 +542,14 @@ class ModelOutputCache:
         model_name : str
             Model identifier.
         """
-        # Get all keys and filter by model name
+        # get all keys and filter by model name
         keys_to_delete: list[str] = []
         for key in self._backend.keys():
             entry = self._backend.get(key)
             if entry and entry.get("model_name") == model_name:
                 keys_to_delete.append(key)
 
-        # Delete matching entries
+        # delete matching entries
         for key in keys_to_delete:
             self._backend.delete(key)
 

@@ -6,9 +6,26 @@ both local (HuggingFace) and API-based (OpenAI, Anthropic, etc.).
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Unpack
 
-from bead.items.adapters.base import ModelAdapter
+from typing_extensions import TypedDict
+
+if TYPE_CHECKING:
+    from bead.items.cache import ModelOutputCache
+
+
+class AdapterKwargs(TypedDict, total=False):
+    """Keyword arguments for adapter initialization."""
+
+    api_key: str
+    device: str
+    model_version: str
+    embedding_model: str
+    normalize_embeddings: bool
+    cache: ModelOutputCache
+
+
+from bead.items.adapters.base import ModelAdapter  # noqa: E402
 
 
 class ModelAdapterRegistry:
@@ -51,7 +68,7 @@ class ModelAdapterRegistry:
         self.adapters[name] = adapter_class
 
     def get_adapter(
-        self, adapter_type: str, model_name: str, **kwargs: Any
+        self, adapter_type: str, model_name: str, **kwargs: Unpack[AdapterKwargs]
     ) -> ModelAdapter:
         """Get or create adapter instance (with caching).
 
@@ -60,12 +77,13 @@ class ModelAdapterRegistry:
 
         Parameters
         ----------
-        adapter_type : str
+        adapter_type
             Type of adapter (must be registered).
-        model_name : str
+        model_name
             Model identifier for the adapter.
-        **kwargs : Any
-            Additional keyword arguments to pass to adapter constructor.
+        **kwargs
+            Additional keyword arguments to pass to adapter constructor
+            (api_key, device, model_version, embedding_model, etc.).
 
         Returns
         -------
@@ -89,18 +107,18 @@ class ModelAdapterRegistry:
                 f"Available types: {list(self.adapters.keys())}"
             )
 
-        # Create cache key from adapter type and model name
+        # create cache key from adapter type and model name
         cache_key = f"{adapter_type}:{model_name}"
 
-        # Return cached instance if available
+        # return cached instance if available
         if cache_key in self.instances:
             return self.instances[cache_key]
 
-        # Create new instance
+        # create new instance
         adapter_class = self.adapters[adapter_type]
-        adapter = adapter_class(model_name=model_name, **kwargs)
+        adapter = adapter_class(model_name=model_name, **kwargs)  # type: ignore[misc]
 
-        # Cache and return
+        # cache and return
         self.instances[cache_key] = adapter
         return adapter
 

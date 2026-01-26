@@ -18,6 +18,16 @@ class TemperatureNoiseModel(NoiseModel):
     For forced choice, modifies the softmax:
         P_i = exp(score_i / T) / sum(exp(score_j / T))
 
+    Parameters
+    ----------
+    temperature
+        Temperature scaling factor (> 0). Default: 1.0.
+
+    Raises
+    ------
+    ValueError
+        If temperature <= 0.
+
     Examples
     --------
     >>> noise_model = TemperatureNoiseModel(temperature=2.0)
@@ -25,18 +35,6 @@ class TemperatureNoiseModel(NoiseModel):
     """
 
     def __init__(self, temperature: float = 1.0) -> None:
-        """Initialize temperature noise model.
-
-        Parameters
-        ----------
-        temperature : float
-            Temperature scaling factor (> 0).
-
-        Raises
-        ------
-        ValueError
-            If temperature <= 0.
-        """
         if temperature <= 0:
             msg = "Temperature must be positive"
             raise ValueError(msg)
@@ -45,7 +43,7 @@ class TemperatureNoiseModel(NoiseModel):
     def apply(
         self,
         value: str | int | float | list[str],
-        context: dict[str, object],
+        context: dict[str, str | int | float | bool | list[str]],
         rng: np.random.RandomState,
     ) -> str | int | float | list[str]:
         """Apply temperature scaling.
@@ -57,7 +55,7 @@ class TemperatureNoiseModel(NoiseModel):
         ----------
         value : str | int | float | list[str]
             Original value (choice, rating, etc.).
-        context : dict[str, object]
+        context : dict[str, str | int | float | bool | list[str]]
             Context with item, template, strategy.
         rng : np.random.RandomState
             Random number generator.
@@ -73,17 +71,16 @@ class TemperatureNoiseModel(NoiseModel):
             task_type = strategy.supported_task_type
 
             if task_type == "forced_choice":
-                # For forced choice, temperature is already handled in strategy
-                # by applying it to the softmax computation
-                # Here we just return the value as-is
+                # for forced choice, temperature is already handled in strategy
+                # by applying it to the softmax computation; return value as-is
                 return value
 
             elif task_type == "ordinal_scale":
-                # For ordinal, add temperature-scaled gaussian noise
+                # for ordinal, add temperature-scaled gaussian noise
                 if isinstance(value, (int, float)):
                     noise = rng.normal(0, self.temperature * 0.5)
                     return value + noise
                 return value
 
-        # Default: no modification
+        # default: no modification
         return value

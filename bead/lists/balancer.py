@@ -118,23 +118,23 @@ class QuantileBalancer:
                 f"got {items_per_quantile_per_list}"
             )
 
-        # Create quantile-based strata
+        # create quantile-based strata
         strata = self._create_strata(item_ids, value_func)
 
-        # Initialize lists
+        # initialize lists
         lists: list[list[UUID]] = [[] for _ in range(n_lists)]
 
-        # Distribute items from each quantile across lists
+        # distribute items from each quantile across lists
         for q in range(self.n_quantiles):
             q_items = strata[q]
 
-            # Shuffle items in this quantile
+            # shuffle items in this quantile
             q_items_array = np.array(q_items)
             self._rng.shuffle(q_items_array)
 
-            # Distribute to lists
+            # distribute to lists
             for list_idx in range(n_lists):
-                # Take items for this list
+                # take items for this list
                 start_idx = list_idx * items_per_quantile_per_list
                 end_idx = start_idx + items_per_quantile_per_list
                 list_items = q_items_array[start_idx:end_idx].tolist()
@@ -183,12 +183,12 @@ class QuantileBalancer:
         if not item_ids:
             return 0.0
 
-        # Compute values
+        # compute values
         values: np.ndarray[tuple[int, ...], np.dtype[np.floating[Any]]] = np.array(
             [value_func(item_id) for item_id in item_ids]
         )
 
-        # Create expected quantile bins
+        # create expected quantile bins
         expected_quantiles: np.ndarray[tuple[int], np.dtype[np.floating[Any]]] = (
             np.linspace(0, 100, self.n_quantiles + 1)
         )
@@ -197,8 +197,7 @@ class QuantileBalancer:
             values, expected_quantiles
         )
 
-        # Count items in each quantile
-        # digitize returns array of integers
+        # count items in each quantile; digitize returns array of integers
         quantile_assignments: np.ndarray[Any, np.dtype[np.intp]] = (
             np.digitize(values, expected_bins) - 1
         )
@@ -206,7 +205,7 @@ class QuantileBalancer:
 
         quantile_counts = np.bincount(quantile_assignments, minlength=self.n_quantiles)
 
-        # Compute uniformity score
+        # compute uniformity score
         expected_count = len(item_ids) / self.n_quantiles
         deviations = np.abs(quantile_counts - expected_count)
         score = 1.0 - (np.mean(deviations) / expected_count)
@@ -237,12 +236,12 @@ class QuantileBalancer:
         - Uses np.digitize to assign items to quantiles
         - Edge cases are handled by clipping to valid quantile range
         """
-        # Extract values
+        # extract values
         values: np.ndarray[tuple[int, ...], np.dtype[np.floating[Any]]] = np.array(
             [value_func(item_id) for item_id in item_ids]
         )
 
-        # Compute quantile bins
+        # compute quantile bins
         quantiles: np.ndarray[tuple[int], np.dtype[np.floating[Any]]] = np.linspace(
             0, 100, self.n_quantiles + 1
         )
@@ -250,13 +249,13 @@ class QuantileBalancer:
             values, quantiles
         )
 
-        # Assign items to quantiles
+        # assign items to quantiles
         quantile_assignments: np.ndarray[Any, np.dtype[np.intp]] = (
             np.digitize(values, bins) - 1
         )
         quantile_assignments = np.clip(quantile_assignments, 0, self.n_quantiles - 1)
 
-        # Group items by quantile
+        # group items by quantile
         strata: dict[int, list[UUID]] = {q: [] for q in range(self.n_quantiles)}
         for item_id, q in zip(item_ids, quantile_assignments, strict=False):
             strata[q].append(item_id)

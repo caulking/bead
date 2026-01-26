@@ -105,23 +105,23 @@ class ClozeStrategy(SimulationStrategy):
         for slot in item.unfilled_slots:
             slot_name = slot.slot_name
 
-            # Try to get MLM scores for this slot
+            # try to get MLM scores for this slot
             slot_scores = self._get_slot_scores(item, slot_name, model_output_key)
 
             if slot_scores:
-                # Select filler with highest score (with softmax sampling)
+                # select filler with highest score (with softmax sampling)
                 fillers = list(slot_scores.keys())
                 scores = np.array(list(slot_scores.values()))
 
-                # Apply softmax to convert scores to probabilities
+                # apply softmax to convert scores to probabilities
                 exp_scores = np.exp(scores - np.max(scores))  # numerical stability
                 probs = exp_scores / np.sum(exp_scores)
 
-                # Sample from distribution
+                # sample from distribution
                 selected_idx = rng.choice(len(fillers), p=probs)
                 response[slot_name] = fillers[selected_idx]
             else:
-                # Fallback: use ground truth if available, else placeholder
+                # fallback: use ground truth if available, else placeholder
                 response[slot_name] = self._get_fallback_filler(item, slot_name, rng)
 
         return response
@@ -159,7 +159,7 @@ class ClozeStrategy(SimulationStrategy):
 
             inputs = model_output.inputs
 
-            # Check if this output is for our slot
+            # check if this output is for our slot
             if inputs.get("slot_name") != slot_name:
                 continue
 
@@ -167,7 +167,7 @@ class ClozeStrategy(SimulationStrategy):
             if candidate is None:
                 continue
 
-            # Extract score
+            # extract score
             score = model_output.output
             if isinstance(score, (int, float)):
                 scores[str(candidate)] = float(score)
@@ -198,13 +198,13 @@ class ClozeStrategy(SimulationStrategy):
         str
             Fallback filler.
         """
-        # Try ground truth
+        # try ground truth
         if hasattr(item, "item_metadata") and item.item_metadata:
             ground_truth = item.item_metadata.get("ground_truth")
             if isinstance(ground_truth, dict) and slot_name in ground_truth:
                 return str(ground_truth[slot_name])
 
-        # Common fallbacks by slot name patterns
+        # common fallbacks by slot name patterns
         fallback_options = {
             "determiner": ["the", "a", "an", "this", "that"],
             "verb": ["is", "was", "has", "can", "will"],
@@ -214,11 +214,11 @@ class ClozeStrategy(SimulationStrategy):
             "preposition": ["in", "on", "at", "to", "for"],
         }
 
-        # Match slot name to category
+        # match slot name to category
         slot_lower = slot_name.lower()
         for category, options in fallback_options.items():
             if category in slot_lower:
                 return str(rng.choice(options))
 
-        # Generic fallback
+        # generic fallback
         return f"[{slot_name}]"

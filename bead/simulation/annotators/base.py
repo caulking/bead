@@ -25,25 +25,23 @@ class SimulatedAnnotator(ABC):
 
     The annotator orchestrates the simulation process and provides
     a unified interface for generating judgments.
+
+    Parameters
+    ----------
+    config
+        Configuration for annotator.
+    random_state
+        Random seed (overrides config if provided).
     """
 
     def __init__(
         self, config: SimulatedAnnotatorConfig, random_state: int | None = None
     ) -> None:
-        """Initialize annotator.
-
-        Parameters
-        ----------
-        config : SimulatedAnnotatorConfig
-            Configuration for annotator.
-        random_state : int | None
-            Random seed (overrides config if provided).
-        """
         self.config = config
         self.random_state = random_state or config.random_state
         self.rng = np.random.RandomState(self.random_state)
 
-        # Will be set by subclasses
+        # will be set by subclasses
         self.strategies: dict[str, SimulationStrategy] = {}
         self.noise_model: NoiseModel | None = None
 
@@ -72,7 +70,7 @@ class SimulatedAnnotator(ABC):
         >>> config = SimulatedAnnotatorConfig(strategy="lm_score")
         >>> annotator = SimulatedAnnotator.from_config(config)
         """
-        # Import here to avoid circular dependency
+        # import here to avoid circular dependency
         from bead.simulation.annotators.distance_based import (  # noqa: PLC0415
             DistanceBasedAnnotator,
         )
@@ -138,14 +136,14 @@ class SimulatedAnnotator(ABC):
         >>> annotations[str(items[0].id)]
         'option_a'
         """
-        # Handle single template
+        # handle single template
         templates_list: list[ItemTemplate]
         if not isinstance(item_templates, list):
             templates_list = [item_templates] * len(items)
         else:
             templates_list = item_templates
 
-        # Annotate each item
+        # annotate each item
         annotations: dict[str, str | int | float | list[str]] = {}
         for item, template in zip(items, templates_list, strict=True):
             annotation = self.annotate(item, template)

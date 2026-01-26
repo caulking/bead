@@ -144,17 +144,17 @@ class Constraint(BeadBaseModel):
         if len(constraints) == 1:
             return constraints[0]
 
-        # Combine expressions with specified logic operator
+        # combine expressions with specified logic operator
         expressions = [f"({c.expression})" for c in constraints]
         combined_expression = f" {logic} ".join(expressions)
 
-        # Merge contexts
+        # merge contexts
         combined_context: dict[str, ContextValue] = {}
         for constraint in constraints:
             if constraint.context:
                 combined_context.update(constraint.context)
 
-        # Combine descriptions
+        # combine descriptions
         descriptions = [c.description for c in constraints if c.description]
         combined_description = "; ".join(descriptions) if descriptions else None
 

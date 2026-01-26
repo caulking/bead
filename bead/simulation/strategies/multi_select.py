@@ -23,6 +23,13 @@ class MultiSelectStrategy(SimulationStrategy):
     For each option i:
         P(select option i) = sigmoid(score_i / temperature)
 
+    Parameters
+    ----------
+    threshold
+        Probability threshold for selection. Default: 0.5.
+    temperature
+        Temperature for scaling decisions. Default: 1.0.
+
     Examples
     --------
     >>> strategy = MultiSelectStrategy()
@@ -31,15 +38,6 @@ class MultiSelectStrategy(SimulationStrategy):
     """
 
     def __init__(self, threshold: float = 0.5, temperature: float = 1.0) -> None:
-        """Initialize multi-select strategy.
-
-        Parameters
-        ----------
-        threshold : float
-            Probability threshold for selection. Default: 0.5.
-        temperature : float
-            Temperature for scaling decisions. Default: 1.0.
-        """
         self.threshold = threshold
         self.temperature = temperature
 
@@ -104,26 +102,27 @@ class MultiSelectStrategy(SimulationStrategy):
             List of selected option names.
         """
         options = item_template.task_spec.options
+        assert options is not None, "options validated in validate()"
         n_options = len(options)
 
-        # Extract model outputs for each option
+        # extract model outputs for each option
         scores = self.extract_model_outputs(item, model_output_key, n_options)
 
         if scores is None:
-            # Fallback to random selection (each option has threshold probability)
+            # fallback to random selection (each option has threshold probability)
             selected = []
             for option in options:
                 if rng.random() < self.threshold:
                     selected.append(option)
             return selected
 
-        # Compute selection probability for each option using sigmoid
+        # compute selection probability for each option using sigmoid
         selected = []
         for option, score in zip(options, scores, strict=True):
             # sigmoid(score / temperature)
             prob = 1.0 / (1.0 + np.exp(-score / self.temperature))
 
-            # Sample selection
+            # sample selection
             if rng.random() < prob:
                 selected.append(option)
 

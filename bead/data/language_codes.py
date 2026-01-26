@@ -14,7 +14,7 @@ def validate_iso639_code(code: str | None) -> str | None:
 
     Parameters
     ----------
-    code : str | None
+    code
         Language code to validate (e.g., "en", "eng", "ko", "kor").
 
     Returns
@@ -46,14 +46,14 @@ def validate_iso639_code(code: str | None) -> str | None:
         return None
 
     try:
-        # Parse and normalize to ISO 639-3
+        # parse and normalize to ISO 639-3
         lang = Language.get(code)
         return lang.to_alpha3()
     except (LanguageTagError, LookupError) as e:
         raise ValueError(f"Invalid language code: {code!r}") from e
 
 
-# Type alias for language codes
+# type alias for language codes
 LanguageCode = Annotated[
     str | None,
     AfterValidator(validate_iso639_code),

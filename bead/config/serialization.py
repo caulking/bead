@@ -38,19 +38,19 @@ def config_to_dict(
     >>> 'profile' in config_dict
     True
     """
-    # Get dictionary with all values, excluding unset fields
+    # get dictionary with all values, excluding unset fields
     config_dict: dict[str, Any] = config.model_dump(
         mode="json", exclude_unset=not include_defaults
     )
 
     if not include_defaults:
-        # Get default config to compare against
+        # get default config to compare against
         default_config = get_default_config()
         default_dict: dict[str, Any] = default_config.model_dump(mode="json")
-        # Remove values that match defaults
+        # remove values that match defaults
         config_dict = _remove_defaults(config_dict, default_dict)  # type: ignore[arg-type]
 
-    # Convert Path objects to strings
+    # convert Path objects to strings
     config_dict = _convert_paths_to_strings(config_dict)  # type: ignore[arg-type]
 
     return config_dict
@@ -76,15 +76,15 @@ def _remove_defaults(
     result: dict[str, Any] = {}
     for key, value in config_dict.items():
         if key not in default_dict:
-            # Keep values not in defaults
+            # keep values not in defaults
             result[key] = value
         elif isinstance(value, dict) and isinstance(default_dict[key], dict):
-            # Recursively remove defaults from nested dicts
+            # recursively remove defaults from nested dicts
             nested_result = _remove_defaults(value, default_dict[key])  # type: ignore[arg-type]
-            if nested_result:  # Only include if not empty after removing defaults
+            if nested_result:  # only include if not empty after removing defaults
                 result[key] = nested_result
         elif value != default_dict[key]:
-            # Keep values that differ from defaults
+            # keep values that differ from defaults
             result[key] = value
     return result
 
@@ -145,7 +145,7 @@ def to_yaml(config: BeadConfig, include_defaults: bool = False) -> str:
     """
     config_dict = config_to_dict(config, include_defaults=include_defaults)
 
-    # Configure YAML dumper for clean output
+    # configure YAML dumper for clean output
     return yaml.dump(
         config_dict,
         default_flow_style=False,
@@ -190,7 +190,7 @@ def save_yaml(
     """
     path = Path(path) if isinstance(path, str) else path
 
-    # Ensure parent directory exists
+    # ensure parent directory exists
     if create_dirs:
         path.parent.mkdir(parents=True, exist_ok=True)
     elif not path.parent.exists():
@@ -199,10 +199,10 @@ def save_yaml(
             f"Set create_dirs=True to create it automatically."
         )
 
-    # Get YAML string
+    # get YAML string
     yaml_str = to_yaml(config, include_defaults=include_defaults)
 
-    # Write to file
+    # write to file
     try:
         with open(path, "w") as f:
             f.write(yaml_str)

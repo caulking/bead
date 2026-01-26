@@ -21,6 +21,11 @@ class OracleAnnotator(SimulatedAnnotator):
 
     Useful for establishing upper bound on performance.
 
+    Parameters
+    ----------
+    config
+        Configuration for annotator.
+
     Examples
     --------
     >>> from bead.config.simulation import SimulatedAnnotatorConfig
@@ -30,16 +35,9 @@ class OracleAnnotator(SimulatedAnnotator):
     """
 
     def __init__(self, config: SimulatedAnnotatorConfig) -> None:
-        """Initialize oracle annotator.
-
-        Parameters
-        ----------
-        config : SimulatedAnnotatorConfig
-            Configuration for annotator.
-        """
         super().__init__(config)
 
-        # Create random annotator for fallback
+        # create random annotator for fallback
         self.random_annotator = RandomAnnotator(config)
 
     def annotate(
@@ -59,15 +57,15 @@ class OracleAnnotator(SimulatedAnnotator):
         str | int | float | bool | list[str]
             Ground truth annotation or random fallback.
         """
-        # Try to get ground truth from item metadata
+        # try to get ground truth from item metadata
         if hasattr(item, "item_metadata") and item.item_metadata:
             ground_truth = item.item_metadata.get("ground_truth")
 
             if ground_truth is not None:
-                # Validate and return ground truth
+                # validate and return ground truth
                 return self._validate_ground_truth(ground_truth, item_template)
 
-        # Fallback to random if no ground truth
+        # fallback to random if no ground truth
         return self.random_annotator.annotate(item, item_template)
 
     def _validate_ground_truth(
@@ -169,7 +167,7 @@ class OracleAnnotator(SimulatedAnnotator):
             if not isinstance(ground_truth, dict):
                 msg = f"cloze ground truth must be dict, got {type(ground_truth)}"
                 raise ValueError(msg)
-            # Validate all required slots are present
+            # validate all required slots are present
             for slot in template.unfilled_slots:
                 if slot.slot_name not in ground_truth:
                     msg = (
@@ -177,7 +175,7 @@ class OracleAnnotator(SimulatedAnnotator):
                         f"(expected slots: {[s.slot_name for s in template.unfilled_slots]})"  # noqa: E501
                     )
                     raise ValueError(msg)
-            # Return dict of slot_name -> value
+            # return dict of slot_name -> value
             return {k: str(v) for k, v in ground_truth.items()}
 
         else:

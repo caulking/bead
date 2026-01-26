@@ -103,7 +103,7 @@ class BatchConstraintConfig(BaseModel):
     def validate_constraint_params(self) -> BatchConstraintConfig:
         """Validate constraint-specific parameters are provided."""
         if self.type == "coverage":
-            # Coverage requires target_values (can be None for auto-detection)
+            # coverage requires target_values (can be None for auto-detection)
             pass
         elif self.type == "balance":
             if self.target_distribution is None:

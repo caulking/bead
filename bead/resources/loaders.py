@@ -80,14 +80,14 @@ def from_csv(
     if not file_path.exists():
         raise FileNotFoundError(f"CSV file not found: {file_path}")
 
-    # Read CSV
+    # read CSV
     df: DataFrame = pd.read_csv(file_path, **csv_kwargs)
 
-    # Set up column mapping
+    # set up column mapping
     mapping = column_mapping or {}
     reverse_mapping = {v: k for k, v in mapping.items()}
 
-    # Check for required lemma column
+    # check for required lemma column
     lemma_col = reverse_mapping.get("lemma", "lemma")
     columns_list = list(df.columns)
     if lemma_col not in columns_list:
@@ -96,46 +96,46 @@ def from_csv(
             f"Available columns: {columns_list}"
         )
 
-    # Create lexicon
+    # create lexicon
     lexicon = Lexicon(
         name=name,
         description=description,
         language_code=language_code,
     )
 
-    # Process each row
+    # process each row
     row_iter: Iterator[tuple[int | str, Series[Any]]] = df.iterrows()
     for _, row_data in row_iter:
         row: Series[Any] = row_data
 
-        # Get lemma
+        # get lemma
         lemma_col = reverse_mapping.get("lemma", "lemma")
         lemma = str(row[lemma_col])
 
-        # Build features dict
+        # build features dict
         features: dict[str, Any] = {}
 
-        # Add POS if provided
+        # add POS if provided
         if pos:
             features["pos"] = pos
 
-        # Handle mapped "pos" column
+        # handle mapped "pos" column
         pos_col = reverse_mapping.get("pos")
         if pos_col and pos_col in columns_list and pd.notna(row[pos_col]):
             features["pos"] = str(row[pos_col])
 
-        # Add feature columns
+        # add feature columns
         if feature_columns:
             for col in feature_columns:
                 if col in columns_list and pd.notna(row[col]):
-                    # Store feature value, converting to string if needed
+                    # store feature value, converting to string if needed
                     val = row[col]
                     if not isinstance(val, (str, int, float, bool)):
                         features[col] = str(val)
                     else:
                         features[col] = val
 
-        # Create and add item
+        # create and add item
         item = LexicalItem(
             lemma=lemma,
             language_code=language_code,

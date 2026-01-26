@@ -223,14 +223,14 @@ class LexicalItemClass(BeadBaseModel):
         >>> en_items[0].lemma
         'break'
         """
-        # Normalize the query language code to ISO 639-3
+        # normalize the query language code to ISO 639-3
         try:
             normalized_code = validate_iso639_code(language_code)
             if normalized_code is None:
                 return []
             lang_normalized = normalized_code.lower()
         except ValueError:
-            # Invalid language code, return empty list
+            # invalid language code, return empty list
             return []
 
         return [
@@ -614,14 +614,14 @@ class TemplateClass(BeadBaseModel):
         >>> en_templates[0].name
         'en_svo'
         """
-        # Normalize the query language code to ISO 639-3
+        # normalize the query language code to ISO 639-3
         try:
             normalized_code = validate_iso639_code(language_code)
             if normalized_code is None:
                 return []
             lang_normalized = normalized_code.lower()
         except ValueError:
-            # Invalid language code, return empty list
+            # invalid language code, return empty list
             return []
 
         return [

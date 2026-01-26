@@ -107,21 +107,21 @@ class ForcedChoiceStrategy(SimulationStrategy):
 
         n_options = len(options)
 
-        # Extract model outputs for each option
+        # extract model outputs for each option
         scores = self.extract_model_outputs(item, model_output_key, n_options)
 
         if scores is None:
-            # Fallback to uniform random
+            # fallback to uniform random
             choice_idx = rng.randint(0, n_options)
             return options[choice_idx]
 
-        # Convert scores to probabilities using softmax
+        # convert scores to probabilities using softmax
         # (will be scaled by noise model later)
         scores_array = np.array(scores)
-        exp_scores = np.exp(scores_array - np.max(scores_array))  # Numerical stability
+        exp_scores = np.exp(scores_array - np.max(scores_array))  # numerical stability
         probs = exp_scores / np.sum(exp_scores)
 
-        # Sample from distribution
+        # sample from distribution
         choice_idx = rng.choice(n_options, p=probs)
 
         return options[choice_idx]

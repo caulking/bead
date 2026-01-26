@@ -14,14 +14,31 @@ class ParseError(DSLError):
 
     Parameters
     ----------
-    message : str
-        Error message.
+    message
+        Error message describing what went wrong during parsing.
+    line
+        Line number where the error occurred (1-indexed). None if unknown.
+    column
+        Column number where the error occurred (1-indexed). None if unknown.
+    text
+        The text that caused the error. None if unavailable.
+
+    Attributes
+    ----------
     line : int | None
         Line number where error occurred.
     column : int | None
         Column number where error occurred.
     text : str | None
         Text that caused the error.
+
+    Examples
+    --------
+    >>> try:
+    ...     raise ParseError("Unexpected token", line=5, column=12, text="@invalid")
+    ... except ParseError as e:
+    ...     print(e.line, e.column)
+    5 12
     """
 
     def __init__(

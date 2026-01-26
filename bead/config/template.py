@@ -137,7 +137,7 @@ class TemplateConfig(BaseModel):
         description="Use CSP solver for templates with multi-slot constraints",
     )
 
-    # MLM-specific settings
+    # MLM-specific settings (model, beam size, fill direction)
     mlm_model_name: str | None = Field(
         default=None, description="HuggingFace model name for MLM filling"
     )
@@ -164,7 +164,7 @@ class TemplateConfig(BaseModel):
         default=None, description="Directory for MLM prediction cache"
     )
 
-    # Mixed strategy settings
+    # mixed strategy settings
     slot_strategies: dict[str, SlotStrategyConfig] | None = Field(
         default=None,
         description="Per-slot strategy configuration for mixed filling. "
@@ -220,14 +220,14 @@ class TemplateConfig(BaseModel):
             )
             raise ValueError(msg)
 
-        # Validate mixed strategy configuration
+        # validate mixed strategy configuration
         if self.filling_strategy == "mixed" and self.slot_strategies is None:
             msg = "slot_strategies must be specified when filling_strategy is 'mixed'"
             raise ValueError(msg)
 
         if self.slot_strategies is not None:
             for slot_name, slot_config in self.slot_strategies.items():
-                # If MLM strategy is used for a slot, check model config is available
+                # if MLM strategy is used for a slot, check model config is available
                 if slot_config.strategy == "mlm" and self.mlm_model_name is None:
                     msg = (
                         f"mlm_model_name must be specified when slot "

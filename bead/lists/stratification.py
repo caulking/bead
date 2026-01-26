@@ -7,11 +7,13 @@ on numeric properties, with optional stratification by grouping variables.
 from __future__ import annotations
 
 from collections import defaultdict
-from collections.abc import Callable
+from collections.abc import Callable, Hashable
 from typing import Any, TypeVar
 from uuid import UUID
 
 import numpy as np
+
+from bead.items.item import MetadataValue
 
 T = TypeVar("T")
 
@@ -20,7 +22,7 @@ def assign_quantiles(
     items: list[T],
     property_getter: Callable[[T], float],
     n_quantiles: int = 10,
-    stratify_by: Callable[[T], Any] | None = None,
+    stratify_by: Callable[[T], Hashable] | None = None,
 ) -> dict[T, int]:
     """Assign quantile bins to items based on numeric property.
 
@@ -38,10 +40,10 @@ def assign_quantiles(
     n_quantiles : int
         Number of quantile bins (default: 10 for deciles).
         Must be >= 2.
-    stratify_by : Callable[[T], Any] | None
+    stratify_by : Callable[[T], Hashable] | None
         Optional function that extracts a grouping variable from each item.
         If provided, quantiles are computed separately for each group.
-        Groups can be any hashable type (str, int, UUID, etc.).
+        Groups must be hashable (str, int, UUID, tuple, etc.).
 
     Returns
     -------
@@ -99,17 +101,17 @@ def assign_quantiles(
     if n_quantiles < 2:
         raise ValueError(f"n_quantiles must be >= 2, got {n_quantiles}")
 
-    # If no stratification, compute quantiles for all items
+    # if no stratification, compute quantiles for all items
     if stratify_by is None:
         return _assign_quantiles_single_group(items, property_getter, n_quantiles)
 
-    # Stratified: compute quantiles separately for each group
-    groups: dict[Any, list[T]] = defaultdict(list)
+    # stratified: compute quantiles separately for each group
+    groups: dict[Hashable, list[T]] = defaultdict(list)
     for item in items:
         group_key = stratify_by(item)
         groups[group_key].append(item)
 
-    # Compute quantiles for each group
+    # compute quantiles for each group
     result: dict[T, int] = {}
     for group_items in groups.values():
         group_result = _assign_quantiles_single_group(
@@ -144,23 +146,23 @@ def _assign_quantiles_single_group(
     if not items:
         return {}
 
-    # Extract scores
+    # extract scores
     scores: np.ndarray[Any, np.dtype[np.floating[Any]]] = np.array(
         [property_getter(item) for item in items]
     )
 
-    # Compute quantile edges
+    # compute quantile edges
     # linspace(0, 1, n+1) gives [0, 1/n, 2/n, ..., 1]
     quantile_edges: np.ndarray[Any, np.dtype[np.floating[Any]]] = np.quantile(
         scores, np.linspace(0, 1, n_quantiles + 1)
     )
 
-    # Assign each item to a quantile bin
+    # assign each item to a quantile bin
     result: dict[T, int] = {}
     for item, score in zip(items, scores.tolist(), strict=True):
-        # searchsorted finds the index where score would be inserted
-        # We use quantile_edges[1:] to exclude the 0th edge
-        # This maps scores to bins [0, n_quantiles-1]
+        # searchsorted finds the index where score would be inserted;
+        # we use quantile_edges[1:] to exclude the 0th edge;
+        # this maps scores to bins [0, n_quantiles-1]
         quantile_idx = int(np.searchsorted(quantile_edges[1:], float(score)))
         result[item] = quantile_idx
 
@@ -169,7 +171,7 @@ def _assign_quantiles_single_group(
 
 def assign_quantiles_by_uuid(
     item_ids: list[UUID],
-    item_metadata: dict[UUID, dict[str, Any]],
+    item_metadata: dict[UUID, dict[str, MetadataValue]],
     property_key: str,
     n_quantiles: int = 10,
     stratify_by_key: str | None = None,
@@ -183,7 +185,7 @@ def assign_quantiles_by_uuid(
     ----------
     item_ids : list[UUID]
         List of item UUIDs.
-    item_metadata : dict[UUID, dict[str, Any]]
+    item_metadata : dict[UUID, dict[str, MetadataValue]]
         Metadata dictionary mapping UUIDs to their metadata dicts.
     property_key : str
         Key in item_metadata[uuid] dict to use for quantile computation.
@@ -220,7 +222,7 @@ def assign_quantiles_by_uuid(
     ...     stratify_by_key="group"
     ... )  # doctest: +SKIP
     """
-    # Validate that all items have the property
+    # validate that all items have the property
     for uid in item_ids:
         if uid not in item_metadata:
             raise KeyError(f"UUID {uid} not found in item_metadata")
@@ -229,12 +231,12 @@ def assign_quantiles_by_uuid(
                 f"Property '{property_key}' not found in metadata for UUID {uid}"
             )
 
-    # Create property getter
+    # create property getter
     def property_getter(uid: UUID) -> float:
         value = item_metadata[uid][property_key]
-        return float(value)
+        return float(value)  # type: ignore[arg-type]
 
-    # Create stratification getter if needed
+    # create stratification getter if needed
     stratify_func: Callable[[UUID], int | float | str | bool] | None
     if stratify_by_key:
         if any(stratify_by_key not in item_metadata[uid] for uid in item_ids):

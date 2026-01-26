@@ -14,9 +14,8 @@ import uuid
 import zipfile
 from datetime import datetime
 from pathlib import Path
-from typing import Any
 
-from bead.data.base import BeadBaseModel
+from bead.data.base import BeadBaseModel, JsonValue
 
 
 class JATOSExporter(BeadBaseModel):
@@ -84,7 +83,7 @@ class JATOSExporter(BeadBaseModel):
         if not experiment_dir.is_dir():
             raise ValueError(f"Path is not a directory: {experiment_dir}")
 
-        # Verify required files exist
+        # verify required files exist
         required_files = ["index.html"]
         for file in required_files:
             if not (experiment_dir / file).exists():
@@ -92,32 +91,32 @@ class JATOSExporter(BeadBaseModel):
                     f"Required file not found: {experiment_dir / file}"
                 )
 
-        # Create temporary directory for staging
+        # create temporary directory for staging
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
 
-            # Create study.json
+            # create study.json
             study_json = self._create_study_json(component_title)
             study_json_path = temp_path / "study.json"
             study_json_path.write_text(json.dumps(study_json, indent=2))
 
-            # Copy experiment files to temp/experiment/
+            # copy experiment files to temp/experiment/
             experiment_target = temp_path / "experiment"
             shutil.copytree(experiment_dir, experiment_target)
 
-            # Create .jzip file
+            # create .jzip file
             with zipfile.ZipFile(output_path, "w", zipfile.ZIP_DEFLATED) as zipf:
-                # Add study.json
+                # add study.json
                 zipf.write(study_json_path, "study.json")
 
-                # Add all experiment files
+                # add all experiment files
                 for file_path in experiment_target.rglob("*"):
                     if file_path.is_file():
-                        # Archive name relative to temp_path
+                        # archive name relative to temp_path
                         arcname = file_path.relative_to(temp_path)
                         zipf.write(file_path, arcname)
 
-    def _create_study_json(self, component_title: str) -> dict[str, Any]:
+    def _create_study_json(self, component_title: str) -> dict[str, JsonValue]:
         """Create JATOS study.json structure.
 
         Parameters
@@ -127,18 +126,18 @@ class JATOSExporter(BeadBaseModel):
 
         Returns
         -------
-        dict[str, Any]
+        dict[str, JsonValue]
             JATOS study metadata dictionary.
 
         Notes
         -----
         The study.json follows JATOS v3 schema format.
         """
-        # Generate UUIDs for study and component
+        # generate UUIDs for study and component
         study_uuid = str(uuid.uuid4())
         component_uuid = str(uuid.uuid4())
 
-        # Sanitize title for directory name
+        # sanitize title for directory name
         dir_name = self._sanitize_dirname(self.study_title)
 
         return {
@@ -189,22 +188,22 @@ class JATOSExporter(BeadBaseModel):
         >>> exporter._sanitize_dirname("Study (2024)")
         'study_2024'
         """
-        # Convert to lowercase
+        # convert to lowercase
         dirname = title.lower()
 
-        # Replace spaces with underscores
+        # replace spaces with underscores
         dirname = dirname.replace(" ", "_")
 
-        # Remove non-alphanumeric characters (except underscores)
+        # remove non-alphanumeric characters (except underscores)
         dirname = re.sub(r"[^a-z0-9_]", "", dirname)
 
-        # Remove consecutive underscores
+        # remove consecutive underscores
         dirname = re.sub(r"_+", "_", dirname)
 
-        # Remove leading/trailing underscores
+        # remove leading/trailing underscores
         dirname = dirname.strip("_")
 
-        # Ensure it's not empty
+        # ensure it's not empty
         if not dirname:
             dirname = "study"
 

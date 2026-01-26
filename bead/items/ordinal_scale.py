@@ -14,9 +14,8 @@ Integration Points
 from __future__ import annotations
 
 from collections import defaultdict
-from collections.abc import Callable
+from collections.abc import Callable, Hashable
 from itertools import product
-from typing import Any
 from uuid import UUID, uuid4
 
 from bead.items.item import Item, MetadataValue
@@ -201,7 +200,7 @@ def create_ordinal_scale_items_from_texts(
 
 def create_ordinal_scale_items_from_groups(
     items: list[Item],
-    group_by: Callable[[Item], Any],
+    group_by: Callable[[Item], Hashable],
     scale_bounds: tuple[int, int] = (1, 7),
     prompt: str | None = None,
     scale_labels: dict[int, str] | None = None,
@@ -219,7 +218,7 @@ def create_ordinal_scale_items_from_groups(
     ----------
     items : list[Item]
         Source items to process.
-    group_by : Callable[[Item], Any]
+    group_by : Callable[[Item], Hashable]
         Function to extract grouping key from items.
     scale_bounds : tuple[int, int]
         Scale bounds (min, max) for all items.
@@ -258,7 +257,7 @@ def create_ordinal_scale_items_from_groups(
     1
     """
     # Group items
-    groups: dict[Any, list[Item]] = defaultdict(list)
+    groups: dict[Hashable, list[Item]] = defaultdict(list)
     for item in items:
         group_key = group_by(item)
         groups[group_key].append(item)

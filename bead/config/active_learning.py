@@ -297,7 +297,7 @@ class ActiveLearningLoopConfig(BaseModel):
         description="Minimum improvement to avoid convergence",
         gt=0,
     )
-    # Data collection configuration (optional)
+    # data collection configuration (optional)
     jatos: JatosDataCollectionConfig | None = Field(
         default=None,
         description="Configuration for JATOS data collection",

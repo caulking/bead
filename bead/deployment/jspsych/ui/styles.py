@@ -22,14 +22,9 @@ class MaterialDesignStylesheet:
     - Ripple effects for buttons
     - Form controls (inputs, dropdowns, radio buttons)
 
-    Parameters
-    ----------
-    theme : Literal["light", "dark", "auto"]
-        Color theme for the stylesheet.
-    primary_color : str
-        Primary color (hex code).
-    secondary_color : str
-        Secondary color (hex code).
+    See Also
+    --------
+    generate_css : Generate complete Material Design CSS with theme options.
 
     Examples
     --------
@@ -39,7 +34,6 @@ class MaterialDesignStylesheet:
     """
 
     def __init__(self) -> None:
-        """Initialize Material Design stylesheet generator."""
         pass
 
     def generate_css(
@@ -71,7 +65,7 @@ class MaterialDesignStylesheet:
         >>> "--primary-color" in css
         True
         """
-        # Determine theme colors
+        # determine theme colors
         if theme == "light":
             background = "#FFFFFF"
             surface = "#FFFFFF"
@@ -83,7 +77,7 @@ class MaterialDesignStylesheet:
             on_surface = "#FFFFFF"
             on_primary = "#000000"
         else:  # auto
-            # Use CSS media query for system preference
+            # use CSS media query for system preference
             background = "#FFFFFF"
             surface = "#FFFFFF"
             on_surface = "#000000"

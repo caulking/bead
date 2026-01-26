@@ -88,17 +88,16 @@ class BinaryStrategy(SimulationStrategy):
         bool
             Binary response (True/False).
         """
-        # Extract model output (expecting single score)
+        # extract model output (expecting single score)
         scores = self.extract_model_outputs(item, model_output_key, required_count=1)
 
         if scores is None:
-            # Fallback to uniform random (50/50)
+            # fallback to uniform random (50/50)
             return bool(rng.rand() > 0.5)
 
-        # Convert score to probability using sigmoid
+        # convert score to probability using sigmoid: 1 / (1 + exp(-x))
         score = scores[0]
-        # Sigmoid: 1 / (1 + exp(-x))
         prob_yes = 1.0 / (1.0 + np.exp(-score))
 
-        # Sample from Bernoulli
+        # sample from Bernoulli
         return bool(rng.rand() < prob_yes)

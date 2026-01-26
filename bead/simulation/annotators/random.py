@@ -20,6 +20,11 @@ class RandomAnnotator(SimulatedAnnotator):
 
     Useful for establishing baseline performance.
 
+    Parameters
+    ----------
+    config
+        Configuration for annotator.
+
     Examples
     --------
     >>> from bead.config.simulation import SimulatedAnnotatorConfig
@@ -29,16 +34,9 @@ class RandomAnnotator(SimulatedAnnotator):
     """
 
     def __init__(self, config: SimulatedAnnotatorConfig) -> None:
-        """Initialize random annotator.
-
-        Parameters
-        ----------
-        config : SimulatedAnnotatorConfig
-            Configuration for annotator.
-        """
         super().__init__(config)
 
-        # No strategies or noise models needed for random
+        # no strategies or noise models needed for random
 
     def annotate(
         self, item: Item, item_template: ItemTemplate
@@ -96,7 +94,7 @@ class RandomAnnotator(SimulatedAnnotator):
 
     def _random_ordinal(self, template: ItemTemplate) -> int:
         """Generate random ordinal scale response."""
-        # Get scale bounds from task_spec
+        # get scale bounds from task_spec
         scale_bounds = template.task_spec.scale_bounds
         if scale_bounds is not None:
             min_val, max_val = scale_bounds
@@ -113,7 +111,7 @@ class RandomAnnotator(SimulatedAnnotator):
 
     def _random_magnitude(self) -> float:
         """Generate random magnitude response."""
-        # Log-normal distribution for positive magnitudes
+        # log-normal distribution for positive magnitudes
         return float(self.rng.lognormal(mean=0, sigma=1))
 
     def _random_multi_select(self, template: ItemTemplate) -> list[str]:
@@ -122,7 +120,7 @@ class RandomAnnotator(SimulatedAnnotator):
         if not options:
             raise ValueError("multi_select requires options")
 
-        # Randomly select subset of options
+        # randomly select subset of options
         selected = []
         for option in options:
             if self.rng.random() < 0.5:
@@ -131,7 +129,7 @@ class RandomAnnotator(SimulatedAnnotator):
 
     def _random_free_text(self) -> str:
         """Generate random free text response."""
-        # Simple random responses
+        # simple random responses
         responses = [
             "No response",
             "Unclear",
@@ -145,7 +143,7 @@ class RandomAnnotator(SimulatedAnnotator):
         """Generate random cloze response."""
         response = {}
 
-        # Common word bank for random selection
+        # common word bank for random selection
         word_bank = [
             "the",
             "a",
@@ -177,7 +175,7 @@ class RandomAnnotator(SimulatedAnnotator):
         ]
 
         for slot in item.unfilled_slots:
-            # Randomly select a word from the bank
+            # randomly select a word from the bank
             response[slot.slot_name] = str(self.rng.choice(word_bank))
 
         return response
