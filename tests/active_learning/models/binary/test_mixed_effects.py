@@ -13,6 +13,9 @@ from bead.active_learning.models.binary import BinaryModel
 from bead.config.active_learning import BinaryModelConfig
 from bead.items.item import Item
 
+# mark all tests in this module as slow model training tests
+pytestmark = pytest.mark.slow_model_training
+
 
 class TestFixedEffectsMode:
     """Test BinaryModel with fixed effects mode."""

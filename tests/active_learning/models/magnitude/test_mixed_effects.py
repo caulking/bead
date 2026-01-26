@@ -11,6 +11,9 @@ from bead.active_learning.models.magnitude import MagnitudeModel
 from bead.config.active_learning import MagnitudeModelConfig
 from bead.items.item import Item
 
+# mark all tests in this module as slow model training tests
+pytestmark = pytest.mark.slow_model_training
+
 
 class TestFixedEffectsMode:
     """Test MagnitudeModel with fixed effects mode."""

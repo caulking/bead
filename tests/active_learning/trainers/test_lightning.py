@@ -4,8 +4,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from bead.active_learning.trainers.base import ModelMetadata
 from bead.active_learning.trainers.lightning import PyTorchLightningTrainer
+
+# mark all tests in this module as slow model training tests
+pytestmark = pytest.mark.slow_model_training
 
 
 class TestPyTorchLightningTrainer:

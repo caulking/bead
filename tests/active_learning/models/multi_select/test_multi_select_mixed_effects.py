@@ -13,6 +13,9 @@ from bead.active_learning.models.multi_select import MultiSelectModel
 from bead.config.active_learning import MultiSelectModelConfig
 from bead.items.item import Item
 
+# mark all tests in this module as slow model training tests
+pytestmark = pytest.mark.slow_model_training
+
 
 class TestFixedEffectsMode:
     """Test MultiSelectModel with fixed effects mode."""

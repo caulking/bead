@@ -6,10 +6,15 @@ fixed and random_intercepts modes.
 
 from __future__ import annotations
 
+import pytest
+
 from bead.active_learning.config import MixedEffectsConfig
 from bead.active_learning.models.cloze import ClozeModel
 from bead.config.active_learning import ClozeModelConfig
 from bead.items.item import Item
+
+# mark all tests in this module as slow model training tests
+pytestmark = pytest.mark.slow_model_training
 
 
 class TestHuggingFaceTrainerIntegration:

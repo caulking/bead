@@ -13,6 +13,9 @@ from bead.active_learning.models.categorical import CategoricalModel
 from bead.config.active_learning import CategoricalModelConfig
 from bead.items.item import Item
 
+# mark all tests in this module as slow model training tests
+pytestmark = pytest.mark.slow_model_training
+
 
 @pytest.fixture
 def sample_items() -> list[Item]:

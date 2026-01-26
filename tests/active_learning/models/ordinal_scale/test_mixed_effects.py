@@ -11,6 +11,9 @@ from bead.active_learning.models.ordinal_scale import OrdinalScaleModel
 from bead.config.active_learning import OrdinalScaleModelConfig
 from bead.items.item import Item
 
+# mark all tests in this module as slow model training tests
+pytestmark = pytest.mark.slow_model_training
+
 
 class TestFixedEffectsMode:
     """Test OrdinalScaleModel with fixed effects mode."""

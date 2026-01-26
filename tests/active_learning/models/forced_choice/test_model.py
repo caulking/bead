@@ -11,6 +11,9 @@ from bead.active_learning.models.base import ModelPrediction
 from bead.active_learning.models.forced_choice import ForcedChoiceModel
 from bead.config.active_learning import ForcedChoiceModelConfig
 
+# mark all tests in this module as slow model training tests
+pytestmark = pytest.mark.slow_model_training
+
 
 def test_forced_choice_initialization():
     """Test forced choice model initializes correctly."""

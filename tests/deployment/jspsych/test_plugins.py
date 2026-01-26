@@ -94,7 +94,8 @@ def test_forced_choice_plugin_preserves_metadata() -> None:
 def test_all_plugins_have_version() -> None:
     """Test that all plugins have version 0.1.0."""
     plugin_dir = Path("bead/deployment/jspsych/src/plugins")
-    plugins = list(plugin_dir.glob("*.ts"))
+    # exclude test files
+    plugins = [p for p in plugin_dir.glob("*.ts") if not p.name.endswith(".test.ts")]
 
     assert len(plugins) == 3, "Expected 3 plugins"
 
@@ -106,7 +107,8 @@ def test_all_plugins_have_version() -> None:
 def test_all_plugins_have_author() -> None:
     """Test that all plugins have Bead Project author."""
     plugin_dir = Path("bead/deployment/jspsych/src/plugins")
-    plugins = list(plugin_dir.glob("*.ts"))
+    # exclude test files
+    plugins = [p for p in plugin_dir.glob("*.ts") if not p.name.endswith(".test.ts")]
 
     for plugin_path in plugins:
         content = plugin_path.read_text()

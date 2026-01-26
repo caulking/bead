@@ -16,6 +16,9 @@ from bead.active_learning.models.free_text import FreeTextModel
 from bead.config.active_learning import FreeTextModelConfig
 from bead.items.item import Item
 
+# mark all tests in this module as slow model training tests
+pytestmark = pytest.mark.slow_model_training
+
 
 class TestFixedEffectsMode:
     """Test FreeTextModel with fixed effects mode."""
