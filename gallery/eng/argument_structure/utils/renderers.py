@@ -24,9 +24,9 @@ def _count_noun_occurrences(
 
     Parameters
     ----------
-    slot_fillers : Mapping[str, LexicalItem]
+    slot_fillers
         Mapping from slot names to lexical items.
-    template_slots : Mapping[str, Slot]
+    template_slots
         Mapping from slot names to slot definitions.
 
     Returns
@@ -45,11 +45,11 @@ def _count_noun_occurrences(
 
 
 def _ordinal_word(n: int) -> str:
-    """Convert number to ordinal word (e.g., 1 -> 'first', 2 -> 'second').
+    """Convert number to ordinal word (e.g., 1 to 'first', 2 to 'second').
 
     Parameters
     ----------
-    n : int
+    n
         Number to convert (1-10).
 
     Returns
@@ -75,14 +75,14 @@ def _ordinal_word(n: int) -> str:
 class OtherNounRenderer(TemplateRenderer):
     """Renderer with special handling for repeated nouns in English.
 
-    This renderer handles repeated noun slots in English argument structure
+    Handles repeated noun slots in English argument structure
     templates by using "another"/"the other" for second occurrences and
     ordinals ("a second", "a third", etc.) for subsequent occurrences.
 
     The rendering rules are:
-    1. First occurrence: Use original determiner + noun (e.g., "a cat")
-    2. Second occurrence when total=2: Use "another"/"the other" based on determiner
-    3. Third+ occurrence: Use ordinals (e.g., "a second cat", "a third cat")
+    1. First occurrence: use original determiner + noun (e.g., "a cat")
+    2. Second occurrence when total=2: use "another"/"the other" based on determiner
+    3. Third+ occurrence: use ordinals (e.g., "a second cat", "a third cat")
 
     This renderer specifically targets determiner-noun pairs where:
     - Noun slot names start with "noun_" (e.g., "noun_subj", "noun_dobj")
@@ -94,13 +94,13 @@ class OtherNounRenderer(TemplateRenderer):
     >>> from bead.resources.template import Slot
     >>> renderer = OtherNounRenderer()
     >>>
-    >>> # Template with repeated noun
+    >>> # template with repeated noun
     >>> template_string = "{det_1} {noun_1} and {det_2} {noun_2}"
     >>> slot_fillers = {
     ...     "det_1": LexicalItem(lemma="a", language_code="eng"),
     ...     "noun_1": LexicalItem(lemma="cat", language_code="eng"),
     ...     "det_2": LexicalItem(lemma="a", language_code="eng"),
-    ...     "noun_2": LexicalItem(lemma="cat", language_code="eng"),  # Same noun!
+    ...     "noun_2": LexicalItem(lemma="cat", language_code="eng"),
     ... }
     >>> slots = {name: Slot(name=name) for name in slot_fillers.keys()}
     >>> renderer.render(template_string, slot_fillers, slots)
@@ -117,11 +117,11 @@ class OtherNounRenderer(TemplateRenderer):
 
         Parameters
         ----------
-        template_string : str
+        template_string
             Template string with {slot_name} placeholders.
-        slot_fillers : Mapping[str, LexicalItem]
+        slot_fillers
             Mapping from slot names to lexical items.
-        template_slots : Mapping[str, Slot]
+        template_slots
             Mapping from slot names to slot definitions.
 
         Returns
@@ -129,11 +129,11 @@ class OtherNounRenderer(TemplateRenderer):
         str
             Rendered text with proper "another"/"the other" handling.
         """
-        # Count total occurrences of each noun
+        # count total occurrences of each noun
         noun_total_counts = _count_noun_occurrences(slot_fillers, template_slots)
 
-        # Identify det+noun pairs in template order
-        # Find position of each slot in template string
+        # identify det+noun pairs in template order
+        # find position of each slot in template string
         slot_positions: dict[str, int] = {}
         for slot_name in template_slots.keys():
             placeholder = f"{{{slot_name}}}"
@@ -141,25 +141,25 @@ class OtherNounRenderer(TemplateRenderer):
             if pos >= 0:
                 slot_positions[slot_name] = pos
 
-        # Sort noun slots by their position in template
+        # sort noun slots by their position in template
         noun_slots_in_order = [
             name
             for name in sorted(slot_positions.keys(), key=lambda x: slot_positions[x])
             if name.startswith("noun_")
         ]
 
-        # Build det+noun pairs in template order
+        # build det+noun pairs in template order
         det_noun_pairs: list[tuple[str, str]] = []
         for noun_slot in noun_slots_in_order:
-            suffix = noun_slot[5:]  # Remove "noun_" prefix
+            suffix = noun_slot[5:]  # remove "noun_" prefix
             det_slot = f"det_{suffix}"
             if det_slot in slot_fillers and noun_slot in slot_fillers:
                 det_noun_pairs.append((det_slot, noun_slot))
 
-        # Track current occurrence of each noun
+        # track current occurrence of each noun
         noun_usage: dict[str, int] = {}
 
-        # Build result by replacing det+noun pairs
+        # build result by replacing det+noun pairs
         result = template_string
 
         for det_slot, noun_slot in det_noun_pairs:
@@ -173,12 +173,12 @@ class OtherNounRenderer(TemplateRenderer):
             occurrence = noun_usage.get(noun_lemma, 0)
             total_occurrences = noun_total_counts[noun_lemma]
 
-            # Determine rendering based on occurrence
+            # determine rendering based on occurrence
             if occurrence == 0:
-                # First occurrence: use original determiner
+                # first occurrence: use original determiner
                 rendered = f"{det_surface} {noun_surface}"
             elif total_occurrences == 2:
-                # Exactly 2 occurrences: use "another" or "the other"
+                # exactly 2 occurrences: use "another" or "the other"
                 if det_surface.lower() == "a":
                     rendered = f"another {noun_surface}"
                 elif det_surface.lower() == "the":
@@ -190,13 +190,13 @@ class OtherNounRenderer(TemplateRenderer):
                 ordinal = _ordinal_word(occurrence + 1)
                 rendered = f"a {ordinal} {noun_surface}"
 
-            # Replace det+noun pair
+            # replace det+noun pair
             pattern = f"{{{det_slot}}} {{{noun_slot}}}"
             result = result.replace(pattern, rendered, 1)
 
             noun_usage[noun_lemma] = occurrence + 1
 
-        # Handle remaining slots (verbs, preps, etc.) with simple substitution
+        # handle remaining slots (verbs, preps, etc.) with simple substitution
         for slot_name, item in slot_fillers.items():
             placeholder = f"{{{slot_name}}}"
             if placeholder in result:

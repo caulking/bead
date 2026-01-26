@@ -13,6 +13,7 @@ This script creates all required lexicons using the bead adapter infrastructure:
 
 import argparse
 from pathlib import Path
+from uuid import UUID
 
 from utils.morphology import MorphologyExtractor
 from utils.verbnet_parser import VerbNetExtractor
@@ -24,31 +25,32 @@ from bead.resources.loaders import from_csv  # NEW: Use bead loader utilities
 
 
 def main(verb_limit: int | None = None) -> None:
-    # Set up paths
+    """Generate lexicons for argument structure experiment."""
+    # set up paths
     base_dir = Path(__file__).parent
     lexicons_dir = base_dir / "lexicons"
     resources_dir = base_dir / "resources"
 
-    # Ensure directories exist
+    # ensure directories exist
     lexicons_dir.mkdir(exist_ok=True)
 
-    # Initialize adapters with caching
+    # initialize adapters with caching
     cache = AdapterCache()
     verbnet = VerbNetExtractor(cache=cache)
     morph = MorphologyExtractor(cache=cache)
 
-    # 1. Generate VerbNet verbs lexicon
+    # 1. generate VerbNet verbs lexicon
     print("=" * 80)
     print("GENERATING VERBNET VERBS LEXICON")
     print("=" * 80)
     print("Extracting VerbNet verbs...")
 
-    verb_items_dict: dict[str, LexicalItem] = {}
+    verb_items_dict: dict[UUID, LexicalItem] = {}
     base_verbs = verbnet.extract_all_verbs()
 
     print(f"Found {len(base_verbs)} verb-class pairs from VerbNet")
 
-    # Apply limit if specified
+    # apply limit if specified
     if verb_limit is not None:
         print(f"[TEST MODE] Limiting to first {verb_limit} verbs")
         base_verbs = base_verbs[:verb_limit]
@@ -61,10 +63,10 @@ def main(verb_limit: int | None = None) -> None:
         if i % 10 == 0 or verb_limit is not None:
             print(f"  Processed {i}/{len(base_verbs)} verbs... (current: {lemma})")
 
-        # Get all inflected forms
+        # get all inflected forms
         forms = morph.get_all_required_forms(lemma)
 
-        # Add VerbNet metadata to each form
+        # add VerbNet metadata to each form
         for form_item in forms:
             form_item.features.update(
                 {
@@ -74,8 +76,8 @@ def main(verb_limit: int | None = None) -> None:
                 }
             )
 
-            # Use LexicalItem's UUID as key
-            verb_items_dict[str(form_item.id)] = form_item
+            # use LexicalItem's UUID as key
+            verb_items_dict[form_item.id] = form_item
 
     print(f"\nCreated {len(verb_items_dict)} verb form entries")
 
@@ -90,7 +92,7 @@ def main(verb_limit: int | None = None) -> None:
     verb_lexicon.to_jsonl(str(output_path))
     print(f"✓ Saved to {output_path}")
 
-    # 2. Generate bleached nouns lexicon
+    # 2. generate bleached nouns lexicon
     print("\n" + "=" * 80)
     print("GENERATING BLEACHED NOUNS LEXICON")
     print("=" * 80)
@@ -113,7 +115,7 @@ def main(verb_limit: int | None = None) -> None:
     noun_lexicon.to_jsonl(str(output_path))
     print(f"✓ Saved to {output_path}")
 
-    # 3. Generate bleached verbs lexicon
+    # 3. generate bleached verbs lexicon
     print("\n" + "=" * 80)
     print("GENERATING BLEACHED VERBS LEXICON")
     print("=" * 80)
@@ -136,7 +138,7 @@ def main(verb_limit: int | None = None) -> None:
     bleached_verb_lexicon.to_jsonl(str(output_path))
     print(f"✓ Saved to {output_path}")
 
-    # 4. Generate bleached adjectives lexicon
+    # 4. generate bleached adjectives lexicon
     print("\n" + "=" * 80)
     print("GENERATING BLEACHED ADJECTIVES LEXICON")
     print("=" * 80)
@@ -159,7 +161,7 @@ def main(verb_limit: int | None = None) -> None:
     adj_lexicon.to_jsonl(str(output_path))
     print(f"✓ Saved to {output_path}")
 
-    # 5. Generate prepositions lexicon
+    # 5. generate prepositions lexicon
     print("\n" + "=" * 80)
     print("GENERATING PREPOSITIONS LEXICON")
     print("=" * 80)
@@ -182,7 +184,7 @@ def main(verb_limit: int | None = None) -> None:
     prep_lexicon.to_jsonl(str(output_path))
     print(f"✓ Saved to {output_path}")
 
-    # 6. Generate determiners lexicon
+    # 6. generate determiners lexicon
     print("\n" + "=" * 80)
     print("GENERATING DETERMINERS LEXICON")
     print("=" * 80)
@@ -205,24 +207,24 @@ def main(verb_limit: int | None = None) -> None:
     det_lexicon.to_jsonl(str(output_path))
     print(f"✓ Saved to {output_path}")
 
-    # 7. Generate "be" verb forms lexicon
+    # 7. generate "be" verb forms lexicon
     print("\n" + "=" * 80)
     print("GENERATING BE VERB LEXICON")
     print("=" * 80)
 
-    # Load from CSV (with custom handling for form column)
+    # load from CSV (with custom handling for form column)
     csv_path = resources_dir / "be_forms.csv"
 
     import pandas as pd
 
     df = pd.read_csv(csv_path)
 
-    be_items: dict[str, LexicalItem] = {}
+    be_items: dict[UUID, LexicalItem] = {}
     for _, row in df.iterrows():
-        # Build features dict from all columns except lemma and form
+        # build features dict from all columns except lemma and form
         features = {"pos": str(row["pos"])}
 
-        # Add optional feature columns if not empty
+        # add optional feature columns if not empty
         for col in ["tense", "person", "number", "verb_form"]:
             if col in df.columns and pd.notna(row[col]) and str(row[col]).strip():
                 features[col] = str(row[col])
@@ -234,7 +236,7 @@ def main(verb_limit: int | None = None) -> None:
             features=features,
             source="csv",
         )
-        be_items[str(item.id)] = item
+        be_items[item.id] = item
 
     print(f"Loaded {len(be_items)} forms of 'be' from {csv_path}")
 
@@ -249,7 +251,7 @@ def main(verb_limit: int | None = None) -> None:
     be_lexicon.to_jsonl(str(output_path))
     print(f"✓ Saved to {output_path}")
 
-    # Summary
+    # summary
     print("\n" + "=" * 80)
     print("LEXICON GENERATION COMPLETE")
     print("=" * 80)

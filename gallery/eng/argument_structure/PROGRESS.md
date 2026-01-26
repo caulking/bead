@@ -1,22 +1,22 @@
 # Argument Structure Active Learning Pipeline - Progress Report
 
 **Last Updated:** October 28, 2025
-**Status:** ✅ **COMPLETE** - Ready for production deployment
+**Status:** COMPLETE - Ready for production deployment
 **Location:** `/Users/awhite48/Projects/bead/gallery/eng/argument_structure/`
 
 ---
 
-## 📊 Project Overview
+## Project Overview
 
-This project implements an **active learning pipeline with human-in-the-loop** for collecting acceptability judgments on verb argument structure alternations. The pipeline iteratively selects informative items and continues until the model converges to human-level inter-annotator agreement (measured by Krippendorff's alpha).
+This project implements an active learning pipeline with human-in-the-loop for collecting acceptability judgments on verb argument structure alternations. The pipeline iteratively selects informative items and continues until the model converges to human-level inter-annotator agreement (measured by Krippendorff's alpha).
 
-**Key Design Principle:** Test **ALL verbs in ALL frame structures** (full cross-product), enabling both grammatical (verb licensed for frame) and ungrammatical (verb not licensed) judgments.
+**Key Design Principle:** Test all verbs in all frame structures (full cross-product), enabling both grammatical (verb licensed for frame) and ungrammatical (verb not licensed) judgments.
 
 ---
 
-## ✅ Completed Phases (1-8)
+## Completed Phases (1-8)
 
-### Phase 1: Evaluation Infrastructure ✅
+### Phase 1: Evaluation Infrastructure [COMPLETE]
 
 **Location:** `bead/evaluation/`
 
@@ -48,7 +48,7 @@ Created comprehensive evaluation module with 153 passing tests and 96%+ coverage
 
 ---
 
-### Phase 2: Template & Item Generation ✅
+### Phase 2: Template and Item Generation [COMPLETE]
 
 **Problem Identified:**
 - Original template generation created 21,453 verb-specific templates
@@ -94,17 +94,17 @@ Top structures by verb coverage:
 
 ---
 
-### Phase 3: Active Learning Integration ✅
+### Phase 3: Active Learning Integration [COMPLETE]
 
 **File Modified:** `bead/training/active_learning/loop.py`
 
 **Changes Implemented:**
-1. ✅ Added `convergence_detector` parameter
-2. ✅ Added `human_ratings` support
-3. ✅ Integrated convergence checking after each iteration
-4. ✅ Added `"convergence"` stopping criterion
-5. ✅ Compute human baseline on first iteration
-6. ✅ Check convergence and break loop when reached
+1. [DONE] Added `convergence_detector` parameter
+2. [DONE] Added `human_ratings` support
+3. [DONE] Integrated convergence checking after each iteration
+4. [DONE] Added `"convergence"` stopping criterion
+5. [DONE] Compute human baseline on first iteration
+6. [DONE] Check convergence and break loop when reached
 
 **Updated Signature:**
 ```python
@@ -139,7 +139,7 @@ if metric_name in metadata.metrics:
 
 ---
 
-### Phase 4: 2AFC Pair Generation ✅
+### Phase 4: 2AFC Pair Generation [COMPLETE]
 
 **File Created:** `create_2afc_pairs.py` (422 lines)
 
@@ -180,7 +180,7 @@ Each 2AFC pair is an Item with:
 
 ---
 
-### Phase 5: Configuration ✅
+### Phase 5: Configuration [COMPLETE]
 
 **File Created:** `config.yaml` (399 lines)
 
@@ -283,7 +283,7 @@ deployment:
 
 ---
 
-### Phase 6: Pipeline Orchestration ✅
+### Phase 6: Pipeline Orchestration [COMPLETE]
 
 **File Created:** `run_pipeline.py` (498 lines)
 
@@ -313,17 +313,17 @@ python run_pipeline.py --config config.yaml
 ```
 
 **Features:**
-- ✅ Flexible command-line interface
-- ✅ Dry-run mode for testing
-- ✅ Comprehensive progress reporting
-- ✅ Robust error handling with tracebacks
-- ✅ Results persistence (JSON format)
-- ✅ Convergence detection integration
-- ✅ Human ratings support
+- [DONE] Flexible command-line interface
+- [DONE] Dry-run mode for testing
+- [DONE] Comprehensive progress reporting
+- [DONE] Robust error handling with tracebacks
+- [DONE] Results persistence (JSON format)
+- [DONE] Convergence detection integration
+- [DONE] Human ratings support
 
 ---
 
-### Phase 7: End-to-End Testing ✅
+### Phase 7: End-to-End Testing [COMPLETE]
 
 **Test Configuration:**
 - Cross-product items: 500 (limited for testing)
@@ -334,30 +334,30 @@ python run_pipeline.py --config config.yaml
 **Test Results:**
 
 **1. Data Generation**
-- ✅ Cross-product generation: 500 items (100% success)
-- ✅ Template filling: 200/200 items filled (100% success)
-- ✅ LM scoring: 200 items scored with GPT-2
-- ✅ Pair generation: 19,900 pairs created
+- [DONE] Cross-product generation: 500 items (100% success)
+- [DONE] Template filling: 200/200 items filled (100% success)
+- [DONE] LM scoring: 200 items scored with GPT-2
+- [DONE] Pair generation: 19,900 pairs created
 
 **2. Data Quality**
-- ✅ All items have unique verb lemmas
-- ✅ All items have valid template references
-- ✅ Complete metadata for all items and pairs
-- ✅ Perfect quantile distribution (1,990 pairs per quantile)
-- ✅ LM score differences: Min 0.0002, Max 22.01, Mean 4.12
+- [DONE] All items have unique verb lemmas
+- [DONE] All items have valid template references
+- [DONE] Complete metadata for all items and pairs
+- [DONE] Perfect quantile distribution (1,990 pairs per quantile)
+- [DONE] LM score differences: Min 0.0002, Max 22.01, Mean 4.12
 
 **3. Pipeline Integration**
-- ✅ Small sample dry run (50 initial + 100 unlabeled) - PASSED
-- ✅ Realistic settings dry run (500 initial + 1,000 unlabeled) - PASSED
-- ✅ Configuration loading - PASSED
-- ✅ Convergence detector initialization - PASSED
-- ✅ Active learning setup - PASSED
-- ✅ All 7 pipeline phases executed successfully
+- [DONE] Small sample dry run (50 initial + 100 unlabeled) - PASSED
+- [DONE] Realistic settings dry run (500 initial + 1,000 unlabeled) - PASSED
+- [DONE] Configuration loading - PASSED
+- [DONE] Convergence detector initialization - PASSED
+- [DONE] Active learning setup - PASSED
+- [DONE] All 7 pipeline phases executed successfully
 
 **4. Code Quality**
-- ✅ All linting checks passed (ruff)
-- ✅ No type errors (pyright)
-- ✅ 153 unit tests passing (96%+ coverage)
+- [DONE] All linting checks passed (ruff)
+- [DONE] No type errors (pyright)
+- [DONE] 153 unit tests passing (96%+ coverage)
 
 **Files Generated:**
 ```
@@ -375,7 +375,7 @@ All limitations are expected and documented for future implementation.
 
 ---
 
-### Phase 8: Documentation ✅
+### Phase 8: Documentation [COMPLETE]
 
 **Files Created:**
 
@@ -459,7 +459,7 @@ make prod-pipeline
 
 ---
 
-## 📈 Statistics
+## Statistics
 
 ### Code Metrics
 ```
@@ -503,7 +503,7 @@ Production Potential:
 
 ---
 
-## 🚀 Next Steps (Production Deployment)
+## Next Steps (Production Deployment)
 
 ### 1. Generate Full Production Data
 ```bash
@@ -561,37 +561,37 @@ make pipeline-full
 
 ---
 
-## ✅ Success Criteria
+## Success Criteria
 
 All Phase 1-8 success criteria met:
 
-- ✅ Evaluation module created and tested (153 tests, 96%+ coverage)
-- ✅ Generic templates extracted (26 unique frame structures)
-- ✅ Cross-product generator functional (74,880 possible combinations)
-- ✅ 2AFC pair generation working with LM scoring
-- ✅ Configuration comprehensive and validated (399 lines)
-- ✅ Pipeline orchestration complete (498 lines, 7 phases)
-- ✅ End-to-end test successful with realistic data (500 items → 19,900 pairs)
-- ✅ Makefile provides easy access to all components (30+ targets)
-- ✅ All code passes linting (ruff) and type checking (pyright)
-- ✅ Comprehensive documentation (PROGRESS.md, README.md, Makefile help)
+- [DONE] Evaluation module created and tested (153 tests, 96%+ coverage)
+- [DONE] Generic templates extracted (26 unique frame structures)
+- [DONE] Cross-product generator functional (74,880 possible combinations)
+- [DONE] 2AFC pair generation working with LM scoring
+- [DONE] Configuration comprehensive and validated (399 lines)
+- [DONE] Pipeline orchestration complete (498 lines, 7 phases)
+- [DONE] End-to-end test successful with realistic data (500 items → 19,900 pairs)
+- [DONE] Makefile provides easy access to all components (30+ targets)
+- [DONE] All code passes linting (ruff) and type checking (pyright)
+- [DONE] Comprehensive documentation (PROGRESS.md, README.md, Makefile help)
 
 ---
 
-## 🎯 Conclusion
+## Conclusion
 
 The argument structure active learning pipeline is **COMPLETE and READY** for production deployment. All core functionality has been implemented, tested, and verified:
 
-- ✅ Full evaluation infrastructure
-- ✅ Template and item generation
-- ✅ Active learning integration
-- ✅ 2AFC pair creation with LM scoring
-- ✅ Comprehensive configuration
-- ✅ Pipeline orchestration
-- ✅ End-to-end testing
-- ✅ Build automation (Makefile)
-- ✅ Documentation
+- [DONE] Full evaluation infrastructure
+- [DONE] Template and item generation
+- [DONE] Active learning integration
+- [DONE] 2AFC pair creation with LM scoring
+- [DONE] Comprehensive configuration
+- [DONE] Pipeline orchestration
+- [DONE] End-to-end testing
+- [DONE] Build automation (Makefile)
+- [DONE] Documentation
 
 The pipeline successfully generates cross-product items, creates 2AFC pairs with language model scoring, and orchestrates the active learning loop with convergence detection to human-level inter-annotator agreement.
 
-**Status: ✅ READY FOR PRODUCTION**
+**Status: READY FOR PRODUCTION**

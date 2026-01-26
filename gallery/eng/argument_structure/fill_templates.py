@@ -55,10 +55,10 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    # Load configuration
+    # load configuration
     config = load_config(args.config)
 
-    # Setup logging
+    # setup logging
     logging.basicConfig(
         level=getattr(logging, config["logging"]["level"]),
         format=config["logging"]["format"],
@@ -66,11 +66,11 @@ def main() -> None:
 
     logger.info("Loading templates and lexicons...")
 
-    # Resolve paths
+    # resolve paths
     templates_path = Path(config["resources"]["templates"][0]["path"])
     output_path = args.output or Path(config["template"]["output_path"])
 
-    # Load templates
+    # load templates
     template_collection = TemplateCollection.from_jsonl(
         templates_path, "generic_frames"
     )
@@ -78,14 +78,14 @@ def main() -> None:
         f"Loaded {len(template_collection.templates)} templates from {templates_path}"
     )
 
-    # Apply dry-run mode: select specific templates
+    # apply dry-run mode: select specific templates
     templates = list(template_collection.templates.values())
     if args.dry_run:
         logger.info(
             "DRY RUN MODE: Selecting 1 simple + 1 progressive template with 3 noun slots"
         )
 
-        # Find templates with 3 noun slots
+        # find templates with 3 noun slots
         def count_noun_slots(template):
             return sum(
                 1 for slot_name in template.slots if slot_name.startswith("noun_")
@@ -93,7 +93,7 @@ def main() -> None:
 
         templates_with_3_nouns = [t for t in templates if count_noun_slots(t) == 3]
 
-        # Separate simple and progressive
+        # separate simple and progressive
         simple_templates = [
             t for t in templates_with_3_nouns if "progressive" not in t.name
         ]
@@ -101,7 +101,7 @@ def main() -> None:
             t for t in templates_with_3_nouns if "progressive" in t.name
         ]
 
-        # Select one of each
+        # select one of each
         selected = []
         if simple_templates:
             selected.append(simple_templates[0])
@@ -113,15 +113,15 @@ def main() -> None:
         templates = selected if selected else templates[:2]
         logger.info(f"Selected {len(templates)} templates for dry run")
 
-    # Load lexicons
+    # load lexicons
     lexicons: list[Lexicon] = []
     for lex_config in config["resources"]["lexicons"]:
         lex_path = Path(lex_config["path"])
         lexicon = Lexicon.from_jsonl(lex_path, lex_config["name"])
 
-        # In dry-run mode, limit verb lexicon to 10 verbs
+        # in dry-run mode, limit verb lexicon to 10 verbs
         if args.dry_run and lex_config["name"] == "verbnet_verbs":
-            # Get first 10 unique verb lemmas
+            # get first 10 unique verb lemmas
             verb_lemmas = []
             limited_items = {}
             for item_id, item in lexicon.items.items():
@@ -129,7 +129,7 @@ def main() -> None:
                     verb_lemmas.append(item.lemma)
                     if len(verb_lemmas) >= 10:
                         break
-                # Keep all forms of verbs we're including
+                # keep all forms of verbs we're including
                 if item.lemma in verb_lemmas[:10]:
                     limited_items[item_id] = item
 
@@ -141,10 +141,10 @@ def main() -> None:
         lexicons.append(lexicon)
         logger.info(f"Loaded {len(lexicon.items)} items from {lex_config['name']}")
 
-    # Initialize constraint resolver
+    # initialize constraint resolver
     resolver = ConstraintResolver()
 
-    # Initialize model adapter for MLM
+    # initialize model adapter for MLM
     mlm_config = config["template"]["mlm"]
     logger.info(f"Loading MLM model: {mlm_config['model_name']}...")
     model_adapter = HuggingFaceMLMAdapter(
@@ -154,12 +154,12 @@ def main() -> None:
     model_adapter.load_model()
     logger.info("MLM model loaded successfully")
 
-    # Initialize cache
+    # initialize cache
     cache_dir = Path(config["paths"]["cache_dir"])
     cache = ModelOutputCache(cache_dir=cache_dir)
 
-    # Build slot_strategies dict for MixedFillingStrategy
-    # Format: {slot_name: (strategy_name, config_dict)}
+    # build slot_strategies dict for MixedFillingStrategy
+    # format: {slot_name: (strategy_name, config_dict)}
     slot_strategies: dict[str, tuple[str, dict]] = {}
 
     for slot_name, slot_config in config["template"]["slot_strategies"].items():
@@ -174,7 +174,7 @@ def main() -> None:
                 "beam_size": mlm_config.get("beam_size", 5),
                 "top_k": mlm_config.get("top_k", 10),
             }
-            # Add per-slot max_fills and enforce_unique if specified
+            # add per-slot max_fills and enforce_unique if specified
             if "max_fills" in slot_config:
                 mlm_slot_config["max_fills"] = slot_config["max_fills"]
             if "enforce_unique" in slot_config:
@@ -182,21 +182,21 @@ def main() -> None:
 
             slot_strategies[slot_name] = ("mlm", mlm_slot_config)
         else:
-            # For other strategies (exhaustive, random, etc.)
+            # for other strategies (exhaustive, random, etc.)
             slot_strategies[slot_name] = (strategy_name, {})
 
-    # Create renderer for English-specific noun handling
-    # Uses OtherNounRenderer for "another"/"the other" patterns with repeated nouns
+    # create renderer for English-specific noun handling
+    # uses OtherNounRenderer for "another"/"the other" patterns with repeated nouns
     renderer = OtherNounRenderer()
     logger.info("Using OtherNounRenderer for English-specific noun handling")
 
-    # Create filler with MixedFillingStrategy
+    # create filler with MixedFillingStrategy
     logger.info("Creating template filler with mixed strategy...")
     strategy = MixedFillingStrategy(
         slot_strategies=slot_strategies,
     )
 
-    # Fill templates
+    # fill templates
     logger.info("Filling templates...")
     filled_templates = []
     for i, template in enumerate(templates, 1):
@@ -208,9 +208,9 @@ def main() -> None:
                 )
             )
 
-            # Convert combinations to FilledTemplate objects
+            # convert combinations to FilledTemplate objects
             for combo in combos:
-                # Render text with English-specific noun handling
+                # render text with English-specific noun handling
                 rendered = renderer.render(
                     template.template_string, combo, template.slots
                 )
@@ -234,7 +234,7 @@ def main() -> None:
 
     logger.info(f"Total filled templates: {len(filled_templates)}")
 
-    # Save filled templates
+    # save filled templates
     output_path.parent.mkdir(parents=True, exist_ok=True)
     write_jsonlines(filled_templates, output_path)
     logger.info(f"Saved filled templates to {output_path}")

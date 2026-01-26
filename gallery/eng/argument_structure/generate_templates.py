@@ -22,28 +22,28 @@ def main(verb_limit: int | None = None) -> None:
     verb_limit : int | None
         Limit number of verb-class pairs to process (for testing).
     """
-    # Set up paths
+    # set up paths
     base_dir = Path(__file__).parent
     templates_dir = base_dir / "templates"
     templates_dir.mkdir(exist_ok=True)
 
-    # Initialize with caching
+    # initialize with caching
     cache = AdapterCache()
     extractor = VerbNetExtractor(cache=cache)
 
-    # Get all verbs with detailed frame information
+    # get all verbs with detailed frame information
     print("=" * 80)
     print("EXTRACTING VERBNET VERBS WITH FRAMES")
     print("=" * 80)
     verbs_with_frames = extractor.extract_all_verbs_with_frames()
     print(f"Found {len(verbs_with_frames)} verb-class pairs")
 
-    # Apply limit if specified
+    # apply limit if specified
     if verb_limit is not None:
         print(f"[TEST MODE] Limiting to first {verb_limit} verb-class pairs")
         verbs_with_frames = verbs_with_frames[:verb_limit]
 
-    # Generate templates for all verbs
+    # generate templates for all verbs
     print("\n" + "=" * 80)
     print("GENERATING TEMPLATES")
     print("=" * 80)
@@ -52,7 +52,7 @@ def main(verb_limit: int | None = None) -> None:
     templates = generate_templates_for_all_verbs(verbs_with_frames)
     print(f"\n✓ Generated {len(templates)} templates")
 
-    # Save templates to JSONL
+    # save templates to JSONL
     print("\n" + "=" * 80)
     print("SAVING TEMPLATES")
     print("=" * 80)
@@ -60,13 +60,13 @@ def main(verb_limit: int | None = None) -> None:
 
     with open(output_path, "w") as f:
         for template in templates:
-            # Convert Template object to JSON string (handles UUID serialization)
+            # convert Template object to JSON string (handles UUID serialization)
             template_json = template.model_dump_json()
             f.write(template_json + "\n")
 
     print(f"✓ Saved {len(templates)} templates to {output_path}")
 
-    # Summary statistics
+    # summary statistics
     print("\n" + "=" * 80)
     print("TEMPLATE GENERATION COMPLETE")
     print("=" * 80)

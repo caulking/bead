@@ -30,15 +30,15 @@ def build_determiner_constraint(det_slot: str, noun_slot: str) -> Constraint:
 
     Parameters
     ----------
-    det_slot : str
-        Name of the determiner slot
-    noun_slot : str
-        Name of the noun slot
+    det_slot
+        Name of the determiner slot.
+    noun_slot
+        Name of the noun slot.
 
     Returns
     -------
     Constraint
-        DSL constraint enforcing determiner-noun agreement
+        DSL constraint enforcing determiner-noun agreement.
 
     Examples
     --------
@@ -67,13 +67,13 @@ def load_bleached_nouns(csv_path: str | Path) -> set[str]:
 
     Parameters
     ----------
-    csv_path : str | Path
-        Path to bleached_nouns.csv
+    csv_path
+        Path to bleached_nouns.csv.
 
     Returns
     -------
     set[str]
-        Set of allowed noun lemmas
+        Set of allowed noun lemmas.
 
     Examples
     --------
@@ -94,13 +94,13 @@ def load_bleached_verbs(csv_path: str | Path) -> set[str]:
 
     Parameters
     ----------
-    csv_path : str | Path
-        Path to bleached_verbs.csv
+    csv_path
+        Path to bleached_verbs.csv.
 
     Returns
     -------
     set[str]
-        Set of allowed verb lemmas
+        Set of allowed verb lemmas.
 
     Examples
     --------
@@ -121,13 +121,13 @@ def load_bleached_adjectives(csv_path: str | Path) -> set[str]:
 
     Parameters
     ----------
-    csv_path : str | Path
-        Path to bleached_adjectives.csv
+    csv_path
+        Path to bleached_adjectives.csv.
 
     Returns
     -------
     set[str]
-        Set of allowed adjective lemmas
+        Set of allowed adjective lemmas.
 
     Examples
     --------
@@ -150,15 +150,15 @@ def build_bleached_noun_constraint(
 
     Parameters
     ----------
-    slot : str
-        Name of the noun slot
-    csv_path : str | Path
-        Path to bleached_nouns.csv (default: "resources/bleached_nouns.csv")
+    slot
+        Name of the noun slot.
+    csv_path
+        Path to bleached_nouns.csv. Defaults to "resources/bleached_nouns.csv".
 
     Returns
     -------
     Constraint
-        DSL constraint restricting to bleached nouns
+        DSL constraint restricting to bleached nouns.
 
     Examples
     --------
@@ -184,15 +184,15 @@ def build_bleached_verb_constraint(
 
     Parameters
     ----------
-    slot : str
-        Name of the verb slot
-    csv_path : str | Path
-        Path to bleached_verbs.csv (default: "resources/bleached_verbs.csv")
+    slot
+        Name of the verb slot.
+    csv_path
+        Path to bleached_verbs.csv. Defaults to "resources/bleached_verbs.csv".
 
     Returns
     -------
     Constraint
-        DSL constraint restricting to bleached verbs
+        DSL constraint restricting to bleached verbs.
 
     Examples
     --------
@@ -218,15 +218,15 @@ def build_bleached_adj_constraint(
 
     Parameters
     ----------
-    slot : str
-        Name of the adjective slot
-    csv_path : str | Path
-        Path to bleached_adjectives.csv (default: "resources/bleached_adjectives.csv")
+    slot
+        Name of the adjective slot.
+    csv_path
+        Path to bleached_adjectives.csv. Defaults to "resources/bleached_adjectives.csv".
 
     Returns
     -------
     Constraint
-        DSL constraint restricting to bleached adjectives
+        DSL constraint restricting to bleached adjectives.
 
     Examples
     --------
@@ -250,13 +250,13 @@ def build_preposition_constraint(slot: str) -> Constraint:
 
     Parameters
     ----------
-    slot : str
-        Name of the preposition slot
+    slot
+        Name of the preposition slot.
 
     Returns
     -------
     Constraint
-        DSL constraint allowing comprehensive English prepositions
+        DSL constraint allowing comprehensive English prepositions.
 
     Examples
     --------
@@ -264,7 +264,7 @@ def build_preposition_constraint(slot: str) -> Constraint:
     >>> "prepositions" in constraint.context
     True
     """
-    # Comprehensive English preposition list
+    # comprehensive english preposition list
     prepositions = {
         "about",
         "above",
@@ -331,24 +331,24 @@ def build_subject_verb_agreement_constraint(
     """Build subject-verb number agreement constraint for English.
 
     Rules:
-    - Singular noun → verb must be 3SG (3rd person singular)
-    - Plural noun → verb must NOT be 3SG
+    - Singular noun requires verb with 3SG (3rd person singular)
+    - Plural noun requires verb that is NOT 3SG
 
     Note: Lexicons use "singular"/"plural" for noun number, "SG"/"PL" for verb number.
 
     Parameters
     ----------
-    det_slot : str
-        Name of the subject determiner slot
-    noun_slot : str
-        Name of the subject noun slot
-    verb_slot : str
-        Name of the verb slot
+    det_slot
+        Name of the subject determiner slot.
+    noun_slot
+        Name of the subject noun slot.
+    verb_slot
+        Name of the verb slot.
 
     Returns
     -------
     Constraint
-        DSL constraint enforcing subject-verb agreement
+        DSL constraint enforcing subject-verb agreement.
 
     Examples
     --------
@@ -356,9 +356,9 @@ def build_subject_verb_agreement_constraint(
     >>> "singular" in constraint.expression
     True
     """
-    # Agreement logic:
-    # If noun is singular → verb should have person=3 and number=SG
-    # If noun is plural → verb should NOT have person=3 and number=SG
+    # agreement logic:
+    # if noun is singular, verb should have person=3 and number=SG
+    # if noun is plural, verb should NOT have person=3 and number=SG
     expression = (
         f"("
         f"  ({noun_slot}.features.get('number') != 'singular') or "
@@ -380,25 +380,25 @@ def build_be_subject_agreement_constraint(
     """Build subject-be number agreement constraint for English auxiliary 'be'.
 
     Rules (noun subjects are always 3rd person):
-    - Singular noun → be must be 3rd person singular (is/was)
-    - Plural noun → be must be plural (are/were)
+    - Singular noun requires be to be 3rd person singular (is/was)
+    - Plural noun requires be to be plural (are/were)
 
     This is stricter than build_subject_verb_agreement_constraint because
     'be' has full person/number paradigm, not just 3SG vs non-3SG.
 
     Parameters
     ----------
-    det_slot : str
-        Name of the subject determiner slot
-    noun_slot : str
-        Name of the subject noun slot
-    be_slot : str
-        Name of the be slot
+    det_slot
+        Name of the subject determiner slot.
+    noun_slot
+        Name of the subject noun slot.
+    be_slot
+        Name of the be slot.
 
     Returns
     -------
     Constraint
-        DSL constraint enforcing subject-be agreement
+        DSL constraint enforcing subject-be agreement.
 
     Examples
     --------
@@ -406,9 +406,9 @@ def build_be_subject_agreement_constraint(
     >>> "singular" in constraint.expression
     True
     """
-    # Strict agreement for auxiliary be with noun subjects (3rd person):
-    # - Singular noun → be must be 3SG (is/was)
-    # - Plural noun → be must be PL (are/were)
+    # strict agreement for auxiliary be with noun subjects (3rd person):
+    # singular noun requires be to be 3SG (is/was)
+    # plural noun requires be to be PL (are/were)
     expression = (
         f"("
         f"  ({noun_slot}.features.get('number') == 'singular' and "
@@ -435,15 +435,15 @@ def build_be_participle_constraint(be_slot: str, verb_slot: str) -> Constraint:
 
     Parameters
     ----------
-    be_slot : str
-        Name of the "be" slot
-    verb_slot : str
-        Name of the verb slot (must be participle)
+    be_slot
+        Name of the "be" slot.
+    verb_slot
+        Name of the verb slot (must be participle).
 
     Returns
     -------
     Constraint
-        DSL constraint enforcing be + participle structure
+        DSL constraint enforcing be + participle structure.
 
     Examples
     --------
@@ -467,13 +467,18 @@ def build_combined_constraint(*constraints: Constraint) -> Constraint:
 
     Parameters
     ----------
-    *constraints : Constraint
-        Variable number of constraints to combine
+    *constraints
+        Variable number of constraints to combine.
 
     Returns
     -------
     Constraint
-        Combined constraint with all expressions ANDed together
+        Combined constraint with all expressions ANDed together.
+
+    Raises
+    ------
+    ValueError
+        If no constraints are provided.
 
     Examples
     --------
@@ -489,22 +494,22 @@ def build_combined_constraint(*constraints: Constraint) -> Constraint:
     if len(constraints) == 1:
         return constraints[0]
 
-    # Combine expressions with AND
+    # combine expressions with and
     expressions = [f"({c.expression})" for c in constraints]
     combined_expression = " and ".join(expressions)
 
-    # Merge contexts
+    # merge contexts
     combined_context = {}
     for constraint in constraints:
         if constraint.context:
             combined_context.update(constraint.context)
 
-    # Combine descriptions
+    # combine descriptions
     descriptions = [c.description for c in constraints if c.description]
     combined_description = "; ".join(descriptions)
 
     return Constraint(
         expression=combined_expression,
-        context=combined_context if combined_context else None,
+        context=combined_context,
         description=combined_description,
     )

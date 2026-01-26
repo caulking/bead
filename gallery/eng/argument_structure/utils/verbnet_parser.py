@@ -8,6 +8,8 @@ with the overall bead architecture.
 
 from __future__ import annotations
 
+from typing import Any
+
 from bead.resources.adapters.cache import AdapterCache
 from bead.resources.adapters.glazing import GlazingAdapter
 from bead.resources.lexical_item import LexicalItem
@@ -16,14 +18,20 @@ from bead.resources.lexical_item import LexicalItem
 class VerbNetExtractor:
     """Extract VerbNet data using bead adapters.
 
-    This is a convenience wrapper around GlazingAdapter that provides
-    project-specific extraction methods while using the standard sash
+    A convenience wrapper around GlazingAdapter that provides
+    project-specific extraction methods while using the standard bead
     adapter infrastructure.
 
     Parameters
     ----------
-    cache : AdapterCache | None
-        Optional cache instance for adapter results.
+    cache
+        Optional cache instance for adapter results. If not provided,
+        no caching is used.
+
+    Attributes
+    ----------
+    adapter : GlazingAdapter
+        The underlying adapter for VerbNet resource access.
 
     Examples
     --------
@@ -32,18 +40,11 @@ class VerbNetExtractor:
     >>> len(verbs) > 3000
     True
     >>> frames = extractor.extract_all_verbs_with_frames()
-    >>> "frames" in frames[0].attributes
+    >>> "frames" in frames[0].features
     True
     """
 
     def __init__(self, cache: AdapterCache | None = None) -> None:
-        """Initialize extractor with optional cache.
-
-        Parameters
-        ----------
-        cache : AdapterCache | None
-            Optional cache for adapter results.
-        """
         self.adapter = GlazingAdapter(resource="verbnet", cache=cache)
 
     def extract_all_verbs(self) -> list[LexicalItem]:
@@ -90,9 +91,9 @@ class VerbNetExtractor:
         --------
         >>> extractor = VerbNetExtractor()
         >>> verbs = extractor.extract_all_verbs_with_frames()
-        >>> "frames" in verbs[0].attributes
+        >>> "frames" in verbs[0].features
         True
-        >>> len(verbs[0].attributes["frames"]) > 0
+        >>> len(verbs[0].features["frames"]) > 0
         True
         """
         return self.adapter.fetch_items(
@@ -104,7 +105,7 @@ class VerbNetExtractor:
 
         Parameters
         ----------
-        lemma : str
+        lemma
             Verb lemma (e.g., "break", "run").
 
         Returns
@@ -120,14 +121,14 @@ class VerbNetExtractor:
         True
         """
         items = self.adapter.fetch_items(query=lemma, language_code="en")
-        return [item.attributes["verbnet_class"] for item in items]
+        return [item.features["verbnet_class"] for item in items]
 
     def get_verb_with_frames(self, lemma: str) -> list[LexicalItem]:
         """Get verb with detailed frame information.
 
         Parameters
         ----------
-        lemma : str
+        lemma
             Verb lemma (e.g., "break", "run").
 
         Returns
@@ -139,7 +140,7 @@ class VerbNetExtractor:
         --------
         >>> extractor = VerbNetExtractor()
         >>> items = extractor.get_verb_with_frames("break")
-        >>> "frames" in items[0].attributes
+        >>> "frames" in items[0].features
         True
         """
         return self.adapter.fetch_items(
@@ -151,8 +152,8 @@ class VerbNetExtractor:
 
         Parameters
         ----------
-        lemma : str
-            Verb lemma.
+        lemma
+            Verb lemma to check.
 
         Returns
         -------
@@ -187,14 +188,14 @@ class VerbNetExtractor:
         all_verbs = self.extract_all_verbs()
         return [v for v in all_verbs if self.is_particle_verb(v.lemma)]
 
-    def get_clausal_frames(self) -> list[dict]:
+    def get_clausal_frames(self) -> list[dict[str, Any]]:
         """Get all frames with clausal complements.
 
         Returns frames containing clausal patterns (S, that, whether, if, to, etc.).
 
         Returns
         -------
-        list[dict]
+        list[dict[str, Any]]
             Dictionaries with:
             - lemma: Verb lemma
             - verbnet_class: Class ID
@@ -221,29 +222,29 @@ class VerbNetExtractor:
 
         clausal_frames = []
         for verb in all_verbs:
-            if "frames" not in verb.attributes:
+            if "frames" not in verb.features:
                 continue
 
-            for frame in verb.attributes["frames"]:
+            for frame in verb.features["frames"]:
                 if any(kw in frame["primary"] for kw in clausal_keywords):
                     clausal_frames.append(
                         {
                             "lemma": verb.lemma,
-                            "verbnet_class": verb.attributes["verbnet_class"],
+                            "verbnet_class": verb.features["verbnet_class"],
                             "frame": frame,
                         }
                     )
 
         return clausal_frames
 
-    def get_frames_with_pp(self) -> list[dict]:
+    def get_frames_with_pp(self) -> list[dict[str, Any]]:
         """Get all frames with prepositional phrases.
 
         Returns frames containing PP patterns.
 
         Returns
         -------
-        list[dict]
+        list[dict[str, Any]]
             Dictionaries with:
             - lemma: Verb lemma
             - verbnet_class: Class ID
@@ -260,32 +261,34 @@ class VerbNetExtractor:
 
         pp_frames = []
         for verb in all_verbs:
-            if "frames" not in verb.attributes:
+            if "frames" not in verb.features:
                 continue
 
-            for frame in verb.attributes["frames"]:
+            for frame in verb.features["frames"]:
                 if "PP" in frame["primary"]:
                     pp_frames.append(
                         {
                             "lemma": verb.lemma,
-                            "verbnet_class": verb.attributes["verbnet_class"],
+                            "verbnet_class": verb.features["verbnet_class"],
                             "frame": frame,
                         }
                     )
 
         return pp_frames
 
-    def export_to_lexicon_format(self, verbs: list[LexicalItem]) -> list[dict]:
+    def export_to_lexicon_format(
+        self, verbs: list[LexicalItem]
+    ) -> list[dict[str, Any]]:
         """Export verbs to format suitable for Lexicon.from_dicts().
 
         Parameters
         ----------
-        verbs : list[LexicalItem]
+        verbs
             Verbs to export.
 
         Returns
         -------
-        list[dict]
+        list[dict[str, Any]]
             Dictionaries suitable for Lexicon construction.
 
         Examples
@@ -299,10 +302,9 @@ class VerbNetExtractor:
         return [
             {
                 "lemma": v.lemma,
-                "pos": v.pos,
+                "pos": v.features.get("pos", "VERB"),
                 "language_code": v.language_code,
                 "features": v.features,
-                "attributes": v.attributes,
             }
             for v in verbs
         ]

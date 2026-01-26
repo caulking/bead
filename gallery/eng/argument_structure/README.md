@@ -1,6 +1,6 @@
 # Argument Structure Active Learning Pipeline
 
-A comprehensive framework for collecting human judgments on argument structure alternations using active learning with convergence detection to human-level inter-annotator agreement.
+A framework for collecting human judgments on argument structure alternations using active learning with convergence detection to human-level inter-annotator agreement.
 
 ## Overview
 
@@ -14,7 +14,7 @@ This project implements a human-in-the-loop active learning pipeline for studyin
 6. **Trains predictive models** that converge to human inter-annotator agreement
 7. **Detects convergence** using Krippendorff's alpha and other reliability metrics
 
-**Key Innovation:** Rather than testing only "known good" verb-frame combinations from VerbNet (~21,453 attested patterns), this approach systematically tests **every verb in every frame structure**, enabling discovery of both grammatical and ungrammatical patterns.
+**Key Feature:** Rather than testing only "known good" verb-frame combinations from VerbNet (approximately 21,453 attested patterns), this approach systematically tests **every verb in every frame structure**, enabling discovery of both grammatical and ungrammatical patterns.
 
 ## Linguistic Background
 
@@ -48,10 +48,10 @@ Not all verbs participate in all alternations:
 
 This project uses **VerbNet** (Kipper et al., 2008), a lexical resource accessed through the **Glazing** interface. VerbNet provides:
 
-- **~3,000 unique verb lemmas** organized into semantic classes
-- **~21,453 verb-specific frame templates** with syntactic patterns
-- **~26 unique generic frame structures** (extracted by this pipeline)
-- **Detailed frame information** including syntax, thematic roles, and examples
+- Approximately 3,000 unique verb lemmas organized into semantic classes
+- Approximately 21,453 verb-specific frame templates with syntactic patterns
+- Approximately 26 unique generic frame structures (extracted by this pipeline)
+- Detailed frame information including syntax, thematic roles, and examples
 
 ### MegaAttitude Frame System
 
@@ -63,16 +63,9 @@ For clausal complement constructions, the project uses the **MegaAttitude** fram
 4. **PP complements** with clausal objects
 5. **Null/pro-clausal** complements
 
-### Research Questions
-
-1. **Acceptability Judgments:** How acceptable is verb V in frame F?
-2. **Generalization:** Can models predict human judgments for unseen verb-frame combinations?
-3. **Convergence:** How many annotations are needed for models to reach human-level agreement?
-4. **Active Learning:** Which items should be annotated to maximize learning efficiency?
-
 ## Two Ways to Run This Pipeline
 
-This pipeline can be executed using **two equivalent approaches** that produce identical outputs:
+This pipeline can be executed using two equivalent approaches that produce identical outputs:
 
 ### CLI Approach
 
@@ -120,7 +113,7 @@ filled = filler.fill(strategy="exhaustive")
 
 ### Current Implementation
 
-The scripts in this directory (`generate_lexicons.py`, `fill_templates.py`, etc.) use the **Python API approach** because they perform complex batch operations with custom plugins (see "Plugin Architecture" section below). However, the same pipeline could be implemented using CLI commands for simpler, single-operation workflows.
+The scripts in this directory (`generate_lexicons.py`, `fill_templates.py`, etc.) use the Python API approach because they perform complex batch operations with custom plugins (see "Plugin Architecture" section below). The same pipeline could be implemented using CLI commands for simpler, single-operation workflows.
 
 **Key Principle**: Both approaches are first-class citizens. Choose based on your workflow needs, not capability constraints.
 
@@ -171,7 +164,7 @@ The pipeline consists of 10 main scripts organized into 4 stages:
 │                                                                  │
 │  5. generate_cross_product.py                                  │
 │     └─ Cross all verbs × all generic frames                   │
-│     → Output: items/cross_product_items.jsonl (~74,880 items)  │
+│     → Output: items/cross_product_items.jsonl (74,880 items)   │
 │                                                                  │
 │  6. create_2afc_pairs.py                                       │
 │     ├─ Load filled templates from previous step               │
@@ -218,7 +211,7 @@ The pipeline consists of 10 main scripts organized into 4 stages:
 
 ### Plugin Architecture
 
-The `utils/` package provides **language-specific plugins** that extend the core `bead` framework for English argument structure experiments. These plugins remain in the gallery because they contain English-specific linguistic knowledge that should not be part of the language-agnostic framework.
+The `utils/` package provides language-specific plugins that extend the core `bead` framework for English argument structure experiments. These plugins remain in the gallery because they contain English-specific linguistic knowledge that should not be part of the language-agnostic framework.
 
 #### Why Plugins Are Language-Specific
 
@@ -513,7 +506,7 @@ training:
 
 #### How Plugins Are Referenced
 
-Plugins are **imported directly in Python scripts**, not referenced in `config.yaml`. For example:
+Plugins are imported directly in Python scripts, not referenced in `config.yaml`. For example:
 
 ```python
 # generate_lexicons.py
@@ -558,14 +551,14 @@ python generate_cross_product.py
 ```
 Tests **all verbs in all frames**:
 ```
-~4,789 verb lemmas × 26 generic frames = 124,514 total combinations
+Approximately 4,789 verb lemmas x 26 generic frames = 124,514 total combinations
 ```
 
 This enables:
-- Testing **both grammatical and ungrammatical combinations**
-- Discovering **novel acceptable patterns** not in VerbNet
-- Training models on **full distributional information**
-- Measuring **fine-grained acceptability gradients**
+- Testing both grammatical and ungrammatical combinations
+- Discovering novel acceptable patterns not in VerbNet
+- Training models on full distributional information
+- Measuring fine-grained acceptability gradients
 
 ### Controlled Lexicons
 
@@ -575,7 +568,7 @@ For verbs, we use 8 light verbs (do, be, have, go, get, make, happen, come), and
 
 ### 2AFC Judgment Format
 
-Rather than Likert scales, we use **two-alternative forced choice (2AFC)**:
+Rather than Likert scales, we use two-alternative forced choice (2AFC):
 
 ```
 Which sentence sounds more natural?
@@ -1393,8 +1386,8 @@ python create_2afc_pairs.py
 ```
 
 **Expected output:**
-- `items/cross_product_items.jsonl` (~76 MB, 124,514 items)
-- `items/2afc_pairs.jsonl` (~200 MB, variable based on pairing strategy)
+- `items/cross_product_items.jsonl` (76 MB, 124,514 items)
+- `items/2afc_pairs.jsonl` (200 MB, variable based on pairing strategy)
 
 **2. Partition into experimental lists:**
 
@@ -1451,24 +1444,24 @@ The pipeline will:
 - Add to training set and retrain
 - Repeat until `|α_model - α_human| < 0.05`
 
-**Expected convergence:** 5-10 iterations (~1,500-2,500 annotations total)
+**Expected convergence:** 5-10 iterations (approximately 1,500-2,500 annotations total)
 
 ### Computational Requirements
 
 **Data generation:**
-- Time: ~2-4 hours (full cross-product + 2AFC pairs)
-- Memory: ~8 GB RAM
-- Storage: ~350 MB (all data files)
+- Time: 2-4 hours (full cross-product + 2AFC pairs)
+- Memory: 8 GB RAM
+- Storage: 350 MB (all data files)
 
 **Active learning loop (per iteration):**
-- Time: ~10-30 minutes (model training + evaluation)
-- Memory: ~16 GB RAM (with BERT-based models)
+- Time: 10-30 minutes (model training + evaluation)
+- Memory: 16 GB RAM (with BERT-based models)
 - GPU: Optional but recommended (10x speedup)
 
 **Human data collection:**
-- Participants: ~50-100 (depending on list design)
-- Time per participant: ~30-45 minutes
-- Total annotations needed: ~1,500-2,500 for convergence
+- Participants: 50-100 (depending on list design)
+- Time per participant: 30-45 minutes
+- Total annotations needed: 1,500-2,500 for convergence
 
 ## Data Format Documentation
 
@@ -1580,7 +1573,7 @@ gallery/eng/argument_structure/
 │   └── generic_frames_filled.jsonl # Templates with slot fillers (required for 2AFC)
 │
 ├── items/                          # Generated experimental items
-│   ├── cross_product_items.jsonl   # Verb × frame combinations (~74,880 items)
+│   ├── cross_product_items.jsonl   # Verb x frame combinations (74,880 items)
 │   └── 2afc_pairs.jsonl            # Paired comparisons for judgments
 │
 ├── lists/                          # Experimental list partitions

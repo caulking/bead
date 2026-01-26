@@ -28,15 +28,20 @@ from .constraint_builder import (
 class TemplateGenerator:
     """Generate Template objects from VerbNet frames.
 
-    This class orchestrates the generation of templates from VerbNet data,
+    Orchestrates the generation of templates from VerbNet data,
     applying appropriate constraints and slot definitions based on the
     frame structure.
 
     Parameters
     ----------
-    resource_dir : str | Path | None
+    resource_dir
         Directory containing bleached lexicon CSV files.
         Defaults to "resources/" relative to this file.
+
+    Attributes
+    ----------
+    resource_dir : Path
+        Path to the resource directory.
 
     Examples
     --------
@@ -55,15 +60,8 @@ class TemplateGenerator:
     """
 
     def __init__(self, resource_dir: str | Path | None = None) -> None:
-        """Initialize template generator.
-
-        Parameters
-        ----------
-        resource_dir : str | Path | None
-            Directory containing bleached lexicon CSV files.
-        """
         if resource_dir is None:
-            # Default to resources/ relative to this file
+            # default to resources/ relative to this file
             resource_dir = Path(__file__).parent.parent / "resources"
         self.resource_dir = Path(resource_dir)
 
@@ -77,11 +75,11 @@ class TemplateGenerator:
 
         Parameters
         ----------
-        verb_lemma : str
-            The verb lemma (e.g., "think", "believe")
-        verbnet_class : str
-            VerbNet class ID (e.g., "29.9")
-        frame_data : dict
+        verb_lemma
+            The verb lemma (e.g., "think", "believe").
+        verbnet_class
+            VerbNet class ID (e.g., "29.9").
+        frame_data
             Frame data with keys:
             - primary: Primary frame description (e.g., "NP V that S")
             - secondary: Secondary description (optional)
@@ -104,16 +102,16 @@ class TemplateGenerator:
         """
         frame_primary = frame_data.get("primary", "")
 
-        # Try to map to clausal templates
+        # try to map to clausal templates
         clausal_templates = map_verbnet_to_clausal_templates(frame_primary)
 
         if clausal_templates:
-            # Generate templates for clausal frames
+            # generate templates for clausal frames
             return self._generate_clausal_templates(
                 verb_lemma, verbnet_class, frame_data, clausal_templates
             )
         else:
-            # Generate simple transitive/intransitive template
+            # generate simple transitive/intransitive template
             return self._generate_simple_templates(
                 verb_lemma, verbnet_class, frame_data
             )
@@ -129,40 +127,40 @@ class TemplateGenerator:
 
         Parameters
         ----------
-        verb_lemma : str
-            Verb lemma
-        verbnet_class : str
-            VerbNet class ID
-        frame_data : dict
-            Frame data
-        clausal_templates : list[ClausalTemplate]
-            Clausal template mappings
+        verb_lemma
+            Verb lemma.
+        verbnet_class
+            VerbNet class ID.
+        frame_data
+            Frame data.
+        clausal_templates
+            Clausal template mappings.
 
         Returns
         -------
         list[Template]
-            Generated templates for each clausal variant
+            Generated templates for each clausal variant.
         """
         templates = []
 
         for clausal_template in clausal_templates:
-            # Create slots based on clausal template
+            # create slots based on clausal template
             slots = self._create_slots_from_clausal_template(clausal_template)
 
-            # Generate constraints
+            # generate constraints
             constraints = self._generate_clausal_constraints(clausal_template)
 
-            # Create template name
+            # create template name
             template_name = self._create_template_name(
                 verb_lemma, verbnet_class, clausal_template.frame_type
             )
 
-            # Create description
+            # create description
             description = self._create_description(
                 verb_lemma, verbnet_class, frame_data, clausal_template
             )
 
-            # Build template
+            # build template
             template = Template(
                 name=template_name,
                 template_string=clausal_template.template_string,
@@ -196,35 +194,35 @@ class TemplateGenerator:
 
         Parameters
         ----------
-        verb_lemma : str
-            Verb lemma
-        verbnet_class : str
-            VerbNet class ID
-        frame_data : dict
-            Frame data
+        verb_lemma
+            Verb lemma.
+        verbnet_class
+            VerbNet class ID.
+        frame_data
+            Frame data.
 
         Returns
         -------
         list[Template]
-            Generated template
+            Generated template.
         """
         frame_primary = frame_data.get("primary", "")
 
-        # Infer slots from frame description
+        # infer slots from frame description
         slots, template_string = self._infer_slots_from_frame(frame_primary)
 
-        # Generate constraints
+        # generate constraints
         constraints = self._generate_simple_constraints(slots)
 
-        # Create template name
+        # create template name
         template_name = self._create_template_name(
             verb_lemma, verbnet_class, frame_primary
         )
 
-        # Create description
+        # create description
         description = f"VerbNet frame: {verb_lemma} ({verbnet_class}) - {frame_primary}"
 
-        # Build template
+        # build template
         template = Template(
             name=template_name,
             template_string=template_string,
@@ -250,18 +248,18 @@ class TemplateGenerator:
 
         Parameters
         ----------
-        clausal_template : ClausalTemplate
-            Clausal template specification
+        clausal_template
+            Clausal template specification.
 
         Returns
         -------
         dict[str, Slot]
-            Slots keyed by name
+            Slots keyed by name.
         """
         slots = {}
 
         for slot_name, slot_type in clausal_template.slots.items():
-            # Create basic slot with POS constraint
+            # create basic slot with POS constraint
             constraints = []
 
             if slot_type == "noun":
@@ -273,13 +271,13 @@ class TemplateGenerator:
                     Constraint(expression="self.features.get('pos') == 'V'"),
                     Constraint(expression="self.features.get('verb_form') != 'V.PTCP'"),
                 ]
-                # Add form constraints for specific verb forms
+                # add form constraints for specific verb forms
                 if slot_type == "verb_past":
                     constraints.append(
                         Constraint(expression="self.features.tense == 'PST'")
                     )
                 elif slot_type == "verb_base":
-                    # Base form - could add constraint for infinitive
+                    # base form - could add constraint for infinitive
                     pass
                 elif slot_type == "verb_present_participle":
                     constraints.append(
@@ -296,7 +294,7 @@ class TemplateGenerator:
                         Constraint(expression="self.features.tense == 'PST'")
                     )
 
-            # Create slot
+            # create slot
             slots[slot_name] = Slot(
                 name=slot_name,
                 description=f"{slot_type} slot",
@@ -313,23 +311,23 @@ class TemplateGenerator:
 
         Parameters
         ----------
-        clausal_template : ClausalTemplate
-            Clausal template specification
+        clausal_template
+            Clausal template specification.
 
         Returns
         -------
         list[Constraint]
-            Multi-slot constraints
+            Multi-slot constraints.
         """
         constraints = []
 
-        # Check for determiner-noun pairs
+        # check for determiner-noun pairs
         slot_names = list(clausal_template.slots.keys())
 
-        # Pattern: det + noun combinations
+        # pattern: det + noun combinations
         for _i, slot_name in enumerate(slot_names):
             if slot_name.endswith("_det") or slot_name == "det":
-                # Find corresponding noun
+                # find corresponding noun
                 noun_slot = slot_name.replace("_det", "_noun")
                 if noun_slot == "det":
                     noun_slot = "noun"
@@ -345,31 +343,31 @@ class TemplateGenerator:
 
         Parameters
         ----------
-        slots : dict[str, Slot]
-            Slot definitions
+        slots
+            Slot definitions.
 
         Returns
         -------
         list[Constraint]
-            Multi-slot constraints
+            Multi-slot constraints.
         """
         constraints = []
         slot_names = list(slots.keys())
 
-        # Add determiner-noun agreement for all det+noun pairs
+        # add determiner-noun agreement for all det+noun pairs
         for slot_name in slot_names:
             if slot_name.startswith("det_"):
-                # Extract suffix (e.g., "subj" from "det_subj")
-                suffix = slot_name[4:]  # Remove "det_" prefix
+                # extract suffix (e.g., "subj" from "det_subj")
+                suffix = slot_name[4:]  # remove "det_" prefix
                 noun_slot = f"noun_{suffix}"
-                # Only add constraint if matching noun slot exists
+                # only add constraint if matching noun slot exists
                 if noun_slot in slot_names:
                     det_constraint = build_determiner_constraint(slot_name, noun_slot)
                     constraints.append(det_constraint)
 
-        # Add subject-verb agreement if we have subject and verb
+        # add subject-verb agreement if we have subject and verb
         if "noun_subj" in slot_names and "verb" in slot_names:
-            # Find subject determiner
+            # find subject determiner
             det_subj = "det_subj" if "det_subj" in slot_names else None
             if det_subj:
                 agreement_constraint = build_subject_verb_agreement_constraint(
@@ -386,25 +384,25 @@ class TemplateGenerator:
 
         Parameters
         ----------
-        frame_primary : str
-            Primary frame description (e.g., "NP V NP", "NP V NP PP")
+        frame_primary
+            Primary frame description (e.g., "NP V NP", "NP V NP PP").
 
         Returns
         -------
         tuple[dict[str, Slot], str]
-            Slots dict and template string
+            Slots dict and template string.
         """
-        # Simple heuristic mapping
+        # simple heuristic mapping
         frame_primary.lower()
         slots = {}
         template_parts = []
 
-        # Track slot counters for multiple instances
+        # track slot counters for multiple instances
         noun_counter = 0
         verb_counter = 0
         pp_counter = 0
 
-        # Parse frame elements - first count total NPs to determine argument structure
+        # parse frame elements - first count total NPs to determine argument structure
         parts = frame_primary.split()
         total_nps = sum(1 for part in parts if part.lower() == "np")
 
@@ -412,16 +410,16 @@ class TemplateGenerator:
             part_lower = part.lower()
 
             if part_lower == "np":
-                # Noun phrase - create determiner + noun slots
+                # noun phrase - create determiner + noun slots
                 noun_counter += 1
                 if noun_counter == 1:
-                    # Always subject
+                    # always subject
                     det_slot_name = "det_subj"
                     noun_slot_name = "noun_subj"
                     det_description = "Subject determiner"
                     noun_description = "Subject noun"
                 elif noun_counter == 2:
-                    # Second NP: dobj in transitive, iobj in ditransitive
+                    # second NP: dobj in transitive, iobj in ditransitive
                     if total_nps >= 3:
                         det_slot_name = "det_iobj"
                         noun_slot_name = "noun_iobj"
@@ -433,19 +431,19 @@ class TemplateGenerator:
                         det_description = "Direct object determiner"
                         noun_description = "Direct object noun"
                 elif noun_counter == 3:
-                    # Third NP: always dobj in ditransitive
+                    # third NP: always dobj in ditransitive
                     det_slot_name = "det_dobj"
                     noun_slot_name = "noun_dobj"
                     det_description = "Direct object determiner"
                     noun_description = "Direct object noun"
                 else:
-                    # Additional NPs (rare)
+                    # additional NPs (rare)
                     det_slot_name = f"det_noun{noun_counter}"
                     noun_slot_name = f"noun{noun_counter}"
                     det_description = f"Determiner for noun phrase {noun_counter}"
                     noun_description = f"Noun {noun_counter}"
 
-                # Create determiner slot
+                # create determiner slot
                 slots[det_slot_name] = Slot(
                     name=det_slot_name,
                     description=det_description,
@@ -455,7 +453,7 @@ class TemplateGenerator:
                     required=True,
                 )
 
-                # Create noun slot
+                # create noun slot
                 slots[noun_slot_name] = Slot(
                     name=noun_slot_name,
                     description=noun_description,
@@ -465,11 +463,11 @@ class TemplateGenerator:
                     required=True,
                 )
 
-                # Add both to template string
+                # add both to template string
                 template_parts.append(f"{{{det_slot_name}}} {{{noun_slot_name}}}")
 
             elif part_lower == "v":
-                # Verb
+                # verb
                 verb_counter += 1
                 slot_name = "verb" if verb_counter == 1 else f"verb{verb_counter}"
 
@@ -487,13 +485,13 @@ class TemplateGenerator:
                 template_parts.append(f"{{{slot_name}}}")
 
             elif part_lower == "pp" or part_lower.startswith("pp."):
-                # Prepositional phrase - preposition + determiner + noun
+                # prepositional phrase - preposition + determiner + noun
                 pp_counter += 1
                 prep_slot = f"prep{pp_counter}" if pp_counter > 1 else "prep"
                 det_slot = f"det_pobj{pp_counter}" if pp_counter > 1 else "det_pobj"
                 obj_slot = f"noun_pobj{pp_counter}" if pp_counter > 1 else "noun_pobj"
 
-                # Preposition slot
+                # preposition slot
                 slots[prep_slot] = Slot(
                     name=prep_slot,
                     description="Preposition",
@@ -525,10 +523,10 @@ class TemplateGenerator:
 
                 template_parts.append(f"{{{prep_slot}}} {{{det_slot}}} {{{obj_slot}}}")
 
-        # Join template parts
+        # join template parts
         template_string = " ".join(template_parts)
 
-        # Add period if not present
+        # add period if not present
         if not template_string.endswith("."):
             template_string += "."
 
@@ -541,19 +539,19 @@ class TemplateGenerator:
 
         Parameters
         ----------
-        verb_lemma : str
-            Verb lemma
-        verbnet_class : str
-            VerbNet class ID
-        frame_info : str
-            Frame type or primary description
+        verb_lemma
+            Verb lemma.
+        verbnet_class
+            VerbNet class ID.
+        frame_info
+            Frame type or primary description.
 
         Returns
         -------
         str
-            Template name
+            Template name.
         """
-        # Sanitize frame info for use in name
+        # sanitize frame info for use in name
         safe_frame = frame_info.replace(" ", "_").replace(".", "").replace("-", "_")
         safe_verb = verb_lemma.replace(" ", "_").replace("-", "_")
         safe_class = verbnet_class.replace(".", "_").replace("-", "_")
@@ -571,19 +569,19 @@ class TemplateGenerator:
 
         Parameters
         ----------
-        verb_lemma : str
-            Verb lemma
-        verbnet_class : str
-            VerbNet class ID
-        frame_data : dict
-            Frame data
-        clausal_template : ClausalTemplate
-            Clausal template
+        verb_lemma
+            Verb lemma.
+        verbnet_class
+            VerbNet class ID.
+        frame_data
+            Frame data.
+        clausal_template
+            Clausal template.
 
         Returns
         -------
         str
-            Description
+            Description.
         """
         parts = [
             f"VerbNet frame: {verb_lemma} ({verbnet_class})",
@@ -606,27 +604,27 @@ class TemplateGenerator:
 
         Parameters
         ----------
-        frame_data : dict
-            Frame data
-        clausal_template : ClausalTemplate | None
-            Clausal template (if applicable)
+        frame_data
+            Frame data.
+        clausal_template
+            Clausal template (if applicable).
 
         Returns
         -------
         list[str]
-            Tags
+            Tags.
         """
         tags = ["verbnet"]
 
         frame_primary = frame_data.get("primary", "").lower()
 
-        # Add frame structure tags
+        # add frame structure tags
         if "np" in frame_primary:
             tags.append("np")
         if "pp" in frame_primary:
             tags.append("pp")
 
-        # Add clausal tags
+        # add clausal tags
         if clausal_template:
             tags.append("clausal")
 
@@ -651,10 +649,10 @@ def generate_templates_for_verb(
 
     Parameters
     ----------
-    verb_item : LexicalItem
+    verb_item
         VerbNet verb with frame data in attributes.
         Should have been fetched with include_frames=True.
-    include_frames : bool
+    include_frames
         Whether to expect frame data in attributes.
 
     Returns
@@ -698,7 +696,7 @@ def generate_templates_for_all_verbs(
 
     Parameters
     ----------
-    verb_items : list[LexicalItem]
+    verb_items
         VerbNet verbs with frame data.
 
     Returns
