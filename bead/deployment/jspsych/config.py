@@ -26,6 +26,212 @@ type ExperimentType = Literal[
 type UITheme = Literal["light", "dark", "auto"]
 
 
+# Factory functions for default lists
+def _empty_demographics_fields() -> list[DemographicsFieldConfig]:
+    """Return empty demographics field list."""
+    return []
+
+
+def _empty_instruction_pages() -> list[InstructionPage]:
+    """Return empty instruction pages list."""
+    return []
+
+
+class DemographicsFieldConfig(BaseModel):
+    """Configuration for a single demographics form field.
+
+    Used to configure fields in a demographics form that appears before
+    the experiment instructions. Supports various input types including
+    text, number, dropdown, radio buttons, and checkboxes.
+
+    Attributes
+    ----------
+    name : str
+        Field name (used as key in collected data).
+    field_type : Literal["text", "number", "dropdown", "radio", "checkbox"]
+        Type of form input.
+    label : str
+        Display label for the field.
+    required : bool
+        Whether this field is required (default: False).
+    options : list[str] | None
+        Options for dropdown/radio fields (default: None).
+    range : Range[int] | Range[float] | None
+        Numeric range constraint for number fields (default: None).
+    placeholder : str | None
+        Placeholder text for text/number inputs (default: None).
+    help_text : str | None
+        Help text displayed below the field (default: None).
+
+    Examples
+    --------
+    >>> age_field = DemographicsFieldConfig(
+    ...     name="age",
+    ...     field_type="number",
+    ...     label="Your Age",
+    ...     required=True,
+    ...     range=Range[int](min=18, max=100),
+    ... )
+    >>> education_field = DemographicsFieldConfig(
+    ...     name="education",
+    ...     field_type="dropdown",
+    ...     label="Highest Education Level",
+    ...     required=True,
+    ...     options=["High School", "Bachelor's", "Master's", "PhD"],
+    ... )
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    name: str
+    field_type: Literal["text", "number", "dropdown", "radio", "checkbox"]
+    label: str
+    required: bool = False
+    options: list[str] | None = None
+    range: Range[int] | Range[float] | None = None
+    placeholder: str | None = None
+    help_text: str | None = None
+
+
+class DemographicsConfig(BaseModel):
+    """Configuration for participant demographics form.
+
+    Defines a demographics form that appears before experiment instructions.
+    When enabled, participants must complete this form before proceeding.
+
+    Attributes
+    ----------
+    enabled : bool
+        Whether to show the demographics form (default: False).
+    title : str
+        Title displayed at the top of the form (default: "Participant Information").
+    fields : list[DemographicsFieldConfig]
+        List of fields to include in the form.
+    submit_button_text : str
+        Text for the submit button (default: "Continue").
+
+    Examples
+    --------
+    >>> config = DemographicsConfig(
+    ...     enabled=True,
+    ...     title="About You",
+    ...     fields=[
+    ...         DemographicsFieldConfig(
+    ...             name="age",
+    ...             field_type="number",
+    ...             label="Age",
+    ...             required=True,
+    ...         ),
+    ...     ],
+    ... )
+    >>> config.enabled
+    True
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    enabled: bool = False
+    title: str = "Participant Information"
+    fields: list[DemographicsFieldConfig] = Field(
+        default_factory=_empty_demographics_fields
+    )
+    submit_button_text: str = "Continue"
+
+
+class InstructionPage(BaseModel):
+    """A single instruction page for multi-page instructions.
+
+    Attributes
+    ----------
+    content : str
+        HTML content for this page.
+    title : str | None
+        Optional title for this page (displayed above content).
+
+    Examples
+    --------
+    >>> page = InstructionPage(
+    ...     title="Welcome",
+    ...     content="<p>Thank you for participating in this study.</p>",
+    ... )
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    content: str
+    title: str | None = None
+
+
+class InstructionsConfig(BaseModel):
+    """Configuration for multi-page experiment instructions.
+
+    Allows creating rich, multi-page instructions with navigation controls.
+    Participants can optionally navigate backwards through pages.
+
+    Attributes
+    ----------
+    pages : list[InstructionPage]
+        List of instruction pages to display.
+    show_page_numbers : bool
+        Whether to show page numbers (default: True).
+    allow_backwards : bool
+        Whether to allow navigating to previous pages (default: True).
+    button_label_next : str
+        Label for the next button (default: "Next").
+    button_label_finish : str
+        Label for the final button (default: "Begin Experiment").
+
+    Examples
+    --------
+    >>> config = InstructionsConfig(
+    ...     pages=[
+    ...         InstructionPage(title="Welcome", content="<p>Welcome!</p>"),
+    ...         InstructionPage(title="Task", content="<p>Your task is...</p>"),
+    ...     ],
+    ...     allow_backwards=True,
+    ... )
+    >>> len(config.pages)
+    2
+
+    >>> # Create from plain text (single page)
+    >>> config = InstructionsConfig.from_text("Please rate each sentence.")
+    >>> len(config.pages)
+    1
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    pages: list[InstructionPage] = Field(default_factory=_empty_instruction_pages)
+    show_page_numbers: bool = True
+    allow_backwards: bool = True
+    button_label_next: str = "Next"
+    button_label_finish: str = "Begin Experiment"
+
+    @classmethod
+    def from_text(cls, text: str) -> InstructionsConfig:
+        """Create single-page instructions from plain text.
+
+        Provides backward compatibility with simple string instructions.
+
+        Parameters
+        ----------
+        text : str
+            Plain text or HTML content for a single instruction page.
+
+        Returns
+        -------
+        InstructionsConfig
+            Instructions config with a single page.
+
+        Examples
+        --------
+        >>> config = InstructionsConfig.from_text("Rate each item from 1-7.")
+        >>> config.pages[0].content
+        'Rate each item from 1-7.'
+        """
+        return cls(pages=[InstructionPage(content=text)])
+
+
 class ExperimentConfig(BaseModel):
     """Configuration for jsPsych experiment generation.
 
@@ -40,8 +246,12 @@ class ExperimentConfig(BaseModel):
         Experiment title displayed to participants
     description : str
         Brief description of the experiment
-    instructions : str
-        Instructions shown to participants before the experiment
+    instructions : str | InstructionsConfig
+        Instructions shown to participants before the experiment. Can be a simple
+        string (single page) or InstructionsConfig for multi-page instructions.
+    demographics : DemographicsConfig | None
+        Optional demographics form shown before instructions (default: None).
+        When provided and enabled, participants must complete this form first.
     distribution_strategy : ListDistributionStrategy
         List distribution strategy for batch mode (required, no default).
         Specifies how participants are assigned to experiment lists using JATOS
@@ -104,8 +314,12 @@ class ExperimentConfig(BaseModel):
     experiment_type: ExperimentType
     title: str
     description: str
-    instructions: str
+    instructions: str | InstructionsConfig
     distribution_strategy: ListDistributionStrategy
+    demographics: DemographicsConfig | None = Field(
+        default=None,
+        description="Demographics form shown before instructions",
+    )
     randomize_trial_order: bool = Field(default=True)
     show_progress_bar: bool = Field(default=True)
     ui_theme: UITheme = Field(default="light")

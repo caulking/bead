@@ -17,6 +17,7 @@ from bead.data.serialization import SerializationError, write_jsonlines
 from bead.deployment.jspsych.config import (
     ChoiceConfig,
     ExperimentConfig,
+    InstructionsConfig,
     RatingScaleConfig,
 )
 from bead.deployment.jspsych.trials import create_trial
@@ -472,15 +473,83 @@ class JsPsychExperimentGenerator:
                 "target_selectors": self.config.slopit.target_selectors,
             }
 
+        # Prepare demographics config for template
+        demographics_enabled = False
+        demographics_title = "Participant Information"
+        demographics_fields: list[dict[str, JsonValue]] = []
+        demographics_submit_text = "Continue"
+
+        if self.config.demographics is not None and self.config.demographics.enabled:
+            demographics_enabled = True
+            demographics_title = self.config.demographics.title
+            demographics_submit_text = self.config.demographics.submit_button_text
+            for field in self.config.demographics.fields:
+                field_data: dict[str, JsonValue] = {
+                    "name": field.name,
+                    "label": field.label,
+                    "field_type": field.field_type,
+                    "required": field.required,
+                }
+                if field.placeholder:
+                    field_data["placeholder"] = field.placeholder
+                if field.options:
+                    field_data["options"] = field.options
+                if field.range is not None:
+                    field_data["range_min"] = field.range.min
+                    field_data["range_max"] = field.range.max
+                demographics_fields.append(field_data)
+
+        # Prepare instructions config for template
+        instructions_is_multi_page = isinstance(
+            self.config.instructions, InstructionsConfig
+        )
+        instructions_pages: list[dict[str, str | None]] = []
+        instructions_show_page_numbers = True
+        instructions_allow_backwards = True
+        instructions_button_next = "Next"
+        instructions_button_finish = "Begin Experiment"
+        simple_instructions: str | None = None
+
+        if instructions_is_multi_page:
+            assert isinstance(self.config.instructions, InstructionsConfig)
+            instructions_show_page_numbers = self.config.instructions.show_page_numbers
+            instructions_allow_backwards = self.config.instructions.allow_backwards
+            instructions_button_next = self.config.instructions.button_label_next
+            instructions_button_finish = self.config.instructions.button_label_finish
+            for page in self.config.instructions.pages:
+                instructions_pages.append({
+                    "title": page.title,
+                    "content": page.content,
+                })
+        else:
+            # Simple string instructions
+            simple_instructions = (
+                self.config.instructions
+                if isinstance(self.config.instructions, str)
+                else None
+            )
+
         js_content = template.render(
             title=self.config.title,
             description=self.config.description,
-            instructions=self.config.instructions,
+            instructions=simple_instructions,
             show_progress_bar=self.config.show_progress_bar,
             use_jatos=self.config.use_jatos,
             on_finish_url=on_finish_url,
             slopit_enabled=self.config.slopit.enabled,
             slopit_config=slopit_config,
+            # Demographics variables
+            demographics_enabled=demographics_enabled,
+            demographics_title=demographics_title,
+            demographics_fields=demographics_fields,
+            demographics_submit_text=demographics_submit_text,
+            # Instructions variables
+            instructions_is_multi_page=instructions_is_multi_page,
+            instructions_pages=instructions_pages,
+            instructions_show_page_numbers=instructions_show_page_numbers,
+            instructions_allow_backwards=instructions_allow_backwards,
+            instructions_button_next=instructions_button_next,
+            instructions_button_finish=instructions_button_finish,
         )
 
         output_file = self.output_dir / "js" / "experiment.js"

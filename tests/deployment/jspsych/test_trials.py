@@ -14,14 +14,19 @@ from bead.deployment.distribution import (
 )
 from bead.deployment.jspsych.config import (
     ChoiceConfig,
+    DemographicsConfig,
+    DemographicsFieldConfig,
     ExperimentConfig,
+    InstructionPage,
+    InstructionsConfig,
     RatingScaleConfig,
 )
 from bead.deployment.jspsych.trials import (
     _generate_stimulus_html,
     create_completion_trial,
     create_consent_trial,
-    create_instruction_trial,
+    create_demographics_trial,
+    create_instructions_trial,
     create_trial,
 )
 from bead.items.item import Item
@@ -390,14 +395,62 @@ class TestStimulusGeneration:
 class TestSpecialTrials:
     """Tests for instruction, consent, and completion trials."""
 
-    def test_instruction_trial(self) -> None:
-        """Test instruction trial creation."""
-        trial = create_instruction_trial("Please follow these instructions carefully.")
+    def test_instruction_trial_simple_string(self) -> None:
+        """Test instruction trial creation with simple string."""
+        trial = create_instructions_trial("Please follow these instructions carefully.")
 
         assert trial["type"] == "html-keyboard-response"
         assert "Please follow these instructions carefully." in trial["stimulus"]
         assert trial["data"]["trial_type"] == "instructions"
         assert "Press any key" in trial["stimulus"]
+
+    def test_instruction_trial_multi_page(self) -> None:
+        """Test instruction trial creation with multi-page config."""
+        config = InstructionsConfig(
+            pages=[
+                InstructionPage(title="Welcome", content="<p>Welcome to the study!</p>"),
+                InstructionPage(title="Task", content="<p>Your task is to rate sentences.</p>"),
+            ],
+            allow_backwards=True,
+            button_label_next="Continue",
+            button_label_finish="Start Experiment",
+        )
+        trial = create_instructions_trial(config)
+
+        assert trial["type"] == "instructions"
+        assert len(trial["pages"]) == 2
+        assert trial["allow_backward"] is True
+        assert trial["button_label_next"] == "Continue"
+        assert trial["button_label_finish"] == "Start Experiment"
+        assert trial["data"]["trial_type"] == "instructions"
+
+    def test_demographics_trial(self) -> None:
+        """Test demographics trial creation."""
+        config = DemographicsConfig(
+            enabled=True,
+            title="About You",
+            fields=[
+                DemographicsFieldConfig(
+                    name="age",
+                    field_type="number",
+                    label="Your Age",
+                    required=True,
+                ),
+                DemographicsFieldConfig(
+                    name="education",
+                    field_type="dropdown",
+                    label="Education Level",
+                    options=["High School", "Bachelors", "Masters", "PhD"],
+                ),
+            ],
+            submit_button_text="Next",
+        )
+        trial = create_demographics_trial(config)
+
+        assert trial["type"] == "survey"
+        assert trial["title"] == "About You"
+        assert trial["button_label_finish"] == "Next"
+        assert trial["data"]["trial_type"] == "demographics"
 
     def test_consent_trial(self) -> None:
         """Test consent trial creation."""

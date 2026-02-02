@@ -10,7 +10,10 @@ from __future__ import annotations
 from bead.data.base import JsonValue
 from bead.deployment.jspsych.config import (
     ChoiceConfig,
+    DemographicsConfig,
+    DemographicsFieldConfig,
     ExperimentConfig,
+    InstructionsConfig,
     RatingScaleConfig,
 )
 from bead.items.item import Item
@@ -480,36 +483,6 @@ def _generate_stimulus_html(item: Item, include_all: bool = True) -> str:
         return f'<div class="stimulus-container"><p>{element_html}</p></div>'
 
 
-def create_instruction_trial(instructions: str) -> dict[str, JsonValue]:
-    """Create an instruction trial.
-
-    Parameters
-    ----------
-    instructions : str
-        The instruction text to display.
-
-    Returns
-    -------
-    dict[str, JsonValue]
-        A jsPsych html-keyboard-response trial object.
-    """
-    stimulus_html = (
-        f'<div class="instructions">'
-        f"<h2>Instructions</h2>"
-        f"<p>{instructions}</p>"
-        f"<p><em>Press any key to continue</em></p>"
-        f"</div>"
-    )
-
-    return {
-        "type": "html-keyboard-response",
-        "stimulus": stimulus_html,
-        "data": {
-            "trial_type": "instructions",
-        },
-    }
-
-
 def create_consent_trial(consent_text: str) -> dict[str, JsonValue]:
     """Create a consent trial.
 
@@ -562,5 +535,189 @@ def create_completion_trial(
         "choices": "NO_KEYS",
         "data": {
             "trial_type": "completion",
+        },
+    }
+
+
+def _create_survey_question(field: DemographicsFieldConfig) -> dict[str, JsonValue]:
+    """Create a jsPsych survey question from a demographics field config.
+
+    Parameters
+    ----------
+    field : DemographicsFieldConfig
+        The field configuration.
+
+    Returns
+    -------
+    dict[str, JsonValue]
+        A jsPsych survey question object.
+    """
+    question: dict[str, JsonValue] = {
+        "name": field.name,
+        "prompt": field.label,
+        "required": field.required,
+    }
+
+    if field.field_type == "text":
+        question["type"] = "text"
+        if field.placeholder:
+            question["placeholder"] = field.placeholder
+
+    elif field.field_type == "number":
+        question["type"] = "text"
+        question["input_type"] = "number"
+        if field.placeholder:
+            question["placeholder"] = field.placeholder
+        if field.range is not None:
+            question["min"] = field.range.min
+            question["max"] = field.range.max
+
+    elif field.field_type == "dropdown":
+        question["type"] = "drop-down"
+        if field.options:
+            question["options"] = field.options
+
+    elif field.field_type == "radio":
+        question["type"] = "multi-choice"
+        if field.options:
+            question["options"] = field.options
+
+    elif field.field_type == "checkbox":
+        question["type"] = "multi-select"
+        if field.options:
+            question["options"] = field.options
+
+    return question
+
+
+def create_demographics_trial(config: DemographicsConfig) -> dict[str, JsonValue]:
+    """Create a demographics survey trial.
+
+    Parameters
+    ----------
+    config : DemographicsConfig
+        The demographics form configuration.
+
+    Returns
+    -------
+    dict[str, JsonValue]
+        A jsPsych survey trial object.
+
+    Examples
+    --------
+    >>> from bead.deployment.jspsych.config import (
+    ...     DemographicsConfig, DemographicsFieldConfig
+    ... )
+    >>> config = DemographicsConfig(
+    ...     enabled=True,
+    ...     title="About You",
+    ...     fields=[
+    ...         DemographicsFieldConfig(
+    ...             name="age",
+    ...             field_type="number",
+    ...             label="Your Age",
+    ...             required=True,
+    ...         ),
+    ...     ],
+    ... )
+    >>> trial = create_demographics_trial(config)
+    >>> trial["type"]
+    'survey'
+    """
+    questions = [_create_survey_question(field) for field in config.fields]
+
+    return {
+        "type": "survey",
+        "title": config.title,
+        "pages": [questions],
+        "button_label_finish": config.submit_button_text,
+        "data": {
+            "trial_type": "demographics",
+        },
+    }
+
+
+def create_instructions_trial(
+    instructions: str | InstructionsConfig,
+) -> dict[str, JsonValue]:
+    """Create an instruction trial supporting both simple strings and rich config.
+
+    Parameters
+    ----------
+    instructions : str | InstructionsConfig
+        Either a simple instruction string (single page, keyboard response)
+        or an InstructionsConfig for multi-page instructions.
+
+    Returns
+    -------
+    dict[str, JsonValue]
+        A jsPsych trial object. For simple strings, returns html-keyboard-response.
+        For InstructionsConfig, returns an instructions plugin trial.
+
+    Examples
+    --------
+    >>> # Simple string instructions
+    >>> trial = create_instructions_trial("Rate each sentence from 1-7.")
+    >>> trial["type"]
+    'html-keyboard-response'
+
+    >>> # Multi-page instructions
+    >>> from bead.deployment.jspsych.config import InstructionsConfig, InstructionPage
+    >>> config = InstructionsConfig(
+    ...     pages=[
+    ...         InstructionPage(title="Welcome", content="<p>Welcome!</p>"),
+    ...         InstructionPage(title="Task", content="<p>Rate sentences.</p>"),
+    ...     ],
+    ... )
+    >>> trial = create_instructions_trial(config)
+    >>> trial["type"]
+    'instructions'
+    >>> len(trial["pages"])
+    2
+    """
+    if isinstance(instructions, str):
+        # Simple string: use html-keyboard-response (backward compatible)
+        stimulus_html = (
+            f'<div class="instructions">'
+            f"<h2>Instructions</h2>"
+            f"<p>{instructions}</p>"
+            f"<p><em>Press any key to continue</em></p>"
+            f"</div>"
+        )
+        return {
+            "type": "html-keyboard-response",
+            "stimulus": stimulus_html,
+            "data": {
+                "trial_type": "instructions",
+            },
+        }
+
+    # InstructionsConfig: use jsPsych instructions plugin
+    pages: list[str] = []
+    for i, page in enumerate(instructions.pages):
+        page_html = '<div class="instructions-page">'
+        if page.title:
+            page_html += f"<h2>{page.title}</h2>"
+        page_html += f"<div>{page.content}</div>"
+
+        # Add page numbers if enabled
+        if instructions.show_page_numbers and len(instructions.pages) > 1:
+            page_html += (
+                f'<p class="page-number">Page {i + 1} of {len(instructions.pages)}</p>'
+            )
+
+        page_html += "</div>"
+        pages.append(page_html)
+
+    return {
+        "type": "instructions",
+        "pages": pages,
+        "show_clickable_nav": True,
+        "allow_backward": instructions.allow_backwards,
+        "button_label_next": instructions.button_label_next,
+        "button_label_previous": "Previous",
+        "button_label_finish": instructions.button_label_finish,
+        "data": {
+            "trial_type": "instructions",
         },
     }
