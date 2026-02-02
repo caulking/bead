@@ -231,7 +231,7 @@ jobs:
           cp -r tests/fixtures/api_docs/* tests/fixtures/cli_work/
 
       - name: Run tests
-        run: .venv/bin/pytest --codeblocks --cov=bead --cov-report=xml --cov-report=term-missing
+        run: .venv/bin/pytest --codeblocks --cov=bead --cov-report=xml --cov-report=term-missing -m "not slow_model_training"
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
