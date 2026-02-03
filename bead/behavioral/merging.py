@@ -171,9 +171,6 @@ def filter_flagged_judgments(
     if is_polars:
         assert isinstance(judgments_df, pl.DataFrame)
 
-        def check_flagged(item_id: str, participant_id: str) -> bool:
-            return (str(item_id), str(participant_id)) in flagged_pairs
-
         # Create mask column
         df_with_flag = judgments_df.with_columns(
             pl.struct([item_id_column, participant_id_column])

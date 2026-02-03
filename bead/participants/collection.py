@@ -441,8 +441,9 @@ class ParticipantCollection(BeadBaseModel):
                         # Polars uses None for nulls
                         metadata[col] = value
                     else:
-                        # Pandas uses NaN - check with pd.notna
-                        if pd.notna(value):
+                        # Pandas uses NaN - check for NaN (NaN != NaN)
+                        is_nan = isinstance(value, float) and value != value
+                        if not is_nan:
                             metadata[col] = value
 
             # Create participant

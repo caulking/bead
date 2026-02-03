@@ -137,4 +137,11 @@ exclude = [
     "bead/resources/loaders.py",
     # Evaluation uses krippendorff which has no type stubs
     "bead/evaluation/**",
+    # Behavioral uses slopit which has no type stubs
+    "bead/behavioral/**",
+    # Participants modules use polars with incomplete type stubs
+    "bead/participants/collection.py",
+    "bead/participants/merging.py",
+    # Items cache has numpy ndarray type issues
+    "bead/items/cache.py",
 ]

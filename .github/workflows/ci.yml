@@ -169,7 +169,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install --upgrade pip
-          pip install -e ".[dev]"
+          pip install -e ".[dev,behavioral-analysis]"
 
       - name: Run pyright
         run: pyright
@@ -223,7 +223,7 @@ jobs:
       - name: Install dependencies in venv
         run: |
           .venv/bin/pip install --upgrade pip
-          .venv/bin/pip install -e ".[dev,api,training,stats]"
+          .venv/bin/pip install -e ".[dev,api,training,stats,behavioral-analysis]"
 
       - name: Set up test fixtures
         run: |
