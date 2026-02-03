@@ -191,7 +191,7 @@ class FieldSpec(BaseModel):
             return False
 
         # Range check
-        if self.range is not None and isinstance(value, (int, float)):
+        if self.range is not None and isinstance(value, int | float):
             if not self.range.contains(value):  # type: ignore[arg-type]
                 return False
 

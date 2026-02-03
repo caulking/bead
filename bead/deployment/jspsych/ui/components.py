@@ -305,7 +305,7 @@ def _extract_allowed_items_from_expression(
             if var_name in context:
                 value = context[var_name]
                 # check if it's a set or list of UUIDs
-                if isinstance(value, (set, list)):
+                if isinstance(value, set | list):
                     uuids = set()
                     for item in value:
                         if isinstance(item, UUID):

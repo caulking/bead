@@ -390,7 +390,7 @@ class ModelOutputCache:
             return obj.tolist()
         elif isinstance(obj, dict):
             return {k: self._serialize_for_hash(v) for k, v in sorted(obj.items())}  # type: ignore[misc]
-        elif isinstance(obj, (list, tuple)):
+        elif isinstance(obj, list | tuple):
             return [self._serialize_for_hash(item) for item in obj]  # type: ignore[misc]
         else:
             return obj
@@ -417,7 +417,7 @@ class ModelOutputCache:
             }
         elif isinstance(result, dict):
             return {k: self._serialize_result(v) for k, v in result.items()}  # type: ignore[misc]
-        elif isinstance(result, (list, tuple)):
+        elif isinstance(result, list | tuple):
             return [self._serialize_result(item) for item in result]  # type: ignore[misc]
         else:
             return result

@@ -121,7 +121,7 @@ def validate_model_output(output: ModelOutput) -> list[str]:
 
     elif output.operation in ("log_probability", "perplexity", "similarity"):
         # These should return numeric values
-        if not isinstance(output.output, (int, float)):
+        if not isinstance(output.output, int | float):
             errors.append(
                 f"{output.operation} output should be numeric, "
                 f"got {type(output.output)}"
@@ -129,7 +129,7 @@ def validate_model_output(output: ModelOutput) -> list[str]:
 
     elif output.operation == "embedding":
         # Should return list or array
-        if not isinstance(output.output, (list, dict)):
+        if not isinstance(output.output, list | dict):
             # dict could be serialized ndarray
             errors.append(
                 f"Embedding output should be list/array, got {type(output.output)}"
@@ -585,8 +585,8 @@ def validate_item_for_task_type(item: Item, task_type: TaskType) -> bool:
         min_val = item.item_metadata.get("min_value")
         max_val = item.item_metadata.get("max_value")
         if min_val is not None and max_val is not None:
-            if not isinstance(min_val, (int, float)) or not isinstance(
-                max_val, (int, float)
+            if not isinstance(min_val, int | float) or not isinstance(
+                max_val, int | float
             ):
                 raise ValueError(
                     "magnitude items with bounds must have numeric "

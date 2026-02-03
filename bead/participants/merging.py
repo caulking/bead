@@ -304,7 +304,7 @@ def build_participant_lookup(
         # Extract simple metadata values
         metadata: dict[str, str | int | float | bool | None] = {}
         for k, v in p.participant_metadata.items():
-            if isinstance(v, (str, int, float, bool)) or v is None:
+            if isinstance(v, str | int | float | bool) or v is None:
                 metadata[k] = v
 
         result[key] = metadata

@@ -169,7 +169,7 @@ class ClozeStrategy(SimulationStrategy):
 
             # extract score
             score = model_output.output
-            if isinstance(score, (int, float)):
+            if isinstance(score, int | float):
                 scores[str(candidate)] = float(score)
 
         return scores

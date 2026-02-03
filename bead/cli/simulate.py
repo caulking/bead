@@ -606,10 +606,10 @@ def analyze(
         annotator_stats: dict[str, dict[str, JsonValue]] = {}
         for annotator_id, annotations in annotators_dict.items():
             # Basic statistics (depends on annotation type)
-            if annotations and isinstance(annotations[0], (int, float)):
+            if annotations and isinstance(annotations[0], int | float):
                 # Type narrowing: we know these are numeric now
                 numeric_annotations = [
-                    a for a in annotations if isinstance(a, (int, float))
+                    a for a in annotations if isinstance(a, int | float)
                 ]
                 annotator_stats[annotator_id] = {
                     "count": len(annotations),

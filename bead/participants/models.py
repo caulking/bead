@@ -116,7 +116,7 @@ class Participant(BeadBaseModel):
         # Convert JsonValue dict to the expected type for validation
         metadata: dict[str, str | int | float | bool | None] = {}
         for key, value in self.participant_metadata.items():
-            if isinstance(value, (str, int, float, bool)) or value is None:
+            if isinstance(value, str | int | float | bool) or value is None:
                 metadata[key] = value
             # Skip complex values (lists, dicts) - they won't match FieldSpec types
         return spec.validate_metadata(metadata)

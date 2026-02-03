@@ -130,7 +130,7 @@ def from_csv(
                 if col in columns_list and pd.notna(row[col]):
                     # store feature value, converting to string if needed
                     val = row[col]
-                    if not isinstance(val, (str, int, float, bool)):
+                    if not isinstance(val, str | int | float | bool):
                         features[col] = str(val)
                     else:
                         features[col] = val

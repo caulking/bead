@@ -58,7 +58,7 @@ class RandomNoiseModel(NoiseModel):
             return value
 
         # apply noise based on value type
-        if isinstance(value, (int, float)) and not isinstance(value, bool):
+        if isinstance(value, int | float) and not isinstance(value, bool):
             return self._add_numeric_noise(value, rng)
         else:
             # for non-numeric, return as-is

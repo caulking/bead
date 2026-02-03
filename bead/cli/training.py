@@ -366,7 +366,7 @@ def evaluate(
                     if support is not None:
                         results["support"] = (
                             float(support)
-                            if isinstance(support, (int, float))
+                            if isinstance(support, int | float)
                             else float(sum(support))
                         )
             else:
@@ -616,7 +616,7 @@ def cross_validate(
             if support is not None:
                 prf["support"] = (
                     float(support)
-                    if isinstance(support, (int, float))
+                    if isinstance(support, int | float)
                     else float(sum(support))
                 )
 

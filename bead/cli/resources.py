@@ -221,7 +221,7 @@ def create_lexicon(
                     features_value = raw_item_untyped["features"]
                     if isinstance(features_value, dict):
                         for k, v in features_value.items():
-                            if isinstance(v, (str, int, float, bool)) or v is None:
+                            if isinstance(v, str | int | float | bool) or v is None:
                                 json_features[k] = v
 
                 # Move pos to features if present at top level

@@ -424,7 +424,7 @@ class ForcedChoiceScorer(ItemScorer):
             key = f"lm_score_{i}"
             if key in item.item_metadata:
                 metadata_val = item.item_metadata[key]
-                if not isinstance(metadata_val, (int, float, str)):
+                if not isinstance(metadata_val, int | float | str):
                     raise TypeError(f"Expected numeric type, got {type(metadata_val)}")
                 scores.append(float(metadata_val))
             else:
@@ -439,7 +439,7 @@ class ForcedChoiceScorer(ItemScorer):
             key = f"lm_score_{letter}"
             if key in item.item_metadata:
                 metadata_val = item.item_metadata[key]
-                if not isinstance(metadata_val, (int, float, str)):
+                if not isinstance(metadata_val, int | float | str):
                     raise TypeError(f"Expected numeric type, got {type(metadata_val)}")
                 scores.append(float(metadata_val))
             else:

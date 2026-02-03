@@ -77,7 +77,7 @@ class TemperatureNoiseModel(NoiseModel):
 
             elif task_type == "ordinal_scale":
                 # for ordinal, add temperature-scaled gaussian noise
-                if isinstance(value, (int, float)):
+                if isinstance(value, int | float):
                     noise = rng.normal(0, self.temperature * 0.5)
                     return value + noise
                 return value

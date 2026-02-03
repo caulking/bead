@@ -278,7 +278,7 @@ class InterAnnotatorMetrics:
                 if rating is None:
                     rater_ratings.append(np.nan)
                 else:
-                    is_numeric = isinstance(rating, (int, float))
+                    is_numeric = isinstance(rating, int | float)
                     val = float(rating) if is_numeric else hash(rating)
                     rater_ratings.append(val)
                     all_values.append(rating)

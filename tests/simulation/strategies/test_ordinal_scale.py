@@ -359,7 +359,7 @@ def test_simulate_response_returns_integer() -> None:
     rng = np.random.RandomState(42)
     response = strategy.simulate_response(item, template, "lm_score", rng)
 
-    assert isinstance(response, (int, np.integer))
+    assert isinstance(response, int | np.integer)
 
 
 def test_simulate_response_with_scale_labels() -> None:
@@ -387,7 +387,7 @@ def test_simulate_response_with_scale_labels() -> None:
     response = strategy.simulate_response(item, template, "lm_score", rng)
 
     # Should still be integer in bounds
-    assert isinstance(response, (int, np.integer))
+    assert isinstance(response, int | np.integer)
     assert 1 <= response <= 7
 
 

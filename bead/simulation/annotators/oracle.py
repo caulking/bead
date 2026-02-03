@@ -137,7 +137,7 @@ class OracleAnnotator(SimulatedAnnotator):
             return ground_truth
 
         elif task_type == "magnitude":
-            if not isinstance(ground_truth, (int, float)):
+            if not isinstance(ground_truth, int | float):
                 msg = (
                     f"magnitude ground truth must be numeric, got {type(ground_truth)}"
                 )
