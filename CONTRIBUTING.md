@@ -1,24 +1,96 @@
 # Contributing to bead
 
-Thank you for your interest in contributing to bead. This document provides guidelines and instructions for contributing.
+First off, thank you for considering contributing to bead! It's people like you that make bead such a great tool for linguistic research.
+
+Following these guidelines helps to communicate that you respect the time of the developers managing and developing this open source project. In return, they should reciprocate that respect in addressing your issue, assessing changes, and helping you finalize your pull requests.
 
 ## Table of Contents
 
 - [Code of Conduct](#code-of-conduct)
-- [Getting Started](#getting-started)
-- [Development Workflow](#development-workflow)
-- [Pull Request Process](#pull-request-process)
-- [Code Style](#code-style)
-- [Testing](#testing)
-- [Documentation](#documentation)
+- [Getting Help](#getting-help)
+- [What We're Looking For](#what-were-looking-for)
 - [Reporting Bugs](#reporting-bugs)
-- [Suggesting Features](#suggesting-features)
+- [Suggesting Enhancements](#suggesting-enhancements)
+- [Your First Contribution](#your-first-contribution)
+- [Development Setup](#development-setup)
+- [Pull Request Process](#pull-request-process)
+- [Style Guides](#style-guides)
 
 ## Code of Conduct
 
-This project follows a standard code of conduct. Be respectful, inclusive, and constructive in all interactions.
+This project and everyone participating in it is governed by our commitment to providing a welcoming and inclusive environment. By participating, you are expected to uphold this standard. Please be respectful, inclusive, and constructive in all interactions.
 
-## Getting Started
+## Getting Help
+
+- **Documentation**: Check [bead.readthedocs.io](https://bead.readthedocs.io) first
+- **Discussions**: Use [GitHub Discussions](https://github.com/FACTSlab/bead/discussions) for questions and ideas
+- **Issues**: Reserved for bug reports and feature requests with clear specifications
+
+Please don't use the issue tracker for support questions. The discussions forum is a much better place to get help.
+
+## What We're Looking For
+
+bead is an open source project and we love to receive contributions from our community. There are many ways to contribute:
+
+- **Bug reports**: Help us identify issues
+- **Feature requests**: Suggest improvements with clear use cases
+- **Documentation**: Fix typos, improve explanations, add examples
+- **Code contributions**: Bug fixes, new features, performance improvements
+- **Language examples**: Contribute research examples for new languages in the gallery
+
+## Reporting Bugs
+
+**Security vulnerabilities**: If you find a security vulnerability, do NOT open an issue. Email aaron.white@rochester.edu instead.
+
+Before creating bug reports, please check the existing issues to avoid duplicates. When you create a bug report, include as many details as possible:
+
+### Bug Report Template
+
+```markdown
+## Description
+A clear and concise description of the bug.
+
+## Steps to Reproduce
+```python
+from bead import ...
+
+# Minimal code that reproduces the issue
+```
+
+## Expected Behavior
+What you expected to happen.
+
+## Actual Behavior
+What actually happened, including full error traceback.
+
+## Environment
+- bead version: (run `bead --version`)
+- Python version: (run `python --version`)
+- OS: macOS / Linux / Windows
+- Installation method: uv / pip
+```
+
+## Suggesting Enhancements
+
+Enhancement suggestions are tracked as GitHub issues. When creating an enhancement suggestion, include:
+
+- **Use case**: Why is this feature needed? What problem does it solve?
+- **Proposed solution**: How do you envision the feature working?
+- **Alternatives considered**: Other approaches you've thought about
+- **Code examples**: How the feature would be used
+
+## Your First Contribution
+
+Unsure where to begin? Look for issues labeled:
+
+- `good first issue`: Simple issues suitable for newcomers
+- `help wanted`: Issues where we'd appreciate community help
+
+Working on your first Pull Request? Here are some resources:
+- [How to Contribute to Open Source](https://opensource.guide/how-to-contribute/)
+- [First Timers Only](https://www.firsttimersonly.com/)
+
+## Development Setup
 
 ### Prerequisites
 
@@ -26,173 +98,104 @@ This project follows a standard code of conduct. Be respectful, inclusive, and c
 - [uv](https://docs.astral.sh/uv/) for package management
 - Git
 
-### Setting Up the Development Environment
+### Setup
 
 ```bash
-# Fork and clone the repository
+# Fork the repository on GitHub, then clone your fork
 git clone https://github.com/YOUR_USERNAME/bead.git
 cd bead
+
+# Add upstream remote
+git remote add upstream https://github.com/FACTSlab/bead.git
 
 # Install all dependencies
 uv sync --all-extras
 
-# Verify the setup
+# Verify setup
 uv run pytest tests/ -x
 ```
 
-**Important:** Always use `uv run` to execute commands. Do not activate the virtual environment manually.
+**Important**: Always use `uv run` to execute commands. Do not activate the virtual environment manually.
 
-### Useful Commands
+### Keeping Your Fork Updated
 
 ```bash
-# Run tests
-uv run pytest tests/
-
-# Run tests with coverage
-uv run pytest tests/ --cov=bead --cov-report=html
-
-# Lint code
-uv run ruff check .
-
-# Format code
-uv run ruff format .
-
-# Type check
-uv run pyright
-
-# Run all checks
-uv run ruff check . && uv run ruff format --check . && uv run pyright
-```
-
-## Development Workflow
-
-1. **Create a branch** from `main` for your work:
-   ```bash
-   git checkout -b feature/your-feature-name
-   ```
-
-2. **Make your changes** following the code style guidelines below.
-
-3. **Write or update tests** for your changes.
-
-4. **Run all checks** before committing:
-   ```bash
-   uv run ruff check .
-   uv run ruff format .
-   uv run pyright
-   uv run pytest tests/
-   ```
-
-5. **Commit your changes** following the commit message convention.
-
-6. **Push and create a pull request.**
-
-### Commit Message Convention
-
-All commit messages must follow these rules:
-
-- Exactly one sentence
-- Present tense (not imperative)
-- Ends with a period
-- Never mention Claude, AI, or assistant
-
-**Good examples:**
-```
-Adds list constraint solver with backtracking.
-Fixes type error in item template validation.
-Updates Python version requirement to 3.13+.
-```
-
-**Bad examples:**
-```
-Add list constraint solver          # imperative mood, no period
-Added list constraint solver.       # past tense
-fix: constraint solver              # not a sentence
+git fetch upstream
+git checkout main
+git merge upstream/main
 ```
 
 ## Pull Request Process
 
-1. **Ensure all checks pass.** PRs with failing tests or linting errors will not be reviewed.
+1. **Create a branch** from `main`:
+   ```bash
+   git checkout -b feature/your-feature-name
+   ```
 
-2. **Update documentation** if you change any public APIs.
+2. **Make your changes** following the style guides below
 
-3. **Add tests** for new functionality. Target >90% coverage for new code.
+3. **Write or update tests** for your changes
 
-4. **Keep PRs focused.** One feature or fix per PR. Large PRs are harder to review.
+4. **Run all checks**:
+   ```bash
+   uv run ruff check .        # Lint
+   uv run ruff format .       # Format
+   uv run pyright             # Type check
+   uv run pytest tests/       # Test
+   ```
 
-5. **Write a clear description** explaining what the PR does and why.
+5. **Commit your changes** (see commit message guidelines below)
 
-6. **Link related issues** using keywords like "Fixes #123" or "Closes #456".
+6. **Push to your fork** and open a Pull Request
 
-### PR Checklist
+### Pull Request Guidelines
 
-- [ ] All tests pass (`uv run pytest tests/`)
-- [ ] Code is formatted (`uv run ruff format .`)
-- [ ] No linting errors (`uv run ruff check .`)
-- [ ] Type checking passes (`uv run pyright`)
-- [ ] Documentation updated if needed
-- [ ] Commit messages follow convention
+- Fill in the PR template completely
+- Link to any related issues using keywords (`Fixes #123`, `Closes #456`)
+- Keep PRs focused on a single change
+- Update documentation for any changed APIs
+- Add tests for new functionality (target >90% coverage)
+- Ensure all CI checks pass
 
-## Code Style
+### What to Expect
 
-### Python
+- A maintainer will review your PR, usually within a week
+- You may be asked to make changes before merging
+- Once approved, a maintainer will merge your PR
 
-- **Python version:** 3.13+ with modern syntax
-- **Line length:** 88 characters
-- **Formatting:** Ruff
-- **Linting:** Ruff
-- **Type checking:** Pyright in strict mode
+## Style Guides
 
-### Type Annotations
+### Python Code Style
 
-All code must have full type annotations:
+- **Python version**: 3.13+ with modern syntax
+- **Line length**: 88 characters
+- **Formatter**: Ruff
+- **Linter**: Ruff
+- **Type checker**: Pyright (strict mode)
+
+All code must have full type annotations. Never use `Any` or `object`:
 
 ```python
 # Good
 def process_items(items: list[Item], *, threshold: float = 0.5) -> list[Item]:
     ...
 
-# Bad (missing annotations)
+# Bad: missing annotations
 def process_items(items, threshold=0.5):
     ...
 ```
 
-**Never use `Any` or `object`** as type annotations. Use specific types or type aliases:
+Use modern Python syntax:
 
 ```python
 # Good
-type MetadataValue = str | int | float | bool | None | dict[str, MetadataValue] | list[MetadataValue]
+def get_item(id: UUID) -> Item | None: ...
+items: list[str] = []
 
-def load_config(path: Path) -> dict[str, MetadataValue]:
-    ...
-
-# Bad
-def load_config(path: Path) -> dict[str, Any]:
-    ...
-```
-
-### Modern Python Syntax
-
-Use modern Python 3.13+ syntax:
-
-```python
-# Good: Union with |
-def get_item(id: UUID) -> Item | None:
-    ...
-
-# Bad: Optional from typing
-from typing import Optional
-def get_item(id: UUID) -> Optional[Item]:
-    ...
-
-# Good: Built-in generics
-def process(items: list[str]) -> dict[str, int]:
-    ...
-
-# Bad: Generics from typing
-from typing import List, Dict
-def process(items: List[str]) -> Dict[str, int]:
-    ...
+# Bad: old typing syntax
+from typing import Optional, List
+def get_item(id: UUID) -> Optional[Item]: ...
+items: List[str] = []
 ```
 
 ### Docstrings
@@ -208,15 +211,12 @@ def construct_list(
 ) -> ExperimentList | None:
     """Construct an experiment list from items with constraints.
 
-    Partitions the given items into a balanced list that satisfies
-    all specified constraints.
-
     Parameters
     ----------
     items
-        List of experimental items to partition.
+        Items to partition into the list.
     constraints
-        List of constraints the list must satisfy.
+        Constraints the list must satisfy.
     max_size
         Maximum items in the resulting list.
 
@@ -238,151 +238,34 @@ def construct_list(
     """
 ```
 
+### Commit Messages
+
+- One sentence, present tense, ends with a period
+- Describe what the change does, not what you did
+
+```
+# Good
+Adds list constraint solver with backtracking.
+Fixes type error in item template validation.
+Updates documentation for ListCollection API.
+
+# Bad
+Add list constraint solver          # imperative, no period
+Added list constraint solver.       # past tense
+fix: constraint solver              # not a sentence
+Fixed the bug                       # too vague
+```
+
 ### Writing Style
 
-**Never use em-dashes** in code, documentation, or comments. Use:
-- Commas for mild separation
-- Semicolons for related clauses
-- Colons for elaboration
-- Parentheses for asides
+- Never use em-dashes in code, documentation, or comments
+- Avoid generic filler phrases ("This powerful module elegantly...")
+- Be direct and specific
 
-**Avoid AI slop** (generic, hollow, or formulaic writing):
-- Bad: "This powerful module elegantly handles..."
-- Good: "This module handles list partitioning by..."
+## Recognition
 
-## Testing
+Contributors are recognized in the project's release notes. Thank you for helping make bead better!
 
-### Running Tests
+---
 
-```bash
-# Run all tests
-uv run pytest tests/
-
-# Run with coverage report
-uv run pytest tests/ --cov=bead --cov-report=html
-
-# Run specific test file
-uv run pytest tests/items/test_item.py -v
-
-# Run tests matching a pattern
-uv run pytest tests/ -k "test_construct"
-```
-
-### Writing Tests
-
-- Place tests in the `tests/` directory mirroring the source structure
-- Use pytest fixtures for shared test data
-- Use descriptive test names: `test_<action>_<condition>`
-- Include docstrings explaining what each test verifies
-
-```python
-import pytest
-from bead.items import Item, ItemTemplate
-
-
-@pytest.fixture
-def sample_items() -> list[Item]:
-    """Create sample items for testing."""
-    return [...]
-
-
-class TestItemTemplate:
-    """Tests for ItemTemplate class."""
-
-    def test_constructs_items_from_templates(
-        self, sample_items: list[Item]
-    ) -> None:
-        """Should construct items from filled templates."""
-        template = ItemTemplate(judgment_type="acceptability")
-        items = template.construct_items(sample_items)
-
-        assert len(items) > 0
-        assert all(i.judgment_type == "acceptability" for i in items)
-
-    def test_returns_empty_list_for_empty_input(self) -> None:
-        """Should return empty list when given no templates."""
-        template = ItemTemplate()
-        items = template.construct_items([])
-
-        assert items == []
-```
-
-### Test Coverage
-
-- Target >90% coverage for new code
-- Focus on testing behavior, not implementation details
-- Include edge cases (empty input, None values, invalid data)
-
-## Documentation
-
-### Updating Documentation
-
-- Update docstrings when changing public APIs
-- Add examples for new functionality
-- Keep the README current with new features
-
-### Building Documentation
-
-```bash
-# Build and serve documentation locally
-uv run mkdocs serve
-
-# Build static documentation
-uv run mkdocs build
-```
-
-## Reporting Bugs
-
-When reporting bugs, please include:
-
-1. **Description:** Clear, concise description of the bug
-2. **Steps to reproduce:** Minimal code example that demonstrates the issue
-3. **Expected behavior:** What you expected to happen
-4. **Actual behavior:** What actually happened
-5. **Environment:** Python version, OS, bead version
-6. **Error messages:** Full traceback if applicable
-
-Use this template:
-
-```markdown
-## Description
-Brief description of the bug.
-
-## Steps to Reproduce
-```python
-from bead import ...
-
-# Minimal code that reproduces the issue
-```
-
-## Expected Behavior
-What should happen.
-
-## Actual Behavior
-What actually happens.
-
-## Environment
-- Python version: 3.13.x
-- OS: macOS/Linux/Windows
-- bead version: 0.1.0
-
-## Error Message
-```
-Full traceback here
-```
-```
-
-## Suggesting Features
-
-When suggesting features, please include:
-
-1. **Use case:** Why is this feature needed? What problem does it solve?
-2. **Proposed solution:** How do you envision the feature working?
-3. **Alternatives:** Have you considered other approaches?
-4. **Examples:** Code examples showing how the feature would be used
-
-## Questions?
-
-If you have questions about contributing, open a discussion or reach out to the maintainers.
-
-Thank you for contributing to bead!
+Questions? Open a [discussion](https://github.com/FACTSlab/bead/discussions) or reach out to the maintainers.

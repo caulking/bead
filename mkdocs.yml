@@ -1,8 +1,8 @@
 site_name: bead Documentation
 site_description: Framework for large-scale linguistic judgment experiments
-site_url: https://caulking.github.io/bead
-repo_url: https://github.com/caulking/bead
-repo_name: caulking/bead
+site_url: https://bead.readthedocs.io
+repo_url: https://github.com/FACTSlab/bead
+repo_name: FACTSlab/bead
 
 theme:
   name: material

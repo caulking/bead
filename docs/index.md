@@ -40,7 +40,7 @@ uv pip install bead
 For development installation:
 
 ```bash
-git clone https://github.com/caulking/bead.git
+git clone https://github.com/FACTSlab/bead.git
 cd bead
 uv sync --all-extras
 ```
@@ -59,11 +59,11 @@ If you use bead in your research, please cite:
   author = {White, Aaron Steven},
   title = {Bead: A python framework for linguistic judgment experiments with active learning},
   year = {2026},
-  url = {https://github.com/caulking/bead},
+  url = {https://github.com/FACTSlab/bead},
   version = {0.1.0}
 }
 ```
 
 ## License
 
-MIT License. See [LICENSE](https://github.com/caulking/bead/blob/main/LICENSE) for details.
+MIT License. See [LICENSE](https://github.com/FACTSlab/bead/blob/main/LICENSE) for details.

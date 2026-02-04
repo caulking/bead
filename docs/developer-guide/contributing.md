@@ -31,7 +31,7 @@ bead uses a fork and branch workflow for contributions.
 Click "Fork" on the GitHub repository page to create your copy:
 
 ```
-https://github.com/caulking/bead → fork → https://github.com/your-username/bead
+https://github.com/FACTSlab/bead → fork → https://github.com/your-username/bead
 ```
 
 ### 2. Clone Your Fork
@@ -48,7 +48,7 @@ cd bead
 Add the original repository as upstream:
 
 ```bash
-git remote add upstream https://github.com/caulking/bead.git
+git remote add upstream https://github.com/FACTSlab/bead.git
 ```
 
 Verify remotes:
@@ -57,8 +57,8 @@ Verify remotes:
 git remote -v
 # origin    https://github.com/your-username/bead.git (fetch)
 # origin    https://github.com/your-username/bead.git (push)
-# upstream  https://github.com/caulking/bead.git (fetch)
-# upstream  https://github.com/caulking/bead.git (push)
+# upstream  https://github.com/FACTSlab/bead.git (fetch)
+# upstream  https://github.com/FACTSlab/bead.git (push)
 ```
 
 ### 4. Create Feature Branch
@@ -500,7 +500,7 @@ git push origin feature/add-ranking-task-type
 
 On GitHub, click "New Pull Request":
 
-1. Base repository: `caulking/bead`
+1. Base repository: `FACTSlab/bead`
 2. Base branch: `main`
 3. Head repository: `your-username/bead`
 4. Compare branch: `feature/add-ranking-task-type`

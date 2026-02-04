@@ -18,7 +18,7 @@ uv pip install bead
 For the latest development version:
 
 ```bash
-git clone https://github.com/caulking/bead.git
+git clone https://github.com/FACTSlab/bead.git
 cd bead
 uv sync
 ```

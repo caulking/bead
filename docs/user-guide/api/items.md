@@ -266,7 +266,7 @@ print(f"Requirements: {list(reqs.keys())}")
 
 ## Complete Example
 
-From [gallery/eng/argument_structure/create_2afc_pairs.py](https://github.com/caulking/bead/blob/main/gallery/eng/argument_structure/create_2afc_pairs.py):
+From [gallery/eng/argument_structure/create_2afc_pairs.py](https://github.com/FACTSlab/bead/blob/main/gallery/eng/argument_structure/create_2afc_pairs.py):
 
 ```python
 from pathlib import Path
@@ -339,4 +339,4 @@ print(f"Created {len(afc_items)} 2AFC items")
 
 - [Lists module](lists.md): Partition items into balanced lists
 - [CLI reference](../cli/items.md): Command-line equivalents
-- [Gallery example](https://github.com/caulking/bead/blob/main/gallery/eng/argument_structure/create_2afc_pairs.py): Full working script
+- [Gallery example](https://github.com/FACTSlab/bead/blob/main/gallery/eng/argument_structure/create_2afc_pairs.py): Full working script

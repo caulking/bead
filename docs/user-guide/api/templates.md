@@ -323,7 +323,7 @@ class OtherNounRenderer(TemplateRenderer):
 
 ## Complete Example
 
-From [gallery/eng/argument_structure/fill_templates.py](https://github.com/caulking/bead/blob/main/gallery/eng/argument_structure/fill_templates.py):
+From [gallery/eng/argument_structure/fill_templates.py](https://github.com/FACTSlab/bead/blob/main/gallery/eng/argument_structure/fill_templates.py):
 
 ```python
 from pathlib import Path
@@ -412,4 +412,4 @@ print(f"Generated {len(filled_templates)} filled templates")
 
 - [Items module](items.md): Create experimental items from filled templates
 - [CLI reference](../cli/templates.md): Command-line equivalents
-- [Gallery example](https://github.com/caulking/bead/blob/main/gallery/eng/argument_structure/fill_templates.py): Full working script
+- [Gallery example](https://github.com/FACTSlab/bead/blob/main/gallery/eng/argument_structure/fill_templates.py): Full working script

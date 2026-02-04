@@ -46,7 +46,7 @@ bead development works on macOS, Linux, and Windows. This guide uses Unix-style 
 Clone the bead repository from GitHub:
 
 ```bash
-git clone https://github.com/caulking/bead.git
+git clone https://github.com/FACTSlab/bead.git
 cd bead
 ```
 

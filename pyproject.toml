@@ -7,6 +7,20 @@ name = "bead"
 version = "0.1.0"
 description = "Lexicon and Template Collection Construction Pipeline for Acceptability and Inference Judgment Data"
 authors = [{name = "Aaron Steven White", email = "aaron.white@rochester.edu"}]
+readme = "README.md"
+license = {text = "MIT"}
+keywords = ["linguistics", "nlp", "experiments", "active-learning", "psycholinguistics"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Text Processing :: Linguistic",
+    "Typing :: Typed",
+]
 requires-python = ">=3.13"
 dependencies = [
     "pydantic>=2.0.0",
@@ -36,6 +50,13 @@ dependencies = [
     "accelerate>=0.25.0",
     "datasets>=2.14.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/FACTSlab/bead"
+Documentation = "https://bead.readthedocs.io"
+Repository = "https://github.com/FACTSlab/bead"
+Issues = "https://github.com/FACTSlab/bead/issues"
+Changelog = "https://github.com/FACTSlab/bead/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 dev = [

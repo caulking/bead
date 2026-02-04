@@ -82,7 +82,7 @@ def cli(
         # Validate configuration
         $ bead config validate
 
-    For more information, visit: https://github.com/caulking/bead
+    For more information, visit: https://github.com/FACTSlab/bead
     """
     # Store options in context for subcommands
     ctx.ensure_object(dict)

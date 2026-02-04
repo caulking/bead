@@ -301,7 +301,7 @@ print(f"Created collection with {len(collection.lists)} lists")
 
 ## Complete Example
 
-From [gallery/eng/argument_structure/generate_lists.py](https://github.com/caulking/bead/blob/main/gallery/eng/argument_structure/generate_lists.py):
+From [gallery/eng/argument_structure/generate_lists.py](https://github.com/FACTSlab/bead/blob/main/gallery/eng/argument_structure/generate_lists.py):
 
 ```python
 from pathlib import Path
@@ -388,4 +388,4 @@ print(f"Created {len(lists)} lists with {total_items} total items")
 
 - [Deployment module](deployment.md): Generate jsPsych experiments from lists
 - [CLI reference](../cli/lists.md): Command-line equivalents
-- [Gallery example](https://github.com/caulking/bead/blob/main/gallery/eng/argument_structure/generate_lists.py): Full working script
+- [Gallery example](https://github.com/FACTSlab/bead/blob/main/gallery/eng/argument_structure/generate_lists.py): Full working script
