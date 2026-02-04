@@ -7,16 +7,26 @@ and generates a jsPsych experiment that can be exported to JATOS.
 
 from __future__ import annotations
 
+import argparse
 import json
+import random
 import sys
+import traceback
 from pathlib import Path
 from uuid import UUID
 
 import yaml
-from rich.console import Console
 from rich.progress import track
-from rich.table import Table
 
+from bead.cli.display import (
+    console,
+    create_summary_table,
+    print_error,
+    print_header,
+    print_info,
+    print_success,
+    print_warning,
+)
 from bead.deployment.distribution import (
     DistributionStrategyType,
     ListDistributionStrategy,
@@ -30,9 +40,7 @@ from bead.items.item_template import (
     PresentationSpec,
     TaskSpec,
 )
-from bead.lists import ExperimentList
-
-console = Console()
+from bead.lists import ExperimentList, ListCollection
 
 
 def load_config(config_path: Path) -> dict:
@@ -44,14 +52,10 @@ def load_config(config_path: Path) -> dict:
 def load_experiment_lists(lists_path: Path) -> list[ExperimentList]:
     """Load experiment lists from JSONL file."""
     with console.status(f"[bold]Loading experiment lists from {lists_path}...[/bold]"):
-        lists = []
-        with open(lists_path) as f:
-            for line in f:
-                data = json.loads(line)
-                lists.append(ExperimentList(**data))
+        collection = ListCollection.from_jsonl(lists_path)
 
-    console.print(f"[green]✓[/green] Loaded {len(lists)} experiment lists")
-    return lists
+    print_success(f"Loaded {len(collection.lists)} experiment lists")
+    return collection.lists
 
 
 def load_items_by_uuid(pairs_path: Path) -> dict[UUID, Item]:
@@ -64,7 +68,7 @@ def load_items_by_uuid(pairs_path: Path) -> dict[UUID, Item]:
                 item = Item(**data)
                 items_dict[item.id] = item
 
-    console.print(f"[green]✓[/green] Loaded {len(items_dict)} 2AFC pairs")
+    print_success(f"Loaded {len(items_dict)} 2AFC pairs")
     return items_dict
 
 
@@ -89,8 +93,6 @@ def create_minimal_item_template() -> ItemTemplate:
 
 def main() -> None:
     """Generate jsPsych/JATOS deployment."""
-    import argparse
-
     parser = argparse.ArgumentParser(
         description="Generate jsPsych/JATOS deployment from experiment lists"
     )
@@ -117,58 +119,56 @@ def main() -> None:
     base_dir = Path(__file__).parent
     config_path = base_dir / "config.yaml"
 
-    console.rule("[bold]jsPsych/JATOS Deployment Generation[/bold]")
+    print_header("jsPsych/JATOS Deployment Generation")
     console.print(f"Base directory: [cyan]{base_dir}[/cyan]")
     console.print(f"Configuration: [cyan]{config_path}[/cyan]")
     console.print(f"Lists to select: [cyan]{args.n_lists}[/cyan]")
     console.print(f"Output directory: [cyan]{args.output_dir}[/cyan]\n")
 
     # Load configuration
-    console.rule("[1/6] Loading Configuration")
+    print_header("[1/6] Loading Configuration")
     config = load_config(config_path)
     deployment_config = config.get("deployment", {})
     jspsych_config = deployment_config.get("jspsych", {})
     experiment_config_dict = deployment_config.get("experiment", {})
 
-    console.print("[green]✓[/green] Configuration loaded")
+    print_success("Configuration loaded")
     console.print(
-        f"  • Platform: [cyan]{deployment_config.get('platform', 'jatos')}[/cyan]"
+        f"  - Platform: [cyan]{deployment_config.get('platform', 'jatos')}[/cyan]"
     )
-    console.print("  • Experiment type: [cyan]forced_choice (2AFC)[/cyan]\n")
+    console.print("  - Experiment type: [cyan]forced_choice (2AFC)[/cyan]\n")
 
     # Load experiment lists
-    console.rule("[2/6] Loading Experiment Lists")
+    print_header("[2/6] Loading Experiment Lists")
     lists_path = base_dir / config["paths"]["experiment_lists"]
     all_lists = load_experiment_lists(lists_path)
 
     # Randomly select subset of lists
-    import random
-
     random.seed(42)
     n_lists = min(args.n_lists, len(all_lists))
     selected_lists = random.sample(all_lists, n_lists)
-    console.print(
-        f"[green]✓[/green] Randomly selected {n_lists} lists from {len(all_lists)} available\n"
+    print_success(
+        f"Randomly selected {n_lists} lists from {len(all_lists)} available\n"
     )
 
     # Load all 2AFC pairs
-    console.rule("[3/6] Loading 2AFC Pairs")
+    print_header("[3/6] Loading 2AFC Pairs")
     pairs_path = base_dir / config["paths"]["2afc_pairs"]
     items_dict = load_items_by_uuid(pairs_path)
 
     # Create minimal template
     console.print()
-    console.rule("[4/6] Creating Item Template")
+    print_header("[4/6] Creating Item Template")
     template = create_minimal_item_template()
     templates_dict = {template.id: template}
-    console.print("[green]✓[/green] Created minimal ItemTemplate for 2AFC items\n")
+    print_success("Created minimal ItemTemplate for 2AFC items\n")
 
     # Update all items to reference this template
     for item in items_dict.values():
         item.item_template_id = template.id
 
     # Create ExperimentConfig for jsPsych (base configuration)
-    console.rule("[5/6] Generating jsPsych Experiments")
+    print_header("[5/6] Generating jsPsych Experiments")
 
     # Extract distribution strategy from config
     dist_config_dict = deployment_config.get("distribution_strategy", {})
@@ -191,7 +191,8 @@ def main() -> None:
         ),
         "instructions": experiment_config_dict.get(
             "instructions",
-            "You will see pairs of sentences. Please select the sentence that sounds more natural to you.",
+            "You will see pairs of sentences. "
+            "Please select the sentence that sounds more natural to you.",
         ),
         "randomize_trial_order": jspsych_config.get("randomize_order", True),
         "show_progress_bar": True,
@@ -244,23 +245,17 @@ def main() -> None:
                     templates=templates_dict,
                 )
             except Exception as e:
-                console.print(
-                    f"[red]✗[/red] Error generating {version_name} list {i + 1}: {e}"
-                )
-                import traceback
-
+                print_error(f"Error generating {version_name} list {i + 1}: {e}")
                 traceback.print_exc()
                 sys.exit(1)
 
-        console.print(
-            f"[green]✓[/green] Generated {n_lists} {version_name} experiments"
-        )
+        print_success(f"Generated {n_lists} {version_name} experiments")
 
     console.print()
 
     # Export to JATOS if requested
     if not args.no_jatos:
-        console.rule("[6/6] Exporting to JATOS")
+        print_header("[6/6] Exporting to JATOS")
 
         exporter = JATOSExporter(
             study_title=config["project"]["name"],
@@ -286,58 +281,43 @@ def main() -> None:
                     component_title=f"List {i + 1}",
                 )
             except Exception as e:
-                console.print(f"[red]✗[/red] Error exporting list {i + 1}: {e}")
-                import traceback
-
+                print_error(f"Error exporting list {i + 1}: {e}")
                 traceback.print_exc()
 
-        console.print(f"[green]✓[/green] Exported {n_lists} JATOS packages\n")
+        print_success(f"Exported {n_lists} JATOS packages\n")
     else:
-        console.rule("[6/6] Skipping JATOS Export")
-        console.print("[dim]  Use --no-jatos flag to disable JATOS export[/dim]\n")
+        print_header("[6/6] Skipping JATOS Export")
+        print_info("Use --no-jatos flag to disable JATOS export\n")
 
     # Print summary table
-    console.rule("[bold]Deployment Summary[/bold]")
-    table = Table(show_header=False, box=None, padding=(0, 2))
-    table.add_row("Lists generated:", f"[cyan]{n_lists}[/cyan]")
-    table.add_row("Versions:", "[cyan]local (standalone) + jatos (deployment)[/cyan]")
-    table.add_row("Output directory:", f"[cyan]{base_dir / args.output_dir}[/cyan]")
-    table.add_row(
-        "Total items deployed:",
-        f"[cyan]{sum(len(lst.item_refs) for lst in selected_lists)}[/cyan]",
-    )
-    table.add_row(
-        "Items per list:",
-        f"[cyan]{[len(lst.item_refs) for lst in selected_lists]}[/cyan]",
-    )
+    print_header("Deployment Summary")
+    summary_data = {
+        "Lists generated": str(n_lists),
+        "Versions": "local (standalone) + jatos (deployment)",
+        "Output directory": str(base_dir / args.output_dir),
+        "Total items deployed": str(sum(len(lst.item_refs) for lst in selected_lists)),
+        "Items per list": str([len(lst.item_refs) for lst in selected_lists]),
+    }
 
     if not args.no_jatos:
-        table.add_row("", "")
-        table.add_row(
-            "JATOS packages:",
-            f"[cyan]{base_dir / args.output_dir / 'jatos'}/*.jzip[/cyan]",
-        )
+        jatos_path = base_dir / args.output_dir / "jatos"
+        summary_data["JATOS packages"] = f"{jatos_path}/*.jzip"
 
+    table = create_summary_table(summary_data)
     console.print(table)
 
-    console.print(
-        "\n[dim]Local version: Open deployment/local/list_XX/index.html in browser[/dim]"
-    )
+    print_info("Local version: Open deployment/local/list_XX/index.html in browser")
     if not args.no_jatos:
-        console.print(
-            "[dim]JATOS version: Upload .jzip files to your JATOS server[/dim]"
-        )
+        print_info("JATOS version: Upload .jzip files to your JATOS server")
 
 
 if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        console.print("\n[yellow]⚠️  Interrupted by user[/yellow]")
+        print_warning("Interrupted by user")
         sys.exit(130)
     except Exception as e:
-        console.print(f"\n[red]✗ Unexpected error: {e}[/red]")
-        import traceback
-
+        print_error(f"Unexpected error: {e}")
         traceback.print_exc()
         sys.exit(1)

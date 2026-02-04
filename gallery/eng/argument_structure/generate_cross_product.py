@@ -9,22 +9,30 @@ Output: items/cross_product_items.jsonl
 
 import argparse
 import json
+import sys
 from pathlib import Path
 
-from rich.console import Console
-from rich.progress import track
-from rich.table import Table
-
+from bead.cli.display import (
+    confirm,
+    console,
+    create_progress,
+    create_summary_table,
+    print_error,
+    print_header,
+    print_info,
+    print_success,
+    print_warning,
+)
 from bead.items.item import Item
 from bead.resources.lexicon import Lexicon
-
-console = Console()
 
 
 def main(
     templates_file: str = "templates/generic_frames.jsonl",
     verbs_file: str = "lexicons/verbnet_verbs.jsonl",
     output_limit: int | None = None,
+    *,
+    yes: bool = False,
 ) -> None:
     """Generate cross-product items.
 
@@ -36,6 +44,8 @@ def main(
         Path to verb lexicon file.
     output_limit : int | None
         Limit output to first N items (for testing).
+    yes : bool
+        Skip confirmation prompts (for non-interactive use).
     """
     base_dir = Path(__file__).parent
     templates_path = base_dir / templates_file
@@ -44,97 +54,117 @@ def main(
     output_dir.mkdir(exist_ok=True)
     output_path = output_dir / "cross_product_items.jsonl"
 
-    console.rule("[bold]Cross-Product Generation[/bold]")
+    print_header("Cross-Product Generation")
     console.print(f"Base directory: [cyan]{base_dir}[/cyan]")
     console.print(f"Templates: [cyan]{templates_path}[/cyan]")
     console.print(f"Verbs: [cyan]{verbs_path}[/cyan]")
     console.print(f"Output: [cyan]{output_path}[/cyan]\n")
 
-    # Load generic templates
-    console.rule("[1/3] Loading Generic Templates")
-    with console.status("[bold]Loading templates...[/bold]"):
-        templates = []
-        with open(templates_path) as f:
-            for line in f:
-                template = json.loads(line)
-                templates.append(template)
+    # Check for existing output
+    if output_path.exists() and not yes:
+        if not confirm(f"Overwrite {output_path}?", default=False):
+            print_info("Operation cancelled.")
+            return
 
-    console.print(f"[green]✓[/green] Loaded {len(templates)} generic templates\n")
+    # Load generic templates
+    print_header("1/3 Loading Generic Templates")
+    try:
+        with console.status("[bold]Loading templates...[/bold]"):
+            templates = []
+            with open(templates_path) as f:
+                for line in f:
+                    template = json.loads(line)
+                    templates.append(template)
+
+        print_success(f"Loaded {len(templates)} generic templates\n")
+    except Exception as e:
+        print_error(f"Failed to load templates: {e}")
+        sys.exit(1)
 
     # Load verb lexicon
-    console.rule("[2/3] Loading Verb Lexicon")
-    with console.status("[bold]Loading verb lexicon...[/bold]"):
-        verb_lexicon = Lexicon.from_jsonl(str(verbs_path), "verbnet_verbs")
+    print_header("2/3 Loading Verb Lexicon")
+    try:
+        with console.status("[bold]Loading verb lexicon...[/bold]"):
+            verb_lexicon = Lexicon.from_jsonl(str(verbs_path), "verbnet_verbs")
 
-    console.print(f"[green]✓[/green] Loaded {len(verb_lexicon.items)} verb forms")
+        print_success(f"Loaded {len(verb_lexicon.items)} verb forms")
 
-    # Get unique verb lemmas (we only need base forms for cross-product)
-    verb_lemmas = sorted({item.lemma for item in verb_lexicon.items.values()})
-    console.print(f"[green]✓[/green] Found {len(verb_lemmas)} unique verb lemmas\n")
+        # Get unique verb lemmas (we only need base forms for cross-product)
+        verb_lemmas = sorted({item.lemma for item in verb_lexicon.items.values()})
+        print_success(f"Found {len(verb_lemmas)} unique verb lemmas\n")
+    except Exception as e:
+        print_error(f"Failed to load verb lexicon: {e}")
+        sys.exit(1)
 
     # Generate cross-product
-    console.rule("[3/3] Generating Cross-Product")
+    print_header("3/3 Generating Cross-Product")
     total_combinations = len(verb_lemmas) * len(templates)
 
     if output_limit:
-        console.print(
-            f"[yellow]⚠[/yellow]  Test mode: Limiting output to {output_limit:,} items"
-        )
+        print_warning(f"Test mode: Limiting output to {output_limit:,} items")
         total_combinations = min(output_limit, total_combinations)
 
     items_generated = 0
 
-    with open(output_path, "w") as f:
-        for template in track(templates, description="Processing templates"):
-            template_id = template["id"]
-            template_name = template["name"]
-            template_string = template["template_string"]
+    try:
+        with open(output_path, "w") as f:
+            with create_progress() as progress:
+                task = progress.add_task("Processing templates", total=len(templates))
 
-            for verb_lemma in verb_lemmas:
-                # Create Item for this verb×template combination
-                item = Item(
-                    item_template_id=template_id,
-                    rendered_elements={
-                        "template_name": template_name,
-                        "template_string": template_string,
-                        "verb_lemma": verb_lemma,
-                    },
-                    item_metadata={
-                        "verb_lemma": verb_lemma,
-                        "template_id": str(template_id),
-                        "template_name": template_name,
-                        "template_structure": template_string,
-                        "combination_type": "verb_frame_cross_product",
-                    },
-                )
+                for template in templates:
+                    template_id = template["id"]
+                    template_name = template["name"]
+                    template_string = template["template_string"]
 
-                # Write to file
-                f.write(item.model_dump_json() + "\n")
-                items_generated += 1
+                    for verb_lemma in verb_lemmas:
+                        # Create Item for this verb×template combination
+                        item = Item(
+                            item_template_id=template_id,
+                            rendered_elements={
+                                "template_name": template_name,
+                                "template_string": template_string,
+                                "verb_lemma": verb_lemma,
+                            },
+                            item_metadata={
+                                "verb_lemma": verb_lemma,
+                                "template_id": str(template_id),
+                                "template_name": template_name,
+                                "template_structure": template_string,
+                                "combination_type": "verb_frame_cross_product",
+                            },
+                        )
 
-                # Check limit
-                if output_limit and items_generated >= output_limit:
-                    break
+                        # Write to file
+                        f.write(item.model_dump_json() + "\n")
+                        items_generated += 1
 
-            if output_limit and items_generated >= output_limit:
-                break
+                        # Check limit
+                        if output_limit and items_generated >= output_limit:
+                            break
 
-    console.print(
-        f"[green]✓[/green] Generated {items_generated:,} cross-product items\n"
-    )
+                    progress.advance(task)
+
+                    if output_limit and items_generated >= output_limit:
+                        break
+
+        print_success(f"Generated {items_generated:,} cross-product items\n")
+    except Exception as e:
+        print_error(f"Failed to generate items: {e}")
+        sys.exit(1)
 
     # Summary
-    console.rule("[bold]Summary[/bold]")
-    table = Table(show_header=False, box=None, padding=(0, 2))
-    table.add_row("Verb lemmas:", f"[cyan]{len(verb_lemmas)}[/cyan]")
-    table.add_row("Generic templates:", f"[cyan]{len(templates)}[/cyan]")
-    table.add_row("Cross-product items:", f"[cyan]{items_generated:,}[/cyan]")
-    table.add_row("Output file:", f"[cyan]{output_path}[/cyan]")
+    print_header("Summary")
+    table = create_summary_table(
+        {
+            "Verb lemmas": str(len(verb_lemmas)),
+            "Generic templates": str(len(templates)),
+            "Cross-product items": f"{items_generated:,}",
+            "Output file": str(output_path),
+        }
+    )
     console.print(table)
 
-    console.print(
-        "\n[dim]Next: Run create_2afc_pairs.py to generate forced-choice pairs[/dim]"
-    )
+    print_info("Next: Run create_2afc_pairs.py to generate forced-choice pairs")
 
 
 if __name__ == "__main__":
@@ -159,10 +189,17 @@ if __name__ == "__main__":
         default=None,
         help="Limit output to first N items (for testing)",
     )
+    parser.add_argument(
+        "-y",
+        "--yes",
+        action="store_true",
+        help="Skip confirmation prompts (for non-interactive use)",
+    )
     args = parser.parse_args()
 
     main(
         templates_file=args.templates,
         verbs_file=args.verbs,
         output_limit=args.limit,
+        yes=args.yes,
     )

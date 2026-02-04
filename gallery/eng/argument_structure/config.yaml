@@ -1,97 +1,61 @@
-# ============================================================================
-# Argument Structure Active Learning Pipeline Configuration
-# ============================================================================
+# argument structure active learning configuration
 #
-# This configuration defines the complete pipeline for collecting acceptability
-# judgments on verb argument structure alternations using active learning with
-# human-in-the-loop until model performance converges to human inter-annotator
-# agreement.
+# collects acceptability judgments on verb argument structure alternations
+# using active learning until model performance converges to human agreement.
 #
-# Design Principle: Test ALL verbs in ALL frame structures (full cross-product)
-# to enable both grammatical (verb licensed for frame) and ungrammatical (verb
-# not licensed) judgments.
-# ============================================================================
+# design: full cross-product of verbs x frames to capture both grammatical
+# and ungrammatical combinations.
 
-# Project Metadata
-# ============================================================================
+# project metadata
 project:
   name: "argument_structure"
   language_code: "eng"
-  description: "VerbNet argument structure alternations with active learning"
-  version: "1.0.0"
+  description: "Verb argument structure alternations with active learning"
+  version: "0.1.0"
   authors:
     - "Aaron Steven White"
-  citation: "White, A. S. (2025). Argument Structure Acceptability Judgments."
 
-# Paths Configuration
-# ============================================================================
+# paths
 paths:
-  # Base directories
   data_dir: "."
   output_dir: "."
   cache_dir: ".cache"
-
-  # Specific paths
   lexicons_dir: "lexicons"
   templates_dir: "templates"
   items_dir: "items"
   lists_dir: "lists"
   filled_templates_dir: "filled_templates"
-
-  # Output files
   cross_product_items: "items/cross_product_items.jsonl"
   2afc_pairs: "items/2afc_pairs.jsonl"
   experiment_lists: "lists/experiment_lists.jsonl"
 
-# Resource Configuration
-# ============================================================================
+# resources
 resources:
-  # Lexicons
   lexicons:
     - path: "lexicons/verbnet_verbs.jsonl"
       name: "verbnet_verbs"
-      description: "VerbNet verbs with frame information"
-
     - path: "lexicons/bleached_nouns.jsonl"
       name: "bleached_nouns"
-      description: "Semantically light nouns for filling argument slots"
-
     - path: "lexicons/bleached_verbs.jsonl"
       name: "bleached_verbs"
-      description: "Semantically light verbs for complex predicates"
-
     - path: "lexicons/bleached_adjectives.jsonl"
       name: "bleached_adjectives"
-      description: "Semantically light adjectives for result/state slots"
-
     - path: "lexicons/prepositions.jsonl"
       name: "prepositions"
-      description: "Prepositions for PP arguments"
-
     - path: "lexicons/determiners.jsonl"
       name: "determiners"
-      description: "Determiners for NP arguments"
-
     - path: "lexicons/be_forms.jsonl"
       name: "be_forms"
-      description: "Forms of auxiliary 'be' for progressive aspect"
 
-  # Templates
   templates:
     - path: "templates/generic_frames.jsonl"
       name: "generic_frames"
-      description: "Generic frame structures extracted from VerbNet"
 
-# Template Filling Strategy
-# ============================================================================
+# template filling
 template:
-  # Strategy type: "exhaustive", "mlm", or "mixed"
-  filling_strategy: "mixed"
-
-  # Output path for filled templates
+  filling_strategy: "mixed"  # exhaustive, mlm, or mixed
   output_path: "filled_templates/generic_frames_filled.jsonl"
 
-  # MLM (Masked Language Model) settings for smart filling
   mlm:
     model_name: "bert-base-uncased"
     beam_size: 5
@@ -99,208 +63,68 @@ template:
     device: "cpu"
     cache_enabled: true
 
-  # Slot-specific strategies
-  # - exhaustive: Use all entries from lexicon (for cross-product design)
-  # - mlm: Use MLM to select contextually appropriate fillers
-  #   - max_fills: Limit to top-N items by MLM probability (after constraint filtering)
-  #   - enforce_unique: Ensure each beam hypothesis uses different items for this slot
-  #
-  # MLM used for all slots EXCEPT determiners and "be" forms
-  # Constraints from templates are preserved and used to filter MLM predictions
+  # slot strategies: exhaustive uses all lexicon entries; mlm selects top-N by probability
+  # max_fills limits items per slot; enforce_unique prevents duplicates across beam hypotheses
   slot_strategies:
-    # ========================================================================
-    # DETERMINERS - EXHAUSTIVE (no MLM)
-    # ========================================================================
-    det_subj:
-      strategy: "exhaustive"
-      description: "All subject determiners"
+    # determiners: exhaustive (no mlm needed)
+    det_subj: { strategy: "exhaustive" }
+    det_dobj: { strategy: "exhaustive" }
+    det_iobj: { strategy: "exhaustive" }
+    det_pobj: { strategy: "exhaustive" }
+    det_pobj2: { strategy: "exhaustive" }
+    det_pobj3: { strategy: "exhaustive" }
 
-    det_dobj:
-      strategy: "exhaustive"
-      description: "All direct object determiners"
+    # be forms: exhaustive (agreement handled by constraints)
+    be: { strategy: "exhaustive" }
 
-    det_iobj:
-      strategy: "exhaustive"
-      description: "All indirect object determiners"
+    # main verb: exhaustive for full cross-product coverage
+    verb: { strategy: "exhaustive" }
 
-    det_pobj:
-      strategy: "exhaustive"
-      description: "All prepositional object determiners"
+    # complement verbs: mlm
+    comp_verb: { strategy: "mlm", max_fills: 5, enforce_unique: true }
+    comp_verb_gerund: { strategy: "mlm", max_fills: 5, enforce_unique: true }
 
-    det_pobj2:
-      strategy: "exhaustive"
-      description: "All second prepositional object determiners"
+    # nouns: mlm with template constraints
+    noun_subj: { strategy: "mlm", max_fills: 5, enforce_unique: true }
+    noun_dobj: { strategy: "mlm", max_fills: 5, enforce_unique: true }
+    noun_iobj: { strategy: "mlm", max_fills: 5, enforce_unique: true }
+    noun_pobj: { strategy: "mlm", max_fills: 5, enforce_unique: true }
+    noun_pobj2: { strategy: "mlm", max_fills: 5, enforce_unique: true }
+    noun_pobj3: { strategy: "mlm", max_fills: 5, enforce_unique: true }
+    subj: { strategy: "mlm", max_fills: 5, enforce_unique: true }
+    comp_subj: { strategy: "mlm", max_fills: 5, enforce_unique: true }
+    comp_obj: { strategy: "mlm", max_fills: 5, enforce_unique: true }
+    recipient: { strategy: "mlm", max_fills: 5, enforce_unique: true }
+    wh_noun: { strategy: "mlm", max_fills: 5, enforce_unique: true }
 
-    det_pobj3:
-      strategy: "exhaustive"
-      description: "All third prepositional object determiners"
+    # prepositions: mlm with template constraints
+    prep: { strategy: "mlm", max_fills: 5, enforce_unique: true }
+    prep2: { strategy: "mlm", max_fills: 5, enforce_unique: true }
+    prep3: { strategy: "mlm", max_fills: 5, enforce_unique: true }
 
-    # ========================================================================
-    # BE FORMS - EXHAUSTIVE (no MLM)
-    # Constraints enforce subject-verb agreement
-    # ========================================================================
-    be:
-      strategy: "exhaustive"
-      description: "All forms of 'be' (am, is, are, was, were, been, being) with constraint-based agreement"
+    # adjectives: mlm (unconstrained)
+    adjective: { strategy: "mlm", beam_size: 3, max_fills: 5, enforce_unique: true }
 
-    # ========================================================================
-    # MAIN VERB - EXHAUSTIVE (no MLM)
-    # Critical: Must test ALL verbs in ALL frames for cross-product design
-    # This is the core experimental manipulation for argument structure alternations
-    # ========================================================================
-    verb:
-      strategy: "exhaustive"
-      description: "ALL VerbNet verbs (exhaustive cross-product with all frames)"
-
-    comp_verb:
-      strategy: "mlm"
-      description: "MLM selection of complement clause verbs"
-      max_fills: 5
-      enforce_unique: true
-
-    comp_verb_gerund:
-      strategy: "mlm"
-      description: "MLM selection of gerund verbs"
-      max_fills: 5
-      enforce_unique: true
-
-    # ========================================================================
-    # NOUNS - MLM with constraints
-    # Uses existing NOUN constraints from templates (bleached nouns)
-    # ========================================================================
-    noun_subj:
-      strategy: "mlm"
-      description: "MLM selection of subject nouns (from bleached nouns)"
-      max_fills: 5
-      enforce_unique: true
-
-    noun_dobj:
-      strategy: "mlm"
-      description: "MLM selection of direct object nouns"
-      max_fills: 5
-      enforce_unique: true
-
-    noun_iobj:
-      strategy: "mlm"
-      description: "MLM selection of indirect object nouns"
-      max_fills: 5
-      enforce_unique: true
-
-    noun_pobj:
-      strategy: "mlm"
-      description: "MLM selection of prepositional object nouns"
-      max_fills: 5
-      enforce_unique: true
-
-    noun_pobj2:
-      strategy: "mlm"
-      description: "MLM selection of second prepositional object nouns"
-      max_fills: 5
-      enforce_unique: true
-
-    noun_pobj3:
-      strategy: "mlm"
-      description: "MLM selection of third prepositional object nouns"
-      max_fills: 5
-      enforce_unique: true
-
-    subj:
-      strategy: "mlm"
-      description: "MLM selection of subject nouns"
-      max_fills: 5
-      enforce_unique: true
-
-    comp_subj:
-      strategy: "mlm"
-      description: "MLM selection of complement clause subjects"
-      max_fills: 5
-      enforce_unique: true
-
-    comp_obj:
-      strategy: "mlm"
-      description: "MLM selection of complement clause objects"
-      max_fills: 5
-      enforce_unique: true
-
-    recipient:
-      strategy: "mlm"
-      description: "MLM selection of recipient nouns"
-      max_fills: 5
-      enforce_unique: true
-
-    wh_noun:
-      strategy: "mlm"
-      description: "MLM selection of wh-clause nouns"
-      max_fills: 5
-      enforce_unique: true
-
-    # ========================================================================
-    # PREPOSITIONS - MLM with constraints
-    # Uses existing ADP constraints from templates
-    # ========================================================================
-    prep:
-      strategy: "mlm"
-      description: "MLM selection of prepositions (constrained by template)"
-      max_fills: 5
-      enforce_unique: true
-
-    prep2:
-      strategy: "mlm"
-      description: "MLM selection of second prepositions"
-      max_fills: 5
-      enforce_unique: true
-
-    prep3:
-      strategy: "mlm"
-      description: "MLM selection of third prepositions"
-      max_fills: 5
-      enforce_unique: true
-
-    # ========================================================================
-    # ADJECTIVES - MLM without constraints (fully MLM-driven)
-    # ========================================================================
-    adjective:
-      strategy: "mlm"
-      description: "MLM for contextually appropriate adjectives (unconstrained)"
-      beam_size: 3
-      max_fills: 5
-      enforce_unique: true
-
-# Items Configuration
-# ============================================================================
+# items
 items:
-  # Judgment type: "forced_choice", "acceptability_rating", "inference"
   judgment_type: "forced_choice"
-
-  # Number of alternatives in forced choice
   n_alternatives: 2  # 2AFC
 
-  # Language models for scoring items
   models:
     - name: "gpt2"
       provider: "huggingface"
       device: "cpu"
       use_for_scoring: true
 
-    # Optional: Additional models for comparison
-    # - name: "gpt2-medium"
-    #   provider: "huggingface"
-    #   device: "cpu"
-
-  # Item construction settings
   construction:
-    # Create minimal pairs
     create_minimal_pairs: true
     pair_types:
-      - "same_verb"       # Same verb, different frames
-      - "different_verb"  # Different verbs, same frame
-
-    # Score-based filtering
+      - "same_verb"       # same verb, different frames
+      - "different_verb"  # different verbs, same frame
     score_filtering:
       enabled: true
-      min_score_diff: 0.5  # Minimum LM score difference for interesting pairs
+      min_score_diff: 0.5  # minimum LM score difference for pairs
 
-  # Item metadata to preserve
   preserve_metadata:
     - "verb_lemma"
     - "template_id"
@@ -310,316 +134,170 @@ items:
     - "lm_score_diff"
     - "quantile"
 
-# List Partitioning Configuration
-# ============================================================================
+# list partitioning
 lists:
-  # Partitioning strategy
   strategy: "quantile_balanced_minimal_pairs"
-
-  # Number of experimental lists to create
   n_lists: 16
-
-  # Items per list
   items_per_list: 50
-
-  # Quantile settings for difficulty stratification
   quantile_bins: 10
   items_per_quantile: 10
 
-  # Constraints for list balancing
   constraints:
-    # Balance pair types
     - type: "balance"
       property_expression: "item.metadata.pair_type"
-      target_counts:
-        same_verb: 50
-        different_verb: 50
-      description: "Equal numbers of same-verb and different-verb pairs"
+      target_counts: { same_verb: 50, different_verb: 50 }
 
-    # Ensure verb uniqueness within lists (use verb for same-verb pairs, verb1 for different-verb pairs)
     - type: "uniqueness"
       property_expression: "item.metadata.get('verb1', item.metadata.get('verb'))"
-      description: "No verb appears multiple times in same list"
+      # no verb appears multiple times in same list
 
-    # Stratify by LM score difference (grouped by pair type)
     - type: "grouped_quantile"
       property_expression: "item.metadata.lm_score_diff"
       group_by_expression: "item.metadata.pair_type"
       n_quantiles: 10
       items_per_quantile: 5
-      description: "Stratified sampling of LM score differences by pair type"
 
-    # Template diversity
     - type: "diversity"
       property_expression: "item.metadata.template_id"
       min_unique_values: 15
-      description: "Ensure diverse set of templates in each list"
 
-  # Batch-level constraints (apply across ALL lists)
+  # batch constraints: apply across all lists
   batch_constraints:
-    # Ensure all 26 templates represented across all lists
     - type: "coverage"
       property_expression: "item['template_id']"
       target_values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]
       min_coverage: 1.0
-      description: "Require 100% of templates appear somewhere in the batch"
 
-    # Ensure balanced pair types across entire batch
     - type: "balance"
       property_expression: "item['pair_type']"
-      target_distribution:
-        same_verb: 0.5
-        different_verb: 0.5
+      target_distribution: { same_verb: 0.5, different_verb: 0.5 }
       tolerance: 0.05
-      description: "50/50 split of pair types across all lists combined"
 
-    # Ensure each quantile appears at least 50 times total
     - type: "min_occurrence"
       property_expression: "item['quantile']"
       min_occurrences: 50
-      description: "Minimum representation of each quantile bin"
 
-    # Ensure no verb appears in more than 4 lists
     - type: "diversity"
       property_expression: "item.get('verb1', item.get('verb'))"
-      max_lists_per_value: 4
-      description: "Spread verbs across participants (max 4/8 lists per verb)"
+      max_lists_per_value: 4  # spread verbs across lists
 
-# Training Configuration
-# ============================================================================
+# training
 training:
-  # Convergence detection settings
   convergence:
-    # Metric for human baseline agreement
-    # Options: "krippendorff_alpha", "fleiss_kappa", "cohens_kappa", "percentage_agreement"
-    metric: "krippendorff_alpha"
-
-    # Convergence threshold (how close to human agreement)
-    # Model is converged when: |model_accuracy - human_agreement| < threshold
-    threshold: 0.05
-
-    # Minimum iterations before checking convergence
+    metric: "krippendorff_alpha"  # or fleiss_kappa, cohens_kappa, percentage_agreement
+    threshold: 0.05  # converged when |model_accuracy - human_agreement| < threshold
     min_iterations: 3
+    alpha: 0.05  # significance level
 
-    # Statistical significance level for convergence test
-    alpha: 0.05
-
-  # Model training settings
   model:
-    # Model architecture (for future implementation)
     architecture: "transformer"
     model_name: "bert-base-uncased"
-
-    # Training hyperparameters
     learning_rate: 2e-5
     batch_size: 16
     epochs_per_iteration: 3
     warmup_steps: 100
-
-    # Device
     device: "cpu"
 
-  # Data settings
   data:
-    # Train/validation split
     validation_split: 0.2
-
-    # Random seed for reproducibility
     random_seed: 42
-
-    # Class balancing
     balance_classes: true
 
-# Active Learning Configuration
-# ============================================================================
+# active learning
 active_learning:
-  # Selection strategy: "uncertainty_sampling", "query_by_committee", "random"
-  strategy: "uncertainty_sampling"
-
-  # Uncertainty method: "entropy", "least_confidence", "margin"
-  method: "entropy"
-
-  # Budget per iteration (items to select and annotate)
+  strategy: "uncertainty_sampling"  # or query_by_committee, random
+  method: "entropy"  # or least_confidence, margin
   budget_per_iteration: 200
-
-  # Maximum iterations
   max_iterations: 20
-
-  # Stopping criterion: "max_iterations", "performance_threshold", "convergence"
-  stopping_criterion: "convergence"
-
-  # Initial training set size
+  stopping_criterion: "convergence"  # or max_iterations, performance_threshold
   initial_training_size: 500
-
-  # Batch mode (select multiple items at once)
   batch_mode: true
-
-  # Diversity promotion in batch selection
   promote_diversity: true
   diversity_lambda: 0.1
 
-# Evaluation Configuration
-# ============================================================================
+# evaluation
 evaluation:
-  # Cross-validation settings
   cross_validation:
-    # K-fold CV
     k_folds: 5
-
-    # Stratification variable
     stratify_by: "metadata.pair_type"
-
-    # Shuffle before splitting
     shuffle: true
     random_seed: 42
 
-  # Metrics to compute
-  metrics:
-    - "accuracy"
-    - "precision"
-    - "recall"
-    - "f1"
-    - "confusion_matrix"
+  metrics: ["accuracy", "precision", "recall", "f1", "confusion_matrix"]
 
-  # Inter-annotator agreement metrics
   interannotator:
-    metrics:
-      - "krippendorff_alpha"
-      - "fleiss_kappa"
-      - "percentage_agreement"
-      - "pairwise_agreement"
-
-    # Minimum number of raters per item
+    metrics: ["krippendorff_alpha", "fleiss_kappa", "percentage_agreement", "pairwise_agreement"]
     min_raters_per_item: 3
 
-  # Model performance tracking
   tracking:
-    # Save checkpoints
     save_checkpoints: true
     checkpoint_dir: "checkpoints"
-
-    # Tensorboard logging
     use_tensorboard: true
     log_dir: "logs"
+    track_metrics: ["train_accuracy", "val_accuracy", "human_agreement", "convergence_gap"]
 
-    # Metrics to track per iteration
-    track_metrics:
-      - "train_accuracy"
-      - "val_accuracy"
-      - "human_agreement"
-      - "convergence_gap"
-
-# Deployment Configuration (for human data collection)
-# ============================================================================
+# deployment
 deployment:
-  # Platform: "jatos", "prolific", "mturk"
-  platform: "jatos"
+  platform: "jatos"  # or prolific, mturk
 
-  # List distribution strategy for batch experiments
-  # Strategies: random, sequential, balanced, latin_square, stratified, weighted_random, quota_based, metadata_based
+  # balanced assigns participants to least-used list
   distribution_strategy:
-    strategy_type: "balanced"  # Assign participants to least-used list
-    max_participants: 400  # Total across all lists (optional)
-    error_on_exhaustion: false  # Continue after max reached
-    debug_mode: false  # Set to true for testing (always assigns same list)
-    debug_list_index: 0  # List index to use in debug mode
+    strategy_type: "balanced"
+    max_participants: 400
+    error_on_exhaustion: false
+    debug_mode: false
+    debug_list_index: 0
 
-  # Number of lists to randomly select for deployment
   n_lists_to_deploy: 20
-
-  # Random seed for reproducible list selection
   random_seed: 42
-
-  # Output directory for deployment files
   output_dir: "deployment"
 
-  # Experiment settings
   experiment:
     title: "Sentence Acceptability Judgments"
     description: "Rate which sentence sounds more natural"
     estimated_duration_minutes: 15
 
-  # jsPsych configuration
   jspsych:
-    version: "8.0.0"  # Using jsPsych 8.x
-
-    # JATOS integration (recommended for Prolific)
-    use_jatos: true  # Enable JATOS integration (default: true)
-
-    # Prolific integration (optional)
-    # When deploying on Prolific via JATOS:
-    # 1. Set prolific_completion_code to the code from your Prolific study
-    # 2. The system will automatically generate the redirect URL
-    # 3. Prolific participant IDs (PROLIFIC_PID, STUDY_ID, SESSION_ID) will be captured
-    prolific_completion_code: null  # Set to your Prolific completion code when deploying
-    # Example: prolific_completion_code: "C1A2B3C4"
-    # This will auto-generate: https://app.prolific.co/submissions/complete?cc=C1A2B3C4
-
-    # Trial settings
+    version: "8.0.0"
+    use_jatos: true
+    prolific_completion_code: null  # set when deploying to Prolific
     trial:
       type: "html-button-response"
-      stimulus_duration: null  # No time limit
+      stimulus_duration: null
       trial_duration: null
-
-    # Button labels for 2AFC
-    choices:
-      - "Sentence A"
-      - "Sentence B"
-
-    # Randomization
+    choices: ["Sentence A", "Sentence B"]
     randomize_order: true
     randomize_choices: true
 
-  # Behavioral capture with slopit (optional)
-  # Captures keystroke dynamics, focus patterns, and paste events
   slopit:
-    enabled: false  # Set to true to enable behavioral capture
-    keystroke:
-      enabled: true  # Capture keystroke timing
-    focus:
-      enabled: true  # Capture focus/blur events
-    paste:
-      enabled: true  # Capture paste events
-      prevent: false  # Set true to block paste operations
+    enabled: false
+    keystroke: { enabled: true }
+    focus: { enabled: true }
+    paste: { enabled: true, prevent: false }
     target_selectors:
       forced_choice: ".bead-choice-button"
 
-  # Participant requirements
   participants:
-    # Number of participants per list
     n_per_list: 30
-
-    # Qualifications
-    qualifications:
-      - "Native English speaker"
-      - "Age 18+"
-      - "Approval rate > 95%"
-
-    # Compensation
+    qualifications: ["Native English speaker", "Age 18+", "Approval rate > 95%"]
     payment_usd: 2.50
-    bonus_usd: 0.50  # For high-quality responses
+    bonus_usd: 0.50
 
-  # Server configuration for remote deployment
   server:
-    host: null  # Will prompt if null
+    host: null
     port: 22
-    username: null  # Will prompt if null
+    username: null
     deploy_path: "/var/www/experiments"
 
-# Logging Configuration
-# ============================================================================
+# logging
 logging:
-  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  level: "INFO"
   format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-
-  # Log files
   file:
     enabled: true
     path: "pipeline.log"
     max_bytes: 10485760  # 10 MB
     backup_count: 5
-
-  # Console logging
   console:
     enabled: true
     colored: true

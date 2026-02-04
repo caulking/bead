@@ -28,6 +28,15 @@ import yaml
 from bead.active_learning.loop import ActiveLearningLoop
 from bead.active_learning.selection import UncertaintySampler
 from bead.active_learning.trainers.base import ModelMetadata
+from bead.cli.display import (
+    console,
+    create_summary_table,
+    print_error,
+    print_header,
+    print_info,
+    print_success,
+    print_warning,
+)
 from bead.evaluation.convergence import ConvergenceDetector
 from bead.items.item import Item
 
@@ -45,10 +54,10 @@ def load_config(config_path: Path) -> dict[str, Any]:
     dict[str, Any]
         Configuration dictionary.
     """
-    print(f"Loading configuration from {config_path}")
+    print_info(f"Loading configuration from {config_path}")
     with open(config_path) as f:
         config = yaml.safe_load(f)
-    print("✓ Configuration loaded")
+    print_success("Configuration loaded")
     return config
 
 
@@ -69,7 +78,7 @@ def load_2afc_pairs(path: Path, limit: int | None = None, skip: int = 0) -> list
     list[Item]
         List of 2AFC item pairs.
     """
-    print(f"Loading 2AFC pairs from {path}")
+    print_info(f"Loading 2AFC pairs from {path}")
     items = []
     with open(path) as f:
         for i, line in enumerate(f):
@@ -80,9 +89,9 @@ def load_2afc_pairs(path: Path, limit: int | None = None, skip: int = 0) -> list
             data = json.loads(line)
             items.append(Item(**data))
 
-    print(f"✓ Loaded {len(items)} 2AFC pairs")
+    print_success(f"Loaded {len(items)} 2AFC pairs")
     if skip > 0:
-        print(f"  (skipped first {skip} items)")
+        console.print(f"  (skipped first {skip} items)")
     return items
 
 
@@ -99,7 +108,7 @@ def setup_convergence_detector(config: dict[str, Any]) -> ConvergenceDetector:
     ConvergenceDetector
         Configured convergence detector.
     """
-    print("Setting up convergence detection...")
+    print_info("Setting up convergence detection...")
     conv_config = config["training"]["convergence"]
 
     detector = ConvergenceDetector(
@@ -109,10 +118,10 @@ def setup_convergence_detector(config: dict[str, Any]) -> ConvergenceDetector:
         alpha=conv_config.get("alpha", 0.05),
     )
 
-    print("✓ Convergence detector initialized")
-    print(f"  - Metric: {conv_config['metric']}")
-    print(f"  - Threshold: {conv_config['threshold']}")
-    print(f"  - Min iterations: {conv_config['min_iterations']}")
+    print_success("Convergence detector initialized")
+    console.print(f"  - Metric: {conv_config['metric']}")
+    console.print(f"  - Threshold: {conv_config['threshold']}")
+    console.print(f"  - Min iterations: {conv_config['min_iterations']}")
 
     return detector
 
@@ -131,20 +140,20 @@ def setup_active_learning(config: dict[str, Any]) -> tuple[UncertaintySampler, A
         Tuple of (item selector, trainer).
         Trainer is None for now (placeholder for future implementation).
     """
-    print("Setting up active learning components...")
+    print_info("Setting up active learning components...")
     al_config = config["active_learning"]
 
     # Set up item selector
     if al_config["strategy"] == "uncertainty_sampling":
         selector = UncertaintySampler(method=al_config["method"])
-        print(f"✓ Item selector: {al_config['strategy']}")
-        print(f"  - Method: {al_config['method']}")
+        print_success(f"Item selector: {al_config['strategy']}")
+        console.print(f"  - Method: {al_config['method']}")
     else:
         raise ValueError(f"Unknown AL strategy: {al_config['strategy']}")
 
-    # Trainer placeholder (Phase 22 - not yet implemented)
+    # Trainer placeholder (Phase 22, not yet implemented)
     trainer = None
-    print("  - Trainer: Not implemented (using placeholder)")
+    console.print("  - Trainer: Not implemented (using placeholder)")
 
     return selector, trainer
 
@@ -191,39 +200,16 @@ def load_human_ratings(
         Returns None if no human ratings available.
     """
     if human_ratings_path is None or not human_ratings_path.exists():
-        print("  - Human ratings: Not available (will be collected during deployment)")
+        console.print(
+            "  - Human ratings: Not available (will be collected during deployment)"
+        )
         return None
 
-    print(f"Loading human ratings from {human_ratings_path}")
+    print_info(f"Loading human ratings from {human_ratings_path}")
     # Placeholder implementation
     # Real implementation would parse JSONL with format:
     # {"rater_id": "r1", "item_id": "...", "response": 0 or 1}
     return None
-
-
-def print_header(title: str) -> None:
-    """Print a formatted header.
-
-    Parameters
-    ----------
-    title : str
-        Title to display.
-    """
-    print("\n" + "=" * 70)
-    print(title.upper())
-    print("=" * 70)
-
-
-def print_section(section: str) -> None:
-    """Print a formatted section header.
-
-    Parameters
-    ----------
-    section : str
-        Section title.
-    """
-    print(f"\n{section}")
-    print("-" * len(section))
 
 
 def print_results(results: list[ModelMetadata]) -> None:
@@ -234,18 +220,20 @@ def print_results(results: list[ModelMetadata]) -> None:
     results : list[ModelMetadata]
         List of model metadata from each iteration.
     """
-    print_section("Active Learning Results")
+    print_header("Active Learning Results")
 
     if not results:
-        print("No training iterations completed.")
+        print_info("No training iterations completed.")
         return
 
-    print(f"\nCompleted {len(results)} iterations")
+    console.print(f"\nCompleted {len(results)} iterations")
 
     # Print per-iteration results
-    print("\nIteration Summary:")
-    print(f"{'Iter':<6} {'Accuracy':<12} {'Precision':<12} {'Recall':<12} {'F1':<12}")
-    print("-" * 60)
+    console.print("\nIteration Summary:")
+    console.print(
+        f"{'Iter':<6} {'Accuracy':<12} {'Precision':<12} {'Recall':<12} {'F1':<12}"
+    )
+    console.print("-" * 60)
 
     for i, metadata in enumerate(results, 1):
         metrics = metadata.metrics
@@ -253,16 +241,16 @@ def print_results(results: list[ModelMetadata]) -> None:
         prec = metrics.get("precision", 0.0)
         rec = metrics.get("recall", 0.0)
         f1 = metrics.get("f1", 0.0)
-        print(f"{i:<6} {acc:<12.4f} {prec:<12.4f} {rec:<12.4f} {f1:<12.4f}")
+        console.print(f"{i:<6} {acc:<12.4f} {prec:<12.4f} {rec:<12.4f} {f1:<12.4f}")
 
     # Print final metrics
-    print_section("Final Model Performance")
+    print_header("Final Model Performance")
     final_metrics = results[-1].metrics
     for metric, value in sorted(final_metrics.items()):
         if isinstance(value, float):
-            print(f"  {metric}: {value:.4f}")
+            console.print(f"  {metric}: {value:.4f}")
         else:
-            print(f"  {metric}: {value}")
+            console.print(f"  {metric}: {value}")
 
 
 def save_results(
@@ -279,7 +267,7 @@ def save_results(
     config : dict[str, Any]
         Configuration dictionary.
     """
-    print_section("Saving Results")
+    print_header("Saving Results")
 
     # Prepare results for serialization
     results_data = {
@@ -306,7 +294,7 @@ def save_results(
     with open(output_path, "w") as f:
         json.dump(results_data, f, indent=2)
 
-    print(f"✓ Results saved to {output_path}")
+    print_success(f"Results saved to {output_path}")
 
 
 def main(args: argparse.Namespace) -> None:
@@ -327,31 +315,31 @@ def main(args: argparse.Namespace) -> None:
         base_dir = Path(__file__).parent
         config_path = base_dir / "config.yaml"
 
-    print(f"\nBase directory: {base_dir}")
-    print(f"Configuration: {config_path}")
+    console.print(f"\nBase directory: {base_dir}")
+    console.print(f"Configuration: {config_path}")
 
     # Load configuration
-    print_section("[1/7] Loading Configuration")
+    print_header("[1/7] Loading Configuration")
     try:
         config = load_config(config_path)
     except Exception as e:
-        print(f"✗ Error loading configuration: {e}")
+        print_error(f"Error loading configuration: {e}")
         sys.exit(1)
 
     # Set up convergence detection
-    print_section("[2/7] Setting Up Convergence Detection")
+    print_header("[2/7] Setting Up Convergence Detection")
     try:
         convergence_detector = setup_convergence_detector(config)
     except Exception as e:
-        print(f"✗ Error setting up convergence detector: {e}")
+        print_error(f"Error setting up convergence detector: {e}")
         sys.exit(1)
 
     # Set up active learning components
-    print_section("[3/7] Setting Up Active Learning")
+    print_header("[3/7] Setting Up Active Learning")
     try:
         selector, trainer = setup_active_learning(config)
     except Exception as e:
-        print(f"✗ Error setting up active learning: {e}")
+        print_error(f"Error setting up active learning: {e}")
         sys.exit(1)
 
     # Create active learning loop
@@ -363,12 +351,12 @@ def main(args: argparse.Namespace) -> None:
         max_iterations=al_config["max_iterations"],
         budget_per_iteration=al_config["budget_per_iteration"],
     )
-    print("✓ Active learning loop initialized")
-    print(f"  - Max iterations: {al_config['max_iterations']}")
-    print(f"  - Budget per iteration: {al_config['budget_per_iteration']}")
+    print_success("Active learning loop initialized")
+    console.print(f"  - Max iterations: {al_config['max_iterations']}")
+    console.print(f"  - Budget per iteration: {al_config['budget_per_iteration']}")
 
     # Load 2AFC pairs
-    print_section("[4/7] Loading 2AFC Pairs")
+    print_header("[4/7] Loading 2AFC Pairs")
     pairs_path = base_dir / config["paths"]["2afc_pairs"]
 
     # Use command-line overrides if provided
@@ -381,28 +369,28 @@ def main(args: argparse.Namespace) -> None:
             pairs_path, limit=unlabeled_size, skip=initial_size
         )
     except Exception as e:
-        print(f"✗ Error loading 2AFC pairs: {e}")
+        print_error(f"Error loading 2AFC pairs: {e}")
         sys.exit(1)
 
-    print("\nData split:")
-    print(f"  - Initial training set: {len(initial_items)} items")
-    print(f"  - Unlabeled pool: {len(unlabeled_pool)} items")
+    console.print("\nData split:")
+    console.print(f"  - Initial training set: {len(initial_items)} items")
+    console.print(f"  - Unlabeled pool: {len(unlabeled_pool)} items")
 
     # Load human ratings (if available)
-    print_section("[5/7] Loading Human Ratings")
+    print_header("[5/7] Loading Human Ratings")
     human_ratings_path = base_dir / "data" / "human_ratings.jsonl"
     human_ratings = load_human_ratings(
         human_ratings_path if human_ratings_path.exists() else None
     )
 
     # Run active learning loop
-    print_section("[6/7] Running Active Learning Loop")
-    print("\nStarting active learning with convergence detection...")
-    print("=" * 70)
+    print_header("[6/7] Running Active Learning Loop")
+    console.print("\nStarting active learning with convergence detection...")
+    console.print("=" * 70)
 
     if args.dry_run:
-        print("\n⚠️  DRY RUN MODE - No actual training will occur")
-        print("=" * 70)
+        print_warning("DRY RUN MODE: No actual training will occur")
+        console.print("=" * 70)
         results = []
     else:
         try:
@@ -416,15 +404,15 @@ def main(args: argparse.Namespace) -> None:
                 metric_name=config["training"]["convergence"]["metric"],
             )
         except Exception as e:
-            print(f"\n✗ Error during active learning: {e}")
+            print_error(f"Error during active learning: {e}")
             traceback.print_exc()
             sys.exit(1)
 
-    print("\n" + "=" * 70)
-    print("✓ Active learning complete!")
+    console.print("\n" + "=" * 70)
+    print_success("Active learning complete!")
 
     # Print and save results
-    print_section("[7/7] Results")
+    print_header("[7/7] Results")
     if not args.dry_run:
         print_results(results)
 
@@ -436,14 +424,18 @@ def main(args: argparse.Namespace) -> None:
     # Print summary
     print_header("Pipeline Complete")
     summary = loop.get_summary()
-    print(f"\nTotal iterations: {summary['total_iterations']}")
-    print(f"Total items selected: {summary['total_items_selected']}")
+
+    table = create_summary_table(
+        {
+            "Total iterations": str(summary["total_iterations"]),
+            "Total items selected": str(summary["total_items_selected"]),
+        }
+    )
+    console.print(table)
 
     if not args.dry_run and results:
         final_acc = results[-1].metrics.get("accuracy", 0.0)
-        print(f"Final accuracy: {final_acc:.4f}")
-
-    print("\n" + "=" * 70)
+        console.print(f"\nFinal accuracy: {final_acc:.4f}")
 
 
 if __name__ == "__main__":
@@ -486,9 +478,9 @@ if __name__ == "__main__":
     try:
         main(args)
     except KeyboardInterrupt:
-        print("\n\n⚠️  Pipeline interrupted by user")
+        print_warning("Pipeline interrupted by user")
         sys.exit(130)
     except Exception as e:
-        print(f"\n✗ Unexpected error: {e}")
+        print_error(f"Unexpected error: {e}")
         traceback.print_exc()
         sys.exit(1)

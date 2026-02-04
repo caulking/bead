@@ -1,5 +1,7 @@
 # Argument Structure Active Learning Pipeline
 
+**Last Updated:** February 2026
+
 A framework for collecting human judgments on argument structure alternations using active learning with convergence detection to human-level inter-annotator agreement.
 
 ## Overview
@@ -942,6 +944,23 @@ lists:
 }
 ```
 
+**ListCollection Serialization:**
+
+The `ListCollection` class provides `to_jsonl()` and `from_jsonl()` methods for consistent serialization:
+
+```python
+from bead.lists import ListCollection
+
+# save lists to JSONL
+collection = ListCollection(lists=experiment_lists, metadata={...})
+collection.to_jsonl("lists/experiment_lists.jsonl")
+
+# load lists from JSONL
+loaded_collection = ListCollection.from_jsonl("lists/experiment_lists.jsonl")
+```
+
+These methods handle all serialization details including UUID preservation and metadata encoding.
+
 ### 8. Generate Deployment
 
 ```bash
@@ -1612,4 +1631,36 @@ gallery/eng/argument_structure/
 └── .cache/                         # Model output cache
     └── ...                         # Cached LM scores
 ```
+
+## Additional bead Modules
+
+The following bead modules are available for future enhancements to this pipeline:
+
+### bead.behavioral
+
+Behavioral analytics with slopit integration for keystroke, focus, and timing data. This module can capture detailed interaction patterns during experiment sessions:
+
+```python
+from bead.behavioral import BehavioralAnalyzer
+
+analyzer = BehavioralAnalyzer()
+metrics = analyzer.analyze_session(session_data)
+# returns keystroke dynamics, focus patterns, response timing distributions
+```
+
+Potential applications for this pipeline include analyzing response time distributions across difficulty quantiles and detecting attention lapses or rushed responses.
+
+### bead.participants
+
+Participant metadata system with UUID-based identification. This module provides consistent participant tracking across experimental sessions:
+
+```python
+from bead.participants import ParticipantRegistry
+
+registry = ParticipantRegistry()
+participant = registry.get_or_create(prolific_id="ABC123")
+# returns participant with stable UUID for cross-session tracking
+```
+
+Potential applications include tracking individual participant reliability across multiple list assignments and building participant-level models of judgment consistency.
 

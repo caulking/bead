@@ -14,20 +14,27 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 from uuid import uuid4
 
 import yaml
-from rich.console import Console
-from rich.table import Table
 
+from bead.cli.display import (
+    confirm,
+    console,
+    create_summary_table,
+    print_error,
+    print_header,
+    print_info,
+    print_success,
+    print_warning,
+)
 from bead.items.forced_choice import create_forced_choice_items_from_groups
 from bead.items.item import Item
 from bead.items.scoring import LanguageModelScorer
 from bead.lists.stratification import assign_quantiles_by_uuid
 from bead.templates.filler import FilledTemplate
-
-console = Console()
 
 
 def load_config(config_path: Path) -> dict:
@@ -68,6 +75,7 @@ def convert_filled_templates_to_items(
         if text:
             text = text[0].upper() + text[1:] if len(text) > 1 else text.upper()
 
+        # Use template_name as structure identifier
         item = Item(
             item_template_id=ft.template_id,
             rendered_elements={"text": text},
@@ -75,7 +83,7 @@ def convert_filled_templates_to_items(
                 "filled_template_id": str(ft.id),
                 "template_id": ft.template_id,
                 "template_name": ft.template_name,
-                "template_structure": ft.template_name,  # Use name as structure identifier
+                "template_structure": ft.template_name,
                 "verb_lemma": verb_lemma,
                 "strategy": ft.strategy_name,
             },
@@ -180,7 +188,7 @@ def create_forced_choice_pairs(
                 }
             )
 
-    console.print(f"[green]✓[/green] Created {len(same_verb_items):,} same-verb pairs")
+    print_success(f"Created {len(same_verb_items):,} same-verb pairs")
 
     # 2. Create different-verb pairs (group by template_id)
     with console.status("[bold]Creating different-verb pairs...[/bold]"):
@@ -218,9 +226,7 @@ def create_forced_choice_pairs(
                 }
             )
 
-    console.print(
-        f"[green]✓[/green] Created {len(different_verb_items):,} different-verb pairs"
-    )
+    print_success(f"Created {len(different_verb_items):,} different-verb pairs")
 
     return same_verb_items + different_verb_items
 
@@ -256,7 +262,7 @@ def assign_quantiles_to_pairs(
         for item in pair_items:
             item.item_metadata["quantile"] = quantile_assignments[item.id]
 
-    console.print(f"[green]✓[/green] Assigned quantiles to {len(pair_items):,} pairs")
+    print_success(f"Assigned quantiles to {len(pair_items):,} pairs")
     return pair_items
 
 
@@ -264,6 +270,8 @@ def main(
     config_path: Path = Path("config.yaml"),
     item_limit: int | None = None,
     output_path: Path | None = None,
+    *,
+    yes: bool = False,
 ) -> None:
     """Generate 2AFC pairs from filled templates.
 
@@ -275,9 +283,15 @@ def main(
         Limit number of filled templates to process
     output_path : Path | None
         Override output path from config
+    yes : bool
+        Skip confirmation prompts (for non-interactive use).
     """
     # Load configuration
-    config = load_config(config_path)
+    try:
+        config = load_config(config_path)
+    except Exception as e:
+        print_error(f"Failed to load config: {e}")
+        sys.exit(1)
 
     # Paths from config
     base_dir = Path(__file__).parent
@@ -286,73 +300,95 @@ def main(
         output_path = base_dir / config["paths"]["2afc_pairs"]
     cache_dir = base_dir / config["paths"]["cache_dir"]
 
-    console.rule("[bold]2AFC Pair Generation[/bold]")
+    print_header("2AFC Pair Generation")
     console.print(f"Base directory: [cyan]{base_dir}[/cyan]")
     console.print(f"Filled templates: [cyan]{filled_templates_path}[/cyan]")
     console.print(f"Output: [cyan]{output_path}[/cyan]\n")
 
+    # Check for existing output
+    if output_path.exists() and not yes:
+        if not confirm(f"Overwrite {output_path}?", default=False):
+            print_info("Operation cancelled.")
+            return
+
     if item_limit:
-        console.print(
-            f"[yellow]⚠[/yellow]  Test mode: Limiting to {item_limit:,} filled templates\n"
-        )
+        print_warning(f"Test mode: Limiting to {item_limit:,} filled templates\n")
 
     # Load filled templates
-    console.rule("[1/4] Loading Filled Templates")
-    with console.status("[bold]Loading filled templates...[/bold]"):
-        filled_templates = load_filled_templates(
-            str(filled_templates_path), limit=item_limit
-        )
-    console.print(
-        f"[green]✓[/green] Loaded {len(filled_templates):,} filled templates\n"
-    )
+    print_header("1/4 Loading Filled Templates")
+    try:
+        with console.status("[bold]Loading filled templates...[/bold]"):
+            filled_templates = load_filled_templates(
+                str(filled_templates_path), limit=item_limit
+            )
+        print_success(f"Loaded {len(filled_templates):,} filled templates\n")
+    except Exception as e:
+        print_error(f"Failed to load filled templates: {e}")
+        sys.exit(1)
 
     # Convert to Items
-    console.rule("[2/4] Converting to Items")
-    with console.status("[bold]Converting filled templates to items...[/bold]"):
-        items = convert_filled_templates_to_items(filled_templates)
-    console.print(f"[green]✓[/green] Created {len(items):,} items")
+    print_header("2/4 Converting to Items")
+    try:
+        with console.status("[bold]Converting filled templates to items...[/bold]"):
+            items = convert_filled_templates_to_items(filled_templates)
+        print_success(f"Created {len(items):,} items")
 
-    # Show examples
-    console.print("\n[dim]Example filled texts:[/dim]")
-    for i, item in enumerate(items[:3]):
-        console.print(f"  [dim]{i + 1}.[/dim] {item.rendered_elements['text']}")
-    console.print()
+        # Show examples
+        console.print("\n[dim]Example filled texts:[/dim]")
+        for i, item in enumerate(items[:3]):
+            console.print(f"  [dim]{i + 1}.[/dim] {item.rendered_elements['text']}")
+        console.print()
+    except Exception as e:
+        print_error(f"Failed to convert templates: {e}")
+        sys.exit(1)
 
     # Score with LM
-    console.rule("[3/4] Scoring with Language Model")
-    model_name = config["items"]["models"][0]["name"]
-    lm_scores = score_filled_items_with_lm(
-        items, cache_dir=cache_dir, model_name=model_name
-    )
-    console.print(f"[green]✓[/green] Scored {len(lm_scores):,} items\n")
+    print_header("3/4 Scoring with Language Model")
+    try:
+        model_name = config["items"]["models"][0]["name"]
+        lm_scores = score_filled_items_with_lm(
+            items, cache_dir=cache_dir, model_name=model_name
+        )
+        print_success(f"Scored {len(lm_scores):,} items\n")
+    except Exception as e:
+        print_error(f"Failed to score items: {e}")
+        sys.exit(1)
 
     # Create forced-choice pairs
-    console.rule("[4/4] Creating Forced-Choice Pairs")
-    pair_items = create_forced_choice_pairs(items, lm_scores)
+    print_header("4/4 Creating Forced-Choice Pairs")
+    try:
+        pair_items = create_forced_choice_pairs(items, lm_scores)
 
-    if not pair_items:
-        console.print("[red]✗[/red] No pairs were created. Exiting.")
-        return
+        if not pair_items:
+            print_error("No pairs were created. Exiting.")
+            sys.exit(1)
 
-    console.print()
+        console.print()
 
-    # Assign quantiles
-    quantile_bins = config["lists"].get("quantile_bins", 10)
-    pair_items = assign_quantiles_to_pairs(pair_items, n_quantiles=quantile_bins)
-    console.print()
+        # Assign quantiles
+        quantile_bins = config["lists"].get("quantile_bins", 10)
+        pair_items = assign_quantiles_to_pairs(pair_items, n_quantiles=quantile_bins)
+        console.print()
+    except Exception as e:
+        print_error(f"Failed to create pairs: {e}")
+        sys.exit(1)
 
     # Save
-    console.rule("Saving Results")
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    with console.status(f"[bold]Writing to {output_path}...[/bold]"):
-        with open(output_path, "w") as f:
-            for item in pair_items:
-                f.write(item.model_dump_json() + "\n")
+    print_header("Saving Results")
+    try:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        with console.status(f"[bold]Writing to {output_path}...[/bold]"):
+            with open(output_path, "w") as f:
+                for item in pair_items:
+                    f.write(item.model_dump_json() + "\n")
 
-    console.print(f"[green]✓[/green] Saved {len(pair_items):,} 2AFC pairs\n")
+        print_success(f"Saved {len(pair_items):,} 2AFC pairs\n")
+    except Exception as e:
+        print_error(f"Failed to save output: {e}")
+        sys.exit(1)
 
     # Summary
-    console.rule("[bold]Summary[/bold]")
+    print_header("Summary")
     same_verb_count = sum(
         1 for item in pair_items if item.item_metadata.get("pair_type") == "same_verb"
     )
@@ -362,16 +398,17 @@ def main(
         if item.item_metadata.get("pair_type") == "different_verb"
     )
 
-    table = Table(show_header=False, box=None, padding=(0, 2))
-    table.add_row("Same-verb pairs:", f"[cyan]{same_verb_count:,}[/cyan]")
-    table.add_row("Different-verb pairs:", f"[cyan]{different_verb_count:,}[/cyan]")
-    table.add_row("Total pairs:", f"[cyan]{len(pair_items):,}[/cyan]")
-    table.add_row("Output file:", f"[cyan]{output_path}[/cyan]")
+    table = create_summary_table(
+        {
+            "Same-verb pairs": f"{same_verb_count:,}",
+            "Different-verb pairs": f"{different_verb_count:,}",
+            "Total pairs": f"{len(pair_items):,}",
+            "Output file": str(output_path),
+        }
+    )
     console.print(table)
 
-    console.print(
-        "\n[dim]Next: Run generate_lists.py to partition pairs into experiment lists[/dim]"
-    )
+    print_info("Next: Run generate_lists.py to partition pairs into experiment lists")
 
 
 if __name__ == "__main__":
@@ -396,6 +433,17 @@ if __name__ == "__main__":
         default=None,
         help="Override output path from config",
     )
+    parser.add_argument(
+        "-y",
+        "--yes",
+        action="store_true",
+        help="Skip confirmation prompts (for non-interactive use)",
+    )
     args = parser.parse_args()
 
-    main(config_path=args.config, item_limit=args.limit, output_path=args.output)
+    main(
+        config_path=args.config,
+        item_limit=args.limit,
+        output_path=args.output,
+        yes=args.yes,
+    )

@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Extract generic frame templates from verb-specific VerbNet templates.
+"""Extract generic frame templates from verb-specific VerbNet templates.
 
 This script analyzes the 21,453 verb-specific templates and extracts the
 26 unique structural patterns (template_strings). Each generic template
@@ -11,19 +10,27 @@ Output: templates/generic_frames.jsonl
 
 import argparse
 import json
+import sys
 from collections import defaultdict
 from pathlib import Path
 
-from rich.console import Console
 from utils.constraint_builder import (
     build_be_participle_constraint,
     build_be_subject_agreement_constraint,
 )
 
+from bead.cli.display import (
+    confirm,
+    console,
+    create_progress,
+    create_summary_table,
+    print_error,
+    print_header,
+    print_info,
+    print_success,
+)
 from bead.resources.constraints import Constraint
 from bead.resources.template import Slot, Template
-
-console = Console()
 
 
 def create_progressive_variant(base_template: Template, tense: str) -> Template:
@@ -139,149 +146,159 @@ def create_progressive_variant(base_template: Template, tense: str) -> Template:
     return progressive_template
 
 
-def main(input_file: str = "templates/verbnet_frames.jsonl") -> None:
+def main(
+    input_file: str = "templates/verbnet_frames.jsonl",
+    *,
+    yes: bool = False,
+) -> None:
     """Extract generic templates from verb-specific templates.
 
     Parameters
     ----------
     input_file : str
         Path to verb-specific templates file.
+    yes : bool
+        Skip confirmation prompts (for non-interactive use).
     """
-    base_dir = Path(__file__).parent
-    input_path = base_dir / input_file
-    output_path = base_dir / "templates" / "generic_frames.jsonl"
+    try:
+        base_dir = Path(__file__).parent
+        input_path = base_dir / input_file
+        output_path = base_dir / "templates" / "generic_frames.jsonl"
 
-    # Group templates by template_string
-    template_groups: dict[str, list[dict]] = defaultdict(list)
+        # Group templates by template_string
+        template_groups: dict[str, list[dict]] = defaultdict(list)
 
-    console.rule("[1/4] Reading Verb-Specific Templates")
+        print_header("[1/4] Reading Verb-Specific Templates")
 
-    with console.status("[bold]Loading templates...[/bold]"):
         with open(input_path) as f:
             for line in f:
                 template = json.loads(line)
                 template_string = template["template_string"]
                 template_groups[template_string].append(template)
 
-    total = sum(len(g) for g in template_groups.values())
-    console.print(f"[green]✓[/green] Loaded {total:,} verb-specific templates")
-    console.print(
-        f"[green]✓[/green] Found {len(template_groups)} unique template structures\n"
-    )
+        total = sum(len(g) for g in template_groups.values())
+        print_success(f"Loaded {total:,} verb-specific templates")
+        print_success(f"Found {len(template_groups)} unique template structures")
 
-    # Create generic templates
-    console.rule("[2/4] Creating Generic Templates")
+        # Create generic templates
+        print_header("[2/4] Creating Generic Templates")
 
-    generic_templates = []
+        generic_templates = []
 
-    for template_string, specific_templates in sorted(
-        template_groups.items(), key=lambda x: -len(x[1])
-    ):
-        # Use first template as prototype
-        prototype = specific_templates[0]
+        for template_string, specific_templates in sorted(
+            template_groups.items(), key=lambda x: -len(x[1])
+        ):
+            # Use first template as prototype
+            prototype = specific_templates[0]
 
-        # Collect all VerbNet frames that use this structure
-        frame_primaries = set()
-        verbnet_classes = set()
-        example_verbs = []
+            # Collect all VerbNet frames that use this structure
+            frame_primaries = set()
+            verbnet_classes = set()
+            example_verbs = []
 
-        for spec_template in specific_templates:
-            frame_primaries.add(spec_template["metadata"]["frame_primary"])
-            verbnet_classes.add(spec_template["metadata"]["verbnet_class"])
-            verb = spec_template["metadata"]["verb_lemma"]
-            if len(example_verbs) < 10:  # Keep 10 example verbs
-                example_verbs.append(verb)
+            for spec_template in specific_templates:
+                frame_primaries.add(spec_template["metadata"]["frame_primary"])
+                verbnet_classes.add(spec_template["metadata"]["verbnet_class"])
+                verb = spec_template["metadata"]["verb_lemma"]
+                if len(example_verbs) < 10:  # Keep 10 example verbs
+                    example_verbs.append(verb)
 
-        # Create generic template name
-        # Use first few words of template_string as name
-        name_parts = template_string.replace("{", "").replace("}", "").split()[:5]
-        template_name = "_".join(name_parts[:3])  # Use first 3 slots
+            # Create generic template name
+            # Use first few words of template_string as name
+            name_parts = template_string.replace("{", "").replace("}", "").split()[:5]
+            template_name = "_".join(name_parts[:3])  # Use first 3 slots
 
-        # Create generic template (reusing constraints from prototype)
-        # Constraints are generic (reference slot names, not verb-specific items)
-        generic_template = Template(
-            name=template_name,
-            template_string=template_string,
-            slots=prototype["slots"],  # Reuse slots structure
-            constraints=prototype.get(
-                "constraints", []
-            ),  # Reuse multi-slot constraints
-            description=f"Generic frame structure: {template_string}",
-            language_code="eng",
-            tags=["verbnet", "generic_frame"],
-            metadata={
-                "template_structure": template_string,
-                "verb_count": len(specific_templates),
-                "frame_primaries": sorted(frame_primaries),
-                "verbnet_class_count": len(verbnet_classes),
-                "example_verbs": example_verbs,
-                "is_generic": True,
-            },
+            # Create generic template (reusing constraints from prototype)
+            # Constraints are generic (reference slot names, not verb-specific items)
+            generic_template = Template(
+                name=template_name,
+                template_string=template_string,
+                slots=prototype["slots"],  # Reuse slots structure
+                constraints=prototype.get(
+                    "constraints", []
+                ),  # Reuse multi-slot constraints
+                description=f"Generic frame structure: {template_string}",
+                language_code="eng",
+                tags=["verbnet", "generic_frame"],
+                metadata={
+                    "template_structure": template_string,
+                    "verb_count": len(specific_templates),
+                    "frame_primaries": sorted(frame_primaries),
+                    "verbnet_class_count": len(verbnet_classes),
+                    "example_verbs": example_verbs,
+                    "is_generic": True,
+                },
+            )
+
+            generic_templates.append(generic_template)
+
+            verb_count = len(specific_templates)
+            frame_count = len(frame_primaries)
+            console.print(
+                f"  {len(generic_templates):2d}. {template_name:30s} "
+                f"[{verb_count:5d} verbs, {frame_count:3d} frames]"
+            )
+
+        print_success(f"Created {len(generic_templates)} base templates")
+
+        # Generate progressive variants
+        print_header("[3/4] Generating Progressive Variants")
+
+        progressive_templates = []
+        with create_progress() as progress:
+            task = progress.add_task(
+                "Creating progressive variants...", total=len(generic_templates)
+            )
+            for base_template in generic_templates:
+                # Create present progressive variant
+                present_prog = create_progressive_variant(base_template, "present")
+                if present_prog:
+                    progressive_templates.append(present_prog)
+
+                # Create past progressive variant
+                past_prog = create_progressive_variant(base_template, "past")
+                if past_prog:
+                    progressive_templates.append(past_prog)
+
+                progress.advance(task)
+
+        print_success(f"Generated {len(progressive_templates)} progressive variants")
+
+        # Combine base and progressive templates
+        all_templates = generic_templates + progressive_templates
+
+        # Save generic templates
+        print_header("[4/4] Saving Templates")
+
+        if output_path.exists() and not yes:
+            if not confirm(f"Overwrite {output_path}?", default=False):
+                print_info("Operation cancelled.")
+                return
+
+        with open(output_path, "w") as f:
+            for template in all_templates:
+                template_json = template.model_dump_json()
+                f.write(template_json + "\n")
+
+        print_success(f"Saved {len(all_templates)} templates to {output_path}")
+
+        # Summary statistics
+        print_header("Summary")
+
+        table = create_summary_table(
+            {
+                "Base generic frames": str(len(generic_templates)),
+                "Progressive variants": str(len(progressive_templates)),
+                "Total templates": str(len(all_templates)),
+                "Cross-product size": f"~2,880 verbs x {len(all_templates)} templates",
+                "Total combinations": f"~{2880 * len(all_templates):,}",
+            }
         )
+        console.print(table)
 
-        generic_templates.append(generic_template)
-
-        console.print(
-            f"  {len(generic_templates):2d}. {template_name:30s} "
-            f"[{len(specific_templates):5d} verbs, {len(frame_primaries):3d} frames]"
-        )
-
-    console.print(
-        f"\n[green]✓[/green] Created {len(generic_templates)} base templates\n"
-    )
-
-    # Generate progressive variants
-    console.rule("[3/4] Generating Progressive Variants")
-
-    progressive_templates = []
-    with console.status("[bold]Creating progressive variants...[/bold]"):
-        for base_template in generic_templates:
-            # Create present progressive variant
-            present_prog = create_progressive_variant(base_template, "present")
-            if present_prog:
-                progressive_templates.append(present_prog)
-
-            # Create past progressive variant
-            past_prog = create_progressive_variant(base_template, "past")
-            if past_prog:
-                progressive_templates.append(past_prog)
-
-    console.print(
-        f"[green]✓[/green] Generated {len(progressive_templates)} progressive variants\n"
-    )
-
-    # Combine base and progressive templates
-    all_templates = generic_templates + progressive_templates
-
-    # Save generic templates
-    console.rule("[4/4] Saving Templates")
-
-    with open(output_path, "w") as f:
-        for template in all_templates:
-            template_json = template.model_dump_json()
-            f.write(template_json + "\n")
-
-    console.print(
-        f"[green]✓[/green] Saved {len(all_templates)} templates to {output_path}\n"
-    )
-
-    # Summary statistics
-    console.rule("[bold]Summary[/bold]")
-    from rich.table import Table
-
-    table = Table(show_header=False, box=None, padding=(0, 2))
-    table.add_row("Base generic frames:", f"[cyan]{len(generic_templates)}[/cyan]")
-    table.add_row("Progressive variants:", f"[cyan]{len(progressive_templates)}[/cyan]")
-    table.add_row("Total templates:", f"[cyan]{len(all_templates)}[/cyan]")
-    table.add_row("", "")
-    table.add_row(
-        "Cross-product size:",
-        f"[cyan]~2,880 verbs × {len(all_templates)} templates[/cyan]",
-    )
-    table.add_row(
-        "Total combinations:", f"[cyan]≈ {2880 * len(all_templates):,}[/cyan]"
-    )
-    console.print(table)
+    except Exception as e:
+        print_error(f"Failed: {e}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
@@ -294,6 +311,12 @@ if __name__ == "__main__":
         default="templates/verbnet_frames.jsonl",
         help="Input file with verb-specific templates",
     )
+    parser.add_argument(
+        "-y",
+        "--yes",
+        action="store_true",
+        help="Skip confirmation prompts (for non-interactive use)",
+    )
     args = parser.parse_args()
 
-    main(input_file=args.input)
+    main(input_file=args.input, yes=args.yes)
