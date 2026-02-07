@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Binary Judgment</title>
+  <link href="https://unpkg.com/jspsych@8.0.0/css/jspsych.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&amp;display=swap" rel="stylesheet">
+  <link href="../css/gallery.css" rel="stylesheet">
+  <script src="https://unpkg.com/jspsych@8.0.0"></script>
+  <script src="../js/gallery-bundle.js"></script>
+</head>
+<body>
+  <div class="gallery-demo">
+    <div id="jspsych-target"></div>
+    <div id="response-display"></div>
+  </div>
+  <script>
+    function runDemo() {
+      var target = document.getElementById("jspsych-target");
+      target.innerHTML = "";
+      document.getElementById("response-display").innerHTML = "";
+      var jsPsych = initJsPsych({
+        display_element: "jspsych-target",
+        on_finish: function() {
+          var data = jsPsych.data.get().last(1).values()[0];
+          var display = document.getElementById("response-display");
+          display.innerHTML =
+            '<div class="gallery-response-label">Response Data</div>' +
+            '<div class="gallery-response">' + JSON.stringify(data, null, 2) + '</div>' +
+            '<button class="gallery-reset" onclick="runDemo()">Reset Demo</button>';
+        }
+      });
+      var trial = {
+        type: BeadBinaryChoicePlugin,
+        prompt: "Is this sentence acceptable?",
+        stimulus: 'Someone <em>persuaded</em> someone to leave.',
+        choices: ["Acceptable", "Unacceptable"],
+        require_response: true,
+        metadata: {
+          verb: "persuade",
+          frame: "NP_to_VP",
+          item_id: "mega-acceptability-persuade-np-to-vp",
+          source: "MegaAcceptability (White & Rawlins, 2016)"
+        }
+      };
+      jsPsych.run([trial]);
+    }
+    runDemo();
+  </script>
+  <script>new ResizeObserver(() => { window.parent.postMessage({ type: 'bead-resize', height: document.documentElement.scrollHeight }, '*'); }).observe(document.body);</script>
+</body>
+</html>

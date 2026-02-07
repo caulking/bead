@@ -102,4 +102,4 @@ nav:
     - Setup: developer-guide/setup.md
     - Testing: developer-guide/testing.md
     - Contributing: developer-guide/contributing.md
-  - Examples: examples/gallery.md
+  - Task Gallery: examples/gallery.md

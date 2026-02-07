@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Span + Binary Judgment</title>
+  <link href="https://unpkg.com/jspsych@8.0.0/css/jspsych.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&amp;display=swap" rel="stylesheet">
+  <link href="../css/gallery.css" rel="stylesheet">
+  <script src="https://unpkg.com/jspsych@8.0.0"></script>
+  <script src="../js/gallery-bundle.js"></script>
+</head>
+<body>
+  <div class="gallery-demo">
+    <div id="jspsych-target"></div>
+    <div id="response-display"></div>
+  </div>
+  <script>
+    function fixSubscriptOverlaps(container) {
+      var badges = Array.from(container.querySelectorAll(".bead-span-subscript"));
+      if (badges.length < 2) return;
+      badges.forEach(function(b) { b.style.transform = ""; });
+      badges.sort(function(a, b) { return a.getBoundingClientRect().left - b.getBoundingClientRect().left; });
+      var placed = [];
+      badges.forEach(function(badge) {
+        var rect = badge.getBoundingClientRect();
+        var shift = 0, hasOverlap = true, iter = 0;
+        while (hasOverlap && iter < 10) {
+          hasOverlap = false;
+          for (var p = 0; p < placed.length; p++) {
+            var pr = placed[p].rect;
+            if (rect.left < pr.right + 3 && rect.right > pr.left - 3 && rect.top < pr.bottom + 1 && rect.bottom > pr.top - 1) {
+              shift += pr.bottom - rect.top + 2;
+              badge.style.transform = "translateY(" + shift + "px)";
+              rect = badge.getBoundingClientRect();
+              hasOverlap = true; break;
+            }
+          }
+          iter++;
+        }
+        placed.push({ el: badge, rect: badge.getBoundingClientRect() });
+      });
+    }
+
+    function renderSpanStimulus(tokens, spaceAfter, spans, palette) {
+      var darkPalette = ["#1565C0", "#2E7D32", "#E65100", "#AD1457", "#4527A0", "#00838F", "#558B2F", "#F9A825"];
+      var labelToLight = {}, labelToDark = {}, spanLight = {}, spanDark = {}, ci = 0;
+      spans.forEach(function(span) {
+        var label = span.label ? span.label.label : null;
+        if (label && labelToLight[label]) {
+          spanLight[span.span_id] = labelToLight[label];
+          spanDark[span.span_id] = labelToDark[label];
+        } else {
+          spanLight[span.span_id] = palette[ci % palette.length];
+          spanDark[span.span_id] = darkPalette[ci % darkPalette.length];
+          if (label) { labelToLight[label] = spanLight[span.span_id]; labelToDark[label] = spanDark[span.span_id]; }
+          ci++;
+        }
+      });
+      var tokenSpanMap = {};
+      spans.forEach(function(span, spanIdx) {
+        span.segments.forEach(function(seg) {
+          seg.indices.forEach(function(idx) {
+            if (!tokenSpanMap[idx]) tokenSpanMap[idx] = [];
+            tokenSpanMap[idx].push(spanIdx);
+          });
+        });
+      });
+      var spanLastToken = {};
+      spans.forEach(function(span) {
+        var maxIdx = -1;
+        span.segments.forEach(function(seg) { seg.indices.forEach(function(idx) { if (idx > maxIdx) maxIdx = idx; }); });
+        spanLastToken[span.span_id] = maxIdx;
+      });
+      var html = '<div class="stimulus-container"><div class="bead-span-container">';
+      tokens.forEach(function(token, i) {
+        var spanIndices = tokenSpanMap[i] || [];
+        if (spanIndices.length > 0) {
+          var spanId = spans[spanIndices[0]].span_id;
+          var color = spanLight[spanId];
+          var leftSpans = tokenSpanMap[i - 1] || [];
+          var rightSpans = tokenSpanMap[i + 1] || [];
+          var hasLeft = spanIndices.some(function(si) { return leftSpans.indexOf(si) >= 0; });
+          var hasRight = spanIndices.some(function(si) { return rightSpans.indexOf(si) >= 0; });
+          var pos = hasLeft && hasRight ? "middle" : hasLeft ? "last" : hasRight ? "first" : "single";
+          var subscript = "";
+          spans.forEach(function(span) {
+            if (spanLastToken[span.span_id] === i && span.label) {
+              subscript += '<span class="bead-span-subscript" style="background-color:' + spanDark[span.span_id] + '">' + span.label.label + '</span>';
+            }
+          });
+          html += '<span class="bead-token highlighted span-' + pos + '" style="background-color:' + color + ';position:relative">' + token + subscript + '</span>';
+          if (spaceAfter[i]) {
+            if (hasRight) {
+              html += '<span class="bead-space highlighted" style="background-color:' + color + '"> </span>';
+            } else { html += ' '; }
+          }
+        } else {
+          html += '<span class="bead-token">' + token + '</span>';
+          if (spaceAfter[i]) html += ' ';
+        }
+      });
+      html += '</div></div>';
+      return html;
+    }
+
+    function runDemo() {
+      var target = document.getElementById("jspsych-target");
+      target.innerHTML = "";
+      document.getElementById("response-display").innerHTML = "";
+
+      var jsPsych = initJsPsych({
+        display_element: "jspsych-target",
+        on_finish: function() {
+          var data = jsPsych.data.get().last(1).values()[0];
+          var display = document.getElementById("response-display");
+          display.innerHTML =
+            '<div class="gallery-response-label">Response Data</div>' +
+            '<div class="gallery-response">' + JSON.stringify(data, null, 2) + '</div>' +
+            '<button class="gallery-reset" onclick="runDemo()">Reset Demo</button>';
+        }
+      });
+
+      var tokens = ["Someone", "gave", "something", "to", "someone", "."];
+      var spaceAfter = [true, true, true, true, false, false];
+      var palette = ["#BBDEFB", "#C8E6C9", "#FFE0B2", "#F8BBD0", "#D1C4E9", "#B2EBF2", "#DCEDC8", "#FFD54F"];
+      var spans = [
+        {span_id: "span_0", segments: [{element_name: "text", indices: [0]}], label: {label: "arg0"}},
+        {span_id: "span_1", segments: [{element_name: "text", indices: [2]}], label: {label: "arg1"}},
+        {span_id: "span_2", segments: [{element_name: "text", indices: [4]}], label: {label: "arg2"}}
+      ];
+
+      var stimulus = renderSpanStimulus(tokens, spaceAfter, spans, palette);
+
+      var trial = {
+        type: BeadBinaryChoicePlugin,
+        prompt: "Does arg0 (someone) have the property <em>volition</em>: did they choose to be involved in this event?",
+        stimulus: stimulus,
+        choices: ["Yes", "No"],
+        require_response: true,
+        on_load: function() { fixSubscriptOverlaps(document.getElementById("jspsych-target")); },
+        metadata: {
+          predicate: "gave",
+          property: "volition",
+          argument: "arg0",
+          item_id: "spr-volition-gave-arg0",
+          source: "Semantic Proto-Roles (Reisinger et al., 2015)"
+        }
+      };
+
+      jsPsych.run([trial]);
+    }
+
+    runDemo();
+  </script>
+  <script>new ResizeObserver(() => { window.parent.postMessage({ type: 'bead-resize', height: document.documentElement.scrollHeight }, '*'); }).observe(document.body);</script>
+</body>
+</html>

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Magnitude Estimation</title>
+  <link href="https://unpkg.com/jspsych@8.0.0/css/jspsych.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&amp;display=swap" rel="stylesheet">
+  <link href="../css/gallery.css" rel="stylesheet">
+  <script src="https://unpkg.com/jspsych@8.0.0"></script>
+  <script src="../js/gallery-bundle.js"></script>
+</head>
+<body>
+  <div class="gallery-demo">
+    <div id="jspsych-target"></div>
+    <div id="response-display"></div>
+  </div>
+  <script>
+    function runDemo() {
+      var target = document.getElementById("jspsych-target");
+      target.innerHTML = "";
+      document.getElementById("response-display").innerHTML = "";
+      var jsPsych = initJsPsych({
+        display_element: "jspsych-target",
+        on_finish: function() {
+          var data = jsPsych.data.get().last(1).values()[0];
+          var display = document.getElementById("response-display");
+          display.innerHTML =
+            '<div class="gallery-response-label">Response Data</div>' +
+            '<div class="gallery-response">' + JSON.stringify(data, null, 2) + '</div>' +
+            '<button class="gallery-reset" onclick="runDemo()">Reset Demo</button>';
+        }
+      });
+      var trial = {
+        type: BeadMagnitudePlugin,
+        prompt: "On a scale of 0 to 100, how acceptable is this sentence?",
+        stimulus: '<div style="font-size:1.15em;padding:16px 24px;background:white;border:1px solid #e0e0e0;border-radius:6px;display:inline-block;margin-bottom:8px">Someone <em>believed</em> someone to be a fool.</div>',
+        unit: "",
+        input_min: 0,
+        input_max: 100,
+        step: 1,
+        placeholder: "0-100",
+        require_response: true,
+        button_label: "Continue",
+        metadata: {
+          verb: "believe",
+          frame: "NP_to_be_NP",
+          item_id: "mega-acceptability-magnitude-believe",
+          source: "MegaAcceptability (White & Rawlins, 2016)"
+        }
+      };
+      jsPsych.run([trial]);
+    }
+    runDemo();
+  </script>
+  <script>new ResizeObserver(() => { window.parent.postMessage({ type: 'bead-resize', height: document.documentElement.scrollHeight }, '*'); }).observe(document.body);</script>
+</body>
+</html>

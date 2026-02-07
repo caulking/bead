@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Span Relations (Fixed Labels)</title>
+  <link href="https://unpkg.com/jspsych@8.0.0/css/jspsych.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&amp;display=swap" rel="stylesheet">
+  <link href="../css/gallery.css" rel="stylesheet">
+  <script src="https://unpkg.com/jspsych@8.0.0"></script>
+  <script src="../js/gallery-bundle.js"></script>
+</head>
+<body>
+  <div class="gallery-demo">
+    <div id="jspsych-target"></div>
+    <div id="response-display"></div>
+  </div>
+  <script>
+    function runDemo() {
+      var target = document.getElementById("jspsych-target");
+      target.innerHTML = "";
+      document.getElementById("response-display").innerHTML = "";
+      var jsPsych = initJsPsych({
+        display_element: "jspsych-target",
+        on_finish: function() {
+          var data = jsPsych.data.get().last(1).values()[0];
+          var display = document.getElementById("response-display");
+          display.innerHTML =
+            '<div class="gallery-response-label">Response Data</div>' +
+            '<div class="gallery-response">' + JSON.stringify(data, null, 2) + '</div>' +
+            '<button class="gallery-reset" onclick="runDemo()">Reset Demo</button>';
+        }
+      });
+      var trial = {
+        type: BeadSpanLabelPlugin,
+        prompt: 'Select spans and label them, then use "Add Relation" to draw relations between spans.',
+        tokens: {text: ["The", "scientist", "presented", "the", "findings", "to", "the", "committee", "at", "the", "annual", "conference", "."]},
+        space_after: {text: [true, true, true, true, true, true, true, true, true, true, true, false, false]},
+        spans: [],
+        relations: [],
+        span_spec: {
+          index_mode: "token",
+          interaction_mode: "interactive",
+          label_source: "fixed",
+          labels: ["Agent", "Patient", "Theme", "Recipient", "Instrument", "Location", "Time", "Predicate", "Stimulus", "Goal"],
+          allow_overlapping: true,
+          enable_relations: true,
+          relation_label_source: "fixed",
+          relation_labels: ["ARG0", "ARG1", "ARG2", "ARG3", "ARG-LOC", "ARG-TMP", "ARG-MNR", "ARG-PRP", "ARG-CAU"],
+          relation_directed: true,
+          wikidata_language: "en",
+          wikidata_result_limit: 10
+        },
+        display_config: {
+          highlight_style: "background",
+          color_palette: ["#BBDEFB", "#C8E6C9", "#FFE0B2", "#F8BBD0", "#D1C4E9", "#B2EBF2", "#DCEDC8", "#FFD54F"],
+          show_labels: true,
+          show_tooltips: true,
+          token_delimiter: " ",
+          label_position: "inline"
+        },
+        require_response: false,
+        button_label: "Continue",
+        metadata: {
+          item_id: "srl-relations-01",
+          source: "UDS Semantic Role Labeling"
+        }
+      };
+      jsPsych.run([trial]);
+    }
+    runDemo();
+  </script>
+  <script>new ResizeObserver(() => { window.parent.postMessage({ type: 'bead-resize', height: document.documentElement.scrollHeight }, '*'); }).observe(document.body);</script>
+</body>
+</html>

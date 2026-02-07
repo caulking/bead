@@ -1,0 +1,1042 @@
+/* Gallery demo styles - loaded by each standalone demo HTML page */
+
+/* Reset and base */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  color: #212121;
+  background: #fafafa;
+  padding: 24px;
+}
+
+/* Demo container */
+.gallery-demo {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+/* jspsych overrides for iframe embedding */
+#jspsych-target {
+  font-family: inherit;
+}
+
+.jspsych-display-element {
+  font-family: inherit;
+  font-size: inherit;
+  min-height: 0 !important;
+}
+
+.jspsych-content-wrapper {
+  min-height: 0 !important;
+}
+
+.jspsych-content {
+  max-width: 100% !important;
+}
+
+/* Ensure jsPsych standard plugin buttons are visible */
+.jspsych-html-button-response-btngroup {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.jspsych-html-slider-response-container {
+  margin-top: 16px;
+}
+
+/* ── Rating plugin ───────────────────────────────────── */
+
+.bead-rating-container {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.bead-rating-prompt {
+  font-size: 1.1em;
+  margin-bottom: 24px;
+  color: #424242;
+}
+
+.bead-rating-scale {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.bead-rating-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.bead-rating-button {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid #bdbdbd;
+  background: white;
+  font-size: 1em;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  color: #424242;
+}
+
+.bead-rating-button:hover {
+  border-color: #5c6bc0;
+  background: #e8eaf6;
+}
+
+.bead-rating-button.selected {
+  border-color: #3f51b5;
+  background: #3f51b5;
+  color: white;
+}
+
+.bead-rating-label {
+  font-size: 0.75em;
+  color: #757575;
+  max-width: 64px;
+  text-align: center;
+}
+
+/* ── Forced choice plugin ────────────────────────────── */
+
+.bead-forced-choice-container {
+  padding: 20px 0;
+}
+
+.bead-forced-choice-prompt {
+  text-align: center;
+  font-size: 1.1em;
+  margin-bottom: 24px;
+  color: #424242;
+}
+
+.bead-forced-choice-alternatives {
+  display: grid;
+  gap: 12px;
+  margin: 0 auto;
+}
+
+.bead-forced-choice-alternatives.bead-layout-horizontal {
+  grid-template-columns: 1fr 1fr;
+  max-width: 600px;
+}
+
+.bead-forced-choice-alternatives.bead-layout-vertical {
+  grid-template-columns: 1fr;
+  max-width: 480px;
+}
+
+.bead-card {
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 20px;
+  background: white;
+  transition: all 0.15s ease;
+}
+
+.bead-alternative {
+  cursor: pointer;
+  text-align: center;
+}
+
+.bead-alternative:hover {
+  border-color: #5c6bc0;
+  box-shadow: 0 2px 8px rgba(63, 81, 181, 0.12);
+}
+
+.bead-alternative.selected {
+  border-color: #3f51b5;
+  background: #e8eaf6;
+}
+
+.bead-alternative-label {
+  font-size: 0.8em;
+  font-weight: 500;
+  color: #9e9e9e;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.bead-alternative-content {
+  font-size: 1em;
+  color: #212121;
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
+.bead-choice-button {
+  display: none;
+}
+
+/* ── Cloze plugin ────────────────────────────────────── */
+
+.bead-cloze-container {
+  padding: 20px 0;
+  text-align: center;
+}
+
+.bead-cloze-text {
+  font-size: 1.1em;
+  line-height: 2;
+  margin-bottom: 24px;
+  color: #424242;
+}
+
+.bead-dropdown {
+  padding: 4px 8px;
+  border: 2px solid #5c6bc0;
+  border-radius: 4px;
+  font-size: 0.95em;
+  background: #e8eaf6;
+  cursor: pointer;
+  appearance: auto;
+}
+
+.bead-text-field {
+  padding: 4px 8px;
+  border: 2px solid #5c6bc0;
+  border-radius: 4px;
+  font-size: 0.95em;
+  width: 120px;
+  text-align: center;
+}
+
+/* ── Binary choice plugin ────────────────────────────── */
+
+.bead-binary-choice-container {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.bead-binary-choice-prompt {
+  font-size: 1.1em;
+  margin-bottom: 16px;
+  color: #424242;
+}
+
+.bead-binary-choice-stimulus {
+  font-size: 1.15em;
+  padding: 16px 24px;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  display: inline-block;
+  margin-bottom: 20px;
+}
+
+.bead-binary-choice-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+.bead-binary-button {
+  padding: 10px 32px;
+  border: 2px solid #e0e0e0;
+  border-radius: 4px;
+  background: white;
+  font-size: 0.95em;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.bead-binary-button:hover {
+  border-color: #5c6bc0;
+  background: #e8eaf6;
+}
+
+.bead-binary-button.selected {
+  border-color: #3f51b5;
+  background: #3f51b5;
+  color: white;
+}
+
+/* ── Slider rating plugin ────────────────────────────── */
+
+.bead-slider-container {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.bead-slider-prompt {
+  font-size: 1.1em;
+  margin-bottom: 24px;
+  color: #424242;
+}
+
+.bead-slider-wrapper {
+  max-width: 480px;
+  margin: 0 auto 16px;
+}
+
+.bead-slider-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 0.85em;
+  color: #757575;
+}
+
+.bead-slider-input {
+  width: 100%;
+  margin: 0;
+  cursor: pointer;
+  accent-color: #3f51b5;
+}
+
+.bead-slider-value {
+  margin-top: 8px;
+  font-size: 1.1em;
+  font-weight: 500;
+  color: #3f51b5;
+}
+
+.bead-slider-button-container {
+  margin-top: 16px;
+  text-align: center;
+}
+
+/* ── Shared button styles ────────────────────────────── */
+
+.bead-button {
+  padding: 10px 32px;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.95em;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.bead-continue-button {
+  background: #3f51b5;
+  color: white;
+}
+
+.bead-continue-button:hover:not(:disabled) {
+  background: #303f9f;
+}
+
+.bead-continue-button:disabled {
+  background: #bdbdbd;
+  cursor: not-allowed;
+}
+
+.bead-rating-button-container,
+.bead-cloze-button-container {
+  margin-top: 16px;
+  text-align: center;
+}
+
+/* ── Span labeling ───────────────────────────────────── */
+
+.bead-span-label-container {
+  text-align: left;
+}
+
+.bead-span-label-container > .bead-rating-prompt {
+  font-size: 0.9em;
+  color: #757575;
+  font-weight: 400;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.bead-span-container {
+  display: inline;
+  line-height: 2.6;
+  font-size: 1.1em;
+}
+
+.bead-token {
+  display: inline;
+  padding: 3px 1px;
+  border-radius: 4px;
+  cursor: default;
+  transition: background-color 0.15s;
+}
+
+.bead-space {
+  display: inline;
+}
+
+/* Contiguous span positions: first/middle/last get merged radius */
+.bead-token.highlighted.span-single {
+  border-radius: 4px;
+  padding: 3px 4px;
+}
+
+.bead-token.highlighted.span-first {
+  border-radius: 4px 0 0 4px;
+  padding: 3px 0 3px 4px;
+}
+
+.bead-token.highlighted.span-middle {
+  border-radius: 0;
+  padding: 3px 0;
+}
+
+.bead-token.highlighted.span-last {
+  border-radius: 0 4px 4px 0;
+  padding: 3px 4px 3px 0;
+}
+
+.bead-space.highlighted {
+  border-radius: 0;
+}
+
+.bead-token.interactive {
+  cursor: pointer;
+}
+
+.bead-token.interactive:hover {
+  background-color: rgba(0, 0, 0, 0.08);
+}
+
+.bead-token.highlighted {
+  position: relative;
+}
+
+.bead-token.selecting {
+  background-color: #c8e6c9;
+  border-radius: 4px;
+  padding: 3px 4px;
+}
+
+.bead-token.selecting.invalid {
+  background-color: #ffcdd2;
+}
+
+.bead-label-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.bead-label-button {
+  padding: 4px 12px;
+  border-radius: 16px;
+  border: 1px solid #ccc;
+  cursor: pointer;
+  background: white;
+  font-size: 0.9em;
+}
+
+.bead-label-button:hover,
+.bead-label-button.active {
+  border-color: #1976d2;
+  background: #e3f2fd;
+}
+
+/* Subscript span labels (positioned below last token of each span) */
+.bead-span-subscript {
+  position: absolute;
+  bottom: -0.6rem;
+  right: -2px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0px 5px;
+  border-radius: 0.6rem;
+  font-size: 0.6rem;
+  font-weight: 500;
+  color: white;
+  white-space: nowrap;
+  z-index: 1;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  line-height: 1.5;
+  cursor: default;
+}
+
+.bead-subscript-delete {
+  border: none;
+  background: none;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  font-size: 1.1em;
+  font-weight: bold;
+  padding: 0 1px;
+  line-height: 1;
+}
+
+.bead-subscript-delete:hover {
+  color: white;
+}
+
+/* Legacy span list (for composite demos) */
+.bead-span-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.bead-span-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 0.72em;
+  font-weight: 500;
+  color: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  line-height: 1.6;
+}
+
+/* Relation arcs */
+.bead-relation-arc-area {
+  position: relative;
+  width: 100%;
+}
+
+.bead-relation-layer {
+  width: 100%;
+  pointer-events: none;
+}
+
+.bead-relation-arc {
+  fill: none;
+  stroke-width: 1.5;
+}
+
+.bead-relation-label-text {
+  font-size: 0.75em;
+  fill: #424242;
+}
+
+.bead-relation-list {
+  margin-top: 8px;
+}
+
+.bead-relation-entry {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 0;
+}
+
+/* Wikidata autocomplete */
+.bead-wikidata-panel {
+  flex-direction: column;
+}
+
+.bead-wikidata-search {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+}
+
+.bead-wikidata-search input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 2px solid #5c6bc0;
+  border-radius: 4px;
+  font-size: 0.95em;
+  outline: none;
+}
+
+.bead-wikidata-search input:focus {
+  border-color: #3f51b5;
+  box-shadow: 0 0 0 2px rgba(63, 81, 181, 0.12);
+}
+
+.bead-wikidata-results {
+  position: absolute;
+  z-index: 10;
+  width: 100%;
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  background: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.bead-wikidata-result {
+  padding: 6px 8px;
+  cursor: pointer;
+}
+
+.bead-wikidata-result:hover {
+  background: #f5f5f5;
+}
+
+.bead-wikidata-result .qid {
+  color: #9e9e9e;
+  font-size: 0.85em;
+}
+
+.bead-wikidata-result .description {
+  color: #757575;
+  font-size: 0.85em;
+}
+
+/* ── Response display ────────────────────────────────── */
+
+.gallery-response {
+  margin-top: 16px;
+  padding: 12px 16px;
+  background: #263238;
+  color: #b2dfdb;
+  border-radius: 6px;
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 0.82em;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.gallery-response-label {
+  font-family: "Roboto", sans-serif;
+  font-size: 0.75em;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #78909c;
+  margin-bottom: 4px;
+}
+
+/* Reset button */
+.gallery-reset {
+  display: inline-block;
+  margin-top: 12px;
+  padding: 6px 16px;
+  border: 1px solid #bdbdbd;
+  border-radius: 4px;
+  background: white;
+  color: #616161;
+  font-size: 0.85em;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.gallery-reset:hover {
+  border-color: #3f51b5;
+  color: #3f51b5;
+}
+
+/* ── Categorical plugin ─────────────────────────────── */
+
+.bead-categorical-container {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.bead-categorical-prompt {
+  font-size: 1.1em;
+  margin-bottom: 16px;
+  color: #424242;
+}
+
+.bead-categorical-stimulus {
+  font-size: 1.15em;
+  padding: 16px 24px;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  display: inline-block;
+  margin-bottom: 20px;
+}
+
+.bead-categorical-options {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.bead-categorical-button {
+  padding: 10px 24px;
+  border: 2px solid #e0e0e0;
+  border-radius: 4px;
+  background: white;
+  font-size: 0.95em;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.bead-categorical-button:hover {
+  border-color: #5c6bc0;
+  background: #e8eaf6;
+}
+
+.bead-categorical-button.selected {
+  border-color: #3f51b5;
+  background: #3f51b5;
+  color: white;
+}
+
+.bead-categorical-button-container {
+  margin-top: 16px;
+  text-align: center;
+}
+
+/* ── Magnitude plugin ──────────────────────────────── */
+
+.bead-magnitude-container {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.bead-magnitude-prompt {
+  font-size: 1.1em;
+  margin-bottom: 16px;
+  color: #424242;
+}
+
+.bead-magnitude-stimulus {
+  font-size: 1.15em;
+  padding: 16px 24px;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  display: inline-block;
+  margin-bottom: 20px;
+}
+
+.bead-magnitude-input-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.bead-magnitude-input {
+  width: 120px;
+  padding: 8px 12px;
+  border: 2px solid #bdbdbd;
+  border-radius: 4px;
+  font-size: 1.1em;
+  text-align: center;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.bead-magnitude-input:focus {
+  border-color: #3f51b5;
+  box-shadow: 0 0 0 2px rgba(63, 81, 181, 0.12);
+}
+
+.bead-magnitude-unit {
+  font-size: 1em;
+  color: #757575;
+}
+
+.bead-magnitude-button-container {
+  margin-top: 16px;
+  text-align: center;
+}
+
+/* ── Free text plugin ──────────────────────────────── */
+
+.bead-free-text-container {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.bead-free-text-prompt {
+  font-size: 1.1em;
+  margin-bottom: 16px;
+  color: #424242;
+}
+
+.bead-free-text-stimulus {
+  font-size: 1.15em;
+  padding: 16px 24px;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  display: inline-block;
+  margin-bottom: 20px;
+}
+
+.bead-free-text-input {
+  width: 100%;
+  max-width: 480px;
+  padding: 8px 12px;
+  border: 2px solid #bdbdbd;
+  border-radius: 4px;
+  font-size: 1em;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s ease;
+  resize: vertical;
+}
+
+.bead-free-text-input:focus {
+  border-color: #3f51b5;
+  box-shadow: 0 0 0 2px rgba(63, 81, 181, 0.12);
+}
+
+.bead-free-text-counter {
+  font-size: 0.8em;
+  color: #9e9e9e;
+  margin-top: 4px;
+}
+
+.bead-free-text-button-container {
+  margin-top: 16px;
+  text-align: center;
+}
+
+/* ── Multi-select plugin ───────────────────────────── */
+
+.bead-multi-select-container {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.bead-multi-select-prompt {
+  font-size: 1.1em;
+  margin-bottom: 16px;
+  color: #424242;
+}
+
+.bead-multi-select-stimulus {
+  font-size: 1.15em;
+  padding: 16px 24px;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  display: inline-block;
+  margin-bottom: 20px;
+}
+
+.bead-multi-select-options {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 20px;
+}
+
+.bead-multi-select-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  min-width: 280px;
+  text-align: left;
+}
+
+.bead-multi-select-option:hover {
+  border-color: #5c6bc0;
+  background: #f5f5f5;
+}
+
+.bead-multi-select-checkbox {
+  accent-color: #3f51b5;
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.bead-multi-select-checkbox:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.bead-multi-select-label {
+  font-size: 0.95em;
+  color: #424242;
+}
+
+.bead-multi-select-button-container {
+  margin-top: 16px;
+  text-align: center;
+}
+
+/* ── Searchable label selector ─────────────────────── */
+
+.bead-label-search-panel {
+  flex-direction: column;
+}
+
+.bead-label-search-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+}
+
+.bead-label-search-wrapper input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 2px solid #5c6bc0;
+  border-radius: 4px;
+  font-size: 0.95em;
+  outline: none;
+}
+
+.bead-label-search-wrapper input:focus {
+  border-color: #3f51b5;
+  box-shadow: 0 0 0 2px rgba(63, 81, 181, 0.12);
+}
+
+.bead-label-search-results {
+  position: absolute;
+  z-index: 10;
+  width: 100%;
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  background: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.bead-label-search-result {
+  padding: 6px 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bead-label-search-result:hover,
+.bead-label-search-result.highlighted {
+  background: #f5f5f5;
+}
+
+.bead-label-search-result .label-color {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.bead-label-search-result .label-name {
+  font-size: 0.95em;
+  color: #212121;
+}
+
+.bead-label-search-result .label-shortcut {
+  font-size: 0.8em;
+  color: #9e9e9e;
+  margin-left: auto;
+}
+
+/* ── Relation creation UI ──────────────────────────── */
+
+.bead-relation-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.bead-add-relation-button {
+  padding: 6px 16px;
+  border: 1px solid #5c6bc0;
+  border-radius: 4px;
+  background: white;
+  color: #5c6bc0;
+  font-size: 0.85em;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.bead-add-relation-button:hover {
+  background: #e8eaf6;
+}
+
+.bead-add-relation-button:disabled {
+  border-color: #bdbdbd;
+  color: #bdbdbd;
+  cursor: not-allowed;
+}
+
+.bead-relation-status {
+  font-size: 0.85em;
+  color: #757575;
+  font-style: italic;
+}
+
+.bead-relation-cancel {
+  padding: 4px 12px;
+  border: 1px solid #e57373;
+  border-radius: 4px;
+  background: white;
+  color: #e57373;
+  font-size: 0.8em;
+  cursor: pointer;
+}
+
+.bead-relation-cancel:hover {
+  background: #ffebee;
+}
+
+.bead-span-subscript.relation-source {
+  outline: 2px solid #ff9800;
+  outline-offset: 1px;
+}
+
+.bead-span-subscript.relation-target-candidate:hover {
+  outline: 2px dashed #2196f3;
+  outline-offset: 1px;
+}
+
+.bead-relation-entry {
+  font-size: 0.85em;
+}
+
+.bead-relation-delete {
+  border: none;
+  background: none;
+  color: #e57373;
+  cursor: pointer;
+  font-size: 1em;
+  padding: 0 4px;
+}
+
+.bead-relation-delete:hover {
+  color: #c62828;
+}
+
+/* ── Stimulus display (for composite tasks) ──────────── */
+
+.stimulus-container {
+  padding: 16px;
+  margin-bottom: 16px;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 1.05em;
+  line-height: 1.8;
+}
+
+.stimulus-container .element-label {
+  font-size: 0.75em;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #9e9e9e;
+  margin-bottom: 4px;
+}
