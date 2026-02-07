@@ -9,6 +9,7 @@ import type { JsPsych } from "../types/jspsych.js";
 import { BeadClozeMultiPlugin } from "./cloze-dropdown.js";
 import { BeadForcedChoicePlugin } from "./forced-choice.js";
 import { BeadRatingPlugin } from "./rating.js";
+import { BeadSpanLabelPlugin } from "./span-label.js";
 
 // Mock jsPsych instance
 function createMockJsPsych(): JsPsych {
@@ -98,6 +99,49 @@ describe("bead-forced-choice plugin", () => {
     test("has trial method", () => {
       const mockJsPsych = createMockJsPsych();
       const plugin = new BeadForcedChoicePlugin(mockJsPsych);
+      expect(typeof plugin.trial).toBe("function");
+    });
+  });
+});
+
+describe("bead-span-label plugin", () => {
+  describe("info structure", () => {
+    test("has correct plugin name", () => {
+      expect(BeadSpanLabelPlugin.info.name).toBe("bead-span-label");
+    });
+
+    test("has required parameters", () => {
+      const params = BeadSpanLabelPlugin.info.parameters;
+      expect(params["tokens"]).toBeDefined();
+      expect(params["space_after"]).toBeDefined();
+      expect(params["spans"]).toBeDefined();
+      expect(params["relations"]).toBeDefined();
+      expect(params["span_spec"]).toBeDefined();
+      expect(params["display_config"]).toBeDefined();
+      expect(params["prompt"]).toBeDefined();
+      expect(params["button_label"]).toBeDefined();
+      expect(params["require_response"]).toBeDefined();
+      expect(params["metadata"]).toBeDefined();
+    });
+
+    test("has correct parameter defaults", () => {
+      const params = BeadSpanLabelPlugin.info.parameters;
+      expect(params["require_response"]?.default).toBe(true);
+      expect(params["button_label"]?.default).toBe("Continue");
+      expect(params["prompt"]?.default).toBe("Select and label spans");
+    });
+  });
+
+  describe("plugin instantiation", () => {
+    test("can be instantiated", () => {
+      const mockJsPsych = createMockJsPsych();
+      const plugin = new BeadSpanLabelPlugin(mockJsPsych);
+      expect(plugin).toBeDefined();
+    });
+
+    test("has trial method", () => {
+      const mockJsPsych = createMockJsPsych();
+      const plugin = new BeadSpanLabelPlugin(mockJsPsych);
       expect(typeof plugin.trial).toBe("function");
     });
   });

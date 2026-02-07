@@ -272,6 +272,80 @@ When slopit is enabled, behavioral data is included in the trial results:
 }
 ```
 
+## Span Labeling Experiments
+
+Generate span labeling experiments where participants annotate text spans.
+
+**Basic span labeling experiment**:
+
+```python
+from bead.deployment.distribution import (
+    DistributionStrategyType,
+    ListDistributionStrategy,
+)
+from bead.deployment.jspsych.config import ExperimentConfig, SpanDisplayConfig
+
+# configure a span labeling experiment
+config = ExperimentConfig(
+    experiment_type="span_labeling",
+    title="Named Entity Annotation",
+    description="Annotate named entities in text",
+    instructions="Select spans of text and assign entity labels.",
+    distribution_strategy=ListDistributionStrategy(
+        strategy_type=DistributionStrategyType.BALANCED
+    ),
+    randomize_trial_order=True,
+    show_progress_bar=True,
+    use_jatos=True,
+    span_display=SpanDisplayConfig(
+        highlight_style="background",
+        show_labels=True,
+        label_position="inline",
+    ),
+)
+```
+
+**Customizing span display**:
+
+```python
+from bead.deployment.jspsych.config import SpanDisplayConfig
+
+# configure visual appearance for span highlights
+span_display = SpanDisplayConfig(
+    highlight_style="underline",
+    color_palette=["#BBDEFB", "#C8E6C9", "#FFE0B2", "#F8BBD0"],
+    show_labels=True,
+    show_tooltips=True,
+    label_position="tooltip",
+)
+```
+
+**Composing spans with other task types**: span annotations can be added to any experiment type. When items contain span data, the span display renders automatically as an overlay on the existing task. For example, a rating experiment can show highlighted spans while participants rate sentences:
+
+```python
+from bead.deployment.distribution import (
+    DistributionStrategyType,
+    ListDistributionStrategy,
+)
+from bead.deployment.jspsych.config import ExperimentConfig, SpanDisplayConfig
+
+# rating experiment with span highlights
+config = ExperimentConfig(
+    experiment_type="likert_rating",
+    title="Acceptability with Entity Highlights",
+    description="Rate sentences with highlighted entities",
+    instructions="Rate how natural each sentence sounds. Entities are highlighted.",
+    distribution_strategy=ListDistributionStrategy(
+        strategy_type=DistributionStrategyType.BALANCED
+    ),
+    use_jatos=True,
+    span_display=SpanDisplayConfig(
+        highlight_style="background",
+        show_labels=True,
+    ),
+)
+```
+
 ## Experiment Configuration
 
 **ExperimentConfig** parameters:

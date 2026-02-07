@@ -2,7 +2,8 @@
 
 This module provides functions to generate jsPsych trial objects from
 Item models. It supports various trial types including rating scales,
-forced choice, and binary choice trials.
+forced choice, binary choice, and span labeling trials. Composite tasks
+(e.g., rating with span highlights) are also supported.
 """
 
 from __future__ import annotations
@@ -15,6 +16,7 @@ from bead.deployment.jspsych.config import (
     ExperimentConfig,
     InstructionsConfig,
     RatingScaleConfig,
+    SpanDisplayConfig,
 )
 from bead.items.item import Item
 from bead.items.item_template import ItemTemplate
@@ -150,6 +152,84 @@ def _serialize_item_metadata(
         "presentation_order": template.presentation_order,
         # Template metadata
         "template_metadata": dict(template.template_metadata),
+        # Span annotation data
+        "spans": [
+            {
+                "span_id": span.span_id,
+                "segments": [
+                    {
+                        "element_name": seg.element_name,
+                        "indices": seg.indices,
+                    }
+                    for seg in span.segments
+                ],
+                "head_index": span.head_index,
+                "label": (
+                    {
+                        "label": span.label.label,
+                        "label_id": span.label.label_id,
+                        "confidence": span.label.confidence,
+                    }
+                    if span.label
+                    else None
+                ),
+                "span_type": span.span_type,
+                "span_metadata": dict(span.span_metadata),
+            }
+            for span in item.spans
+        ],
+        "span_relations": [
+            {
+                "relation_id": rel.relation_id,
+                "source_span_id": rel.source_span_id,
+                "target_span_id": rel.target_span_id,
+                "label": (
+                    {
+                        "label": rel.label.label,
+                        "label_id": rel.label.label_id,
+                        "confidence": rel.label.confidence,
+                    }
+                    if rel.label
+                    else None
+                ),
+                "directed": rel.directed,
+                "relation_metadata": dict(rel.relation_metadata),
+            }
+            for rel in item.span_relations
+        ],
+        "tokenized_elements": dict(item.tokenized_elements),
+        "token_space_after": {
+            k: list(v) for k, v in item.token_space_after.items()
+        },
+        "span_spec": (
+            {
+                "index_mode": template.task_spec.span_spec.index_mode,
+                "interaction_mode": template.task_spec.span_spec.interaction_mode,
+                "label_source": template.task_spec.span_spec.label_source,
+                "labels": template.task_spec.span_spec.labels,
+                "label_colors": template.task_spec.span_spec.label_colors,
+                "allow_overlapping": template.task_spec.span_spec.allow_overlapping,
+                "min_spans": template.task_spec.span_spec.min_spans,
+                "max_spans": template.task_spec.span_spec.max_spans,
+                "enable_relations": template.task_spec.span_spec.enable_relations,
+                "relation_label_source": (
+                    template.task_spec.span_spec.relation_label_source
+                ),
+                "relation_labels": template.task_spec.span_spec.relation_labels,
+                "relation_directed": template.task_spec.span_spec.relation_directed,
+                "min_relations": template.task_spec.span_spec.min_relations,
+                "max_relations": template.task_spec.span_spec.max_relations,
+                "wikidata_language": template.task_spec.span_spec.wikidata_language,
+                "wikidata_entity_types": (
+                    template.task_spec.span_spec.wikidata_entity_types
+                ),
+                "wikidata_result_limit": (
+                    template.task_spec.span_spec.wikidata_result_limit
+                ),
+            }
+            if template.task_spec.span_spec
+            else None
+        ),
     }
 
 
@@ -214,22 +294,49 @@ def create_trial(
     >>> trial["type"]
     'html-slider-response'
     """
+    # Standalone span_labeling experiment type
+    if experiment_config.experiment_type == "span_labeling":
+        span_display = experiment_config.span_display or SpanDisplayConfig()
+        return _create_span_labeling_trial(
+            item, template, span_display, trial_number
+        )
+
+    # For composite tasks: detect spans and use span-enhanced stimulus HTML
+    has_spans = bool(item.spans) and bool(
+        template.task_spec.span_spec if template.task_spec else False
+    )
+
+    # Resolve span display config for composite tasks with spans
+    span_display = experiment_config.span_display or SpanDisplayConfig()
+
     if experiment_config.experiment_type == "likert_rating":
         if rating_config is None:
             raise ValueError("rating_config required for likert_rating experiments")
-        return _create_likert_trial(item, template, rating_config, trial_number)
+        return _create_likert_trial(
+            item, template, rating_config, trial_number,
+            has_spans=has_spans, span_display=span_display,
+        )
     elif experiment_config.experiment_type == "slider_rating":
         if rating_config is None:
             raise ValueError("rating_config required for slider_rating experiments")
-        return _create_slider_trial(item, template, rating_config, trial_number)
+        return _create_slider_trial(
+            item, template, rating_config, trial_number,
+            has_spans=has_spans, span_display=span_display,
+        )
     elif experiment_config.experiment_type == "binary_choice":
         if choice_config is None:
             raise ValueError("choice_config required for binary_choice experiments")
-        return _create_binary_choice_trial(item, template, choice_config, trial_number)
+        return _create_binary_choice_trial(
+            item, template, choice_config, trial_number,
+            has_spans=has_spans, span_display=span_display,
+        )
     elif experiment_config.experiment_type == "forced_choice":
         if choice_config is None:
             raise ValueError("choice_config required for forced_choice experiments")
-        return _create_forced_choice_trial(item, template, choice_config, trial_number)
+        return _create_forced_choice_trial(
+            item, template, choice_config, trial_number,
+            has_spans=has_spans, span_display=span_display,
+        )
     else:
         raise ValueError(
             f"Unknown experiment type: {experiment_config.experiment_type}"
@@ -241,6 +348,8 @@ def _create_likert_trial(
     template: ItemTemplate,
     config: RatingScaleConfig,
     trial_number: int,
+    has_spans: bool = False,
+    span_display: SpanDisplayConfig | None = None,
 ) -> dict[str, JsonValue]:
     """Create a Likert rating trial.
 
@@ -254,6 +363,10 @@ def _create_likert_trial(
         Rating scale configuration.
     trial_number : int
         The trial number.
+    has_spans : bool
+        Whether the item has span annotations.
+    span_display : SpanDisplayConfig | None
+        Span display configuration.
 
     Returns
     -------
@@ -261,7 +374,10 @@ def _create_likert_trial(
         A jsPsych html-button-response trial object.
     """
     # Generate stimulus HTML from rendered elements
-    stimulus_html = _generate_stimulus_html(item)
+    if has_spans and span_display:
+        stimulus_html = _generate_span_stimulus_html(item, span_display)
+    else:
+        stimulus_html = _generate_stimulus_html(item)
 
     # Generate button labels for Likert scale
     labels: list[str] = []
@@ -298,6 +414,8 @@ def _create_slider_trial(
     template: ItemTemplate,
     config: RatingScaleConfig,
     trial_number: int,
+    has_spans: bool = False,
+    span_display: SpanDisplayConfig | None = None,
 ) -> dict[str, JsonValue]:
     """Create a slider rating trial.
 
@@ -311,13 +429,20 @@ def _create_slider_trial(
         Rating scale configuration.
     trial_number : int
         The trial number.
+    has_spans : bool
+        Whether the item has span annotations.
+    span_display : SpanDisplayConfig | None
+        Span display configuration.
 
     Returns
     -------
     dict[str, JsonValue]
         A jsPsych html-slider-response trial object.
     """
-    stimulus_html = _generate_stimulus_html(item)
+    if has_spans and span_display:
+        stimulus_html = _generate_span_stimulus_html(item, span_display)
+    else:
+        stimulus_html = _generate_stimulus_html(item)
 
     # Serialize complete metadata
     metadata = _serialize_item_metadata(item, template)
@@ -342,6 +467,8 @@ def _create_binary_choice_trial(
     template: ItemTemplate,
     config: ChoiceConfig,
     trial_number: int,
+    has_spans: bool = False,
+    span_display: SpanDisplayConfig | None = None,
 ) -> dict[str, JsonValue]:
     """Create a binary choice trial.
 
@@ -355,13 +482,20 @@ def _create_binary_choice_trial(
         Choice configuration.
     trial_number : int
         The trial number.
+    has_spans : bool
+        Whether the item has span annotations.
+    span_display : SpanDisplayConfig | None
+        Span display configuration.
 
     Returns
     -------
     dict[str, JsonValue]
         A jsPsych html-button-response trial object.
     """
-    stimulus_html = _generate_stimulus_html(item)
+    if has_spans and span_display:
+        stimulus_html = _generate_span_stimulus_html(item, span_display)
+    else:
+        stimulus_html = _generate_stimulus_html(item)
 
     # Serialize complete metadata
     metadata = _serialize_item_metadata(item, template)
@@ -383,6 +517,8 @@ def _create_forced_choice_trial(
     template: ItemTemplate,
     config: ChoiceConfig,
     trial_number: int,
+    has_spans: bool = False,
+    span_display: SpanDisplayConfig | None = None,
 ) -> dict[str, JsonValue]:
     """Create a forced choice trial.
 
@@ -397,6 +533,10 @@ def _create_forced_choice_trial(
         Choice configuration.
     trial_number : int
         The trial number.
+    has_spans : bool
+        Whether the item has span annotations.
+    span_display : SpanDisplayConfig | None
+        Span display configuration.
 
     Returns
     -------
@@ -720,4 +860,252 @@ def create_instructions_trial(
         "data": {
             "trial_type": "instructions",
         },
+    }
+
+
+def _generate_span_stimulus_html(
+    item: Item,
+    span_display: SpanDisplayConfig,
+) -> str:
+    """Generate HTML with span-highlighted tokens for composite tasks.
+
+    Renders tokens as individually wrapped ``<span>`` elements with
+    highlight classes and data attributes for span identification.
+
+    Parameters
+    ----------
+    item : Item
+        Item with spans and tokenized_elements.
+    span_display : SpanDisplayConfig
+        Visual configuration.
+
+    Returns
+    -------
+    str
+        HTML string with span-highlighted token elements.
+    """
+    if not item.tokenized_elements:
+        return _generate_stimulus_html(item)
+
+    html_parts: list[str] = ['<div class="stimulus-container">']
+
+    sorted_keys = sorted(item.tokenized_elements.keys())
+    for element_name in sorted_keys:
+        tokens = item.tokenized_elements[element_name]
+        space_flags = item.token_space_after.get(element_name, [])
+
+        # Build token-to-span mapping
+        token_spans: dict[int, list[str]] = {}
+        for span in item.spans:
+            for segment in span.segments:
+                if segment.element_name == element_name:
+                    for idx in segment.indices:
+                        if idx not in token_spans:
+                            token_spans[idx] = []
+                        token_spans[idx].append(span.span_id)
+
+        # Assign colors
+        span_colors: dict[str, str] = {}
+        palette = span_display.color_palette
+        color_idx = 0
+        for span in item.spans:
+            if span.label and span.label.label:
+                # Use label_colors if available
+                if (
+                    span_display.show_labels
+                    and hasattr(span, "label")
+                    and span.label
+                ):
+                    label_name = span.label.label
+                    if label_name not in span_colors:
+                        span_colors[label_name] = palette[
+                            color_idx % len(palette)
+                        ]
+                        color_idx += 1
+                    span_colors[span.span_id] = span_colors[label_name]
+            else:
+                span_colors[span.span_id] = palette[
+                    color_idx % len(palette)
+                ]
+                color_idx += 1
+
+        html_parts.append(
+            f'<div class="stimulus-element bead-span-container" '
+            f'data-element="{element_name}">'
+        )
+
+        for i, token_text in enumerate(tokens):
+            span_ids = token_spans.get(i, [])
+            n_spans = len(span_ids)
+
+            classes = ["bead-token"]
+            if n_spans > 0:
+                classes.append("highlighted")
+
+            style_parts: list[str] = []
+            if n_spans == 1:
+                color = span_colors.get(span_ids[0], palette[0])
+                style_parts.append(f"background-color: {color}")
+            elif n_spans > 1:
+                # Layer multiple spans
+                colors = [
+                    span_colors.get(sid, palette[0]) for sid in span_ids
+                ]
+                gradient = ", ".join(colors)
+                style_parts.append(
+                    f"background: linear-gradient({gradient})"
+                )
+
+            style_attr = f' style="{"; ".join(style_parts)}"' if style_parts else ""
+            span_id_attr = (
+                f' data-span-ids="{",".join(span_ids)}"' if span_ids else ""
+            )
+            count_attr = (
+                f' data-span-count="{n_spans}"' if n_spans > 0 else ""
+            )
+
+            html_parts.append(
+                f'<span class="{" ".join(classes)}" '
+                f'data-index="{i}" data-element="{element_name}"'
+                f"{count_attr}{span_id_attr}{style_attr}>"
+                f"{token_text}</span>"
+            )
+
+            # Add spacing
+            if i < len(space_flags) and space_flags[i]:
+                html_parts.append(" ")
+
+        html_parts.append("</div>")
+
+    html_parts.append("</div>")
+    return "".join(html_parts)
+
+
+def _create_span_labeling_trial(
+    item: Item,
+    template: ItemTemplate,
+    span_display: SpanDisplayConfig,
+    trial_number: int,
+) -> dict[str, JsonValue]:
+    """Create a standalone span labeling trial.
+
+    Uses the ``bead-span-label`` plugin for interactive or static span
+    annotation.
+
+    Parameters
+    ----------
+    item : Item
+        Item with span data.
+    template : ItemTemplate
+        Item template with span_spec.
+    span_display : SpanDisplayConfig
+        Visual configuration.
+    trial_number : int
+        Trial number.
+
+    Returns
+    -------
+    dict[str, JsonValue]
+        A jsPsych trial object using the bead-span-label plugin.
+    """
+    metadata = _serialize_item_metadata(item, template)
+    metadata["trial_number"] = trial_number
+    metadata["trial_type"] = "span_labeling"
+
+    prompt = (
+        template.task_spec.prompt
+        if template.task_spec
+        else "Select and label spans"
+    )
+
+    # Serialize span data for the plugin
+    spans_data = [
+        {
+            "span_id": span.span_id,
+            "segments": [
+                {"element_name": seg.element_name, "indices": seg.indices}
+                for seg in span.segments
+            ],
+            "head_index": span.head_index,
+            "label": (
+                {
+                    "label": span.label.label,
+                    "label_id": span.label.label_id,
+                    "confidence": span.label.confidence,
+                }
+                if span.label
+                else None
+            ),
+            "span_type": span.span_type,
+        }
+        for span in item.spans
+    ]
+
+    relations_data = [
+        {
+            "relation_id": rel.relation_id,
+            "source_span_id": rel.source_span_id,
+            "target_span_id": rel.target_span_id,
+            "label": (
+                {
+                    "label": rel.label.label,
+                    "label_id": rel.label.label_id,
+                    "confidence": rel.label.confidence,
+                }
+                if rel.label
+                else None
+            ),
+            "directed": rel.directed,
+        }
+        for rel in item.span_relations
+    ]
+
+    # Serialize span_spec
+    span_spec_data = None
+    if template.task_spec.span_spec:
+        ss = template.task_spec.span_spec
+        span_spec_data = {
+            "index_mode": ss.index_mode,
+            "interaction_mode": ss.interaction_mode,
+            "label_source": ss.label_source,
+            "labels": ss.labels,
+            "label_colors": ss.label_colors,
+            "allow_overlapping": ss.allow_overlapping,
+            "min_spans": ss.min_spans,
+            "max_spans": ss.max_spans,
+            "enable_relations": ss.enable_relations,
+            "relation_label_source": ss.relation_label_source,
+            "relation_labels": ss.relation_labels,
+            "relation_directed": ss.relation_directed,
+            "min_relations": ss.min_relations,
+            "max_relations": ss.max_relations,
+            "wikidata_language": ss.wikidata_language,
+            "wikidata_entity_types": ss.wikidata_entity_types,
+            "wikidata_result_limit": ss.wikidata_result_limit,
+        }
+
+    # Serialize display config
+    display_config_data = {
+        "highlight_style": span_display.highlight_style,
+        "color_palette": span_display.color_palette,
+        "show_labels": span_display.show_labels,
+        "show_tooltips": span_display.show_tooltips,
+        "token_delimiter": span_display.token_delimiter,
+        "label_position": span_display.label_position,
+    }
+
+    return {
+        "type": "bead-span-label",
+        "tokens": dict(item.tokenized_elements),
+        "space_after": {
+            k: list(v) for k, v in item.token_space_after.items()
+        },
+        "spans": spans_data,
+        "relations": relations_data,
+        "span_spec": span_spec_data,
+        "display_config": display_config_data,
+        "prompt": prompt,
+        "button_label": "Continue",
+        "require_response": True,
+        "data": metadata,
     }

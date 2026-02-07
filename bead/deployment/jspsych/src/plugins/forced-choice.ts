@@ -11,7 +11,7 @@
  * - Preserves all item and template metadata
  *
  * @author Bead Project
- * @version 0.1.0
+ * @version 0.2.0
  */
 
 import type { JsPsych, JsPsychPlugin, KeyboardResponseInfo, PluginInfo } from "../types/jspsych.js";

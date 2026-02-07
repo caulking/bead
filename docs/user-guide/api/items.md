@@ -4,7 +4,7 @@ The `bead.items` module provides task-type-specific utilities for creating exper
 
 ## Task-Type Utilities
 
-The items module provides 8 task-type-specific utilities for programmatic item creation. All utilities follow a consistent API pattern.
+The items module provides 9 task-type-specific utilities for programmatic item creation. All utilities follow a consistent API pattern.
 
 ### Forced Choice
 
@@ -200,6 +200,157 @@ item = create_magnitude_item(
 print(f"Created magnitude item with unit: {item.item_metadata.get('unit')}")
 ```
 
+### Span Labeling
+
+Create items with span annotations for entity labeling, relation extraction, and similar tasks. Spans can be added as standalone items or composed onto any existing task type.
+
+**Standalone span item with pre-defined spans**:
+
+```python
+from bead.items.span_labeling import create_span_item
+from bead.items.spans import Span, SpanSegment, SpanLabel
+from bead.tokenization.config import TokenizerConfig
+
+# create a span item with pre-tokenized text and labeled spans
+item = create_span_item(
+    text="The quick brown fox jumps over the lazy dog",
+    spans=[
+        Span(
+            span_id="s1",
+            segments=[SpanSegment(element_name="text", indices=[1, 2])],
+            label=SpanLabel(label="ADJ"),
+        ),
+        Span(
+            span_id="s2",
+            segments=[SpanSegment(element_name="text", indices=[3])],
+            label=SpanLabel(label="NOUN"),
+        ),
+    ],
+    prompt="Review the highlighted spans:",
+    tokenizer_config=TokenizerConfig(backend="whitespace"),
+)
+
+print(f"Created span item with {len(item.spans)} spans")
+print(f"Tokens: {item.tokenized_elements['text']}")
+```
+
+**Interactive span item for participant annotation**:
+
+```python
+from bead.items.span_labeling import create_interactive_span_item
+from bead.tokenization.config import TokenizerConfig
+
+# create an interactive item where participants select and label spans
+item = create_interactive_span_item(
+    text="Marie Curie discovered radium in Paris.",
+    prompt="Select all named entities and assign a label:",
+    tokenizer_config=TokenizerConfig(backend="whitespace"),
+    label_set=["PERSON", "LOCATION", "SUBSTANCE"],
+    label_source="fixed",
+)
+
+print(f"Created interactive span item")
+print(f"Tokens: {item.tokenized_elements['text']}")
+```
+
+**Composing spans onto an existing item** (any task type):
+
+```python
+from bead.items.ordinal_scale import create_ordinal_scale_item
+from bead.items.span_labeling import add_spans_to_item
+from bead.items.spans import Span, SpanSegment, SpanLabel
+from bead.tokenization.config import TokenizerConfig
+
+# start with a rating item
+rating_item = create_ordinal_scale_item(
+    text="The scientist discovered a new element.",
+    scale_bounds=(1, 7),
+    prompt="Rate the naturalness of this sentence:",
+)
+
+# add span annotations as an overlay
+item_with_spans = add_spans_to_item(
+    item=rating_item,
+    spans=[
+        Span(
+            span_id="agent",
+            segments=[SpanSegment(element_name="text", indices=[0, 1])],
+            label=SpanLabel(label="AGENT"),
+        ),
+    ],
+    tokenizer_config=TokenizerConfig(backend="whitespace"),
+)
+
+print(f"Original spans: {len(rating_item.spans)}")
+print(f"After adding: {len(item_with_spans.spans)}")
+```
+
+**Adding tokenization to an existing item**:
+
+```python
+from bead.items.binary import create_binary_item
+from bead.items.span_labeling import tokenize_item
+from bead.tokenization.config import TokenizerConfig
+
+# create a binary item without tokenization
+binary_item = create_binary_item(
+    text="The cat sat on the mat.",
+    prompt="Is this sentence grammatical?",
+)
+
+# add tokenization data
+tokenized = tokenize_item(
+    binary_item,
+    tokenizer_config=TokenizerConfig(backend="whitespace"),
+)
+
+print(f"Tokenized elements: {list(tokenized.tokenized_elements.keys())}")
+print(f"Tokens for 'text': {tokenized.tokenized_elements.get('text')}")
+```
+
+**Batch creation with a span extractor**:
+
+```python
+from bead.items.span_labeling import create_span_items_from_texts
+from bead.items.spans import Span, SpanSegment, SpanLabel
+from bead.tokenization.config import TokenizerConfig
+
+
+# define a span extractor function
+def find_capitalized_spans(text: str, tokens: list[str]) -> list[Span]:
+    """Extract spans for capitalized words (simple NER heuristic)."""
+    spans: list[Span] = []
+    for i, token in enumerate(tokens):
+        if token[0].isupper() and i > 0:
+            spans.append(
+                Span(
+                    span_id=f"cap_{i}",
+                    segments=[SpanSegment(element_name="text", indices=[i])],
+                    label=SpanLabel(label="ENTITY"),
+                )
+            )
+    return spans
+
+
+sentences = [
+    "Marie Curie was born in Warsaw.",
+    "Albert Einstein developed relativity in Berlin.",
+    "Ada Lovelace wrote the first algorithm.",
+]
+
+items = create_span_items_from_texts(
+    texts=sentences,
+    span_extractor=find_capitalized_spans,
+    prompt="Review the detected entities:",
+    tokenizer_config=TokenizerConfig(backend="whitespace"),
+    labels=["ENTITY"],
+)
+
+print(f"Created {len(items)} span items")
+for item in items:
+    print(f"  {item.rendered_elements['text']}: {len(item.spans)} spans")
+```
+
 ## Language Model Scoring
 
 Score items with language models:
@@ -319,7 +470,7 @@ print(f"Created {len(afc_items)} 2AFC items")
 
 1. **NO Silent Fallbacks**: All errors raise `ValueError` with descriptive messages
 2. **Strict Validation**: Use `zip(..., strict=True)`, explicit parameter checks
-3. **Consistent API**: Same pattern across all 8 task types
+3. **Consistent API**: Same pattern across all 9 task types
 4. **Automatic Metadata**: Utilities populate task-specific metadata (n_options, scale_min/max, etc.)
 
 ## Task Type Summary
@@ -334,6 +485,7 @@ print(f"Created {len(afc_items)} 2AFC items")
 | `cloze` | Fill-in-blank | `create_cloze_item()` |
 | `multi_select` | Checkboxes | `create_multi_select_item()` |
 | `magnitude` | Numeric | `create_magnitude_item()` |
+| `span_labeling` | Entity/span annotation | `create_span_item()` |
 
 ## Next Steps
 

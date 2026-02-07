@@ -20,6 +20,7 @@ type ExperimentType = Literal[
     "slider_rating",
     "binary_choice",
     "forced_choice",
+    "span_labeling",
 ]
 
 # Type alias for UI themes
@@ -35,6 +36,51 @@ def _empty_demographics_fields() -> list[DemographicsFieldConfig]:
 def _empty_instruction_pages() -> list[InstructionPage]:
     """Return empty instruction pages list."""
     return []
+
+
+def _default_span_color_palette() -> list[str]:
+    """Return default span highlight color palette."""
+    return [
+        "#BBDEFB",
+        "#C8E6C9",
+        "#FFE0B2",
+        "#F8BBD0",
+        "#D1C4E9",
+        "#B2EBF2",
+        "#DCEDC8",
+        "#FFD54F",
+    ]
+
+
+class SpanDisplayConfig(BaseModel):
+    """Visual configuration for span rendering in experiments.
+
+    Attributes
+    ----------
+    highlight_style : Literal["background", "underline", "border"]
+        How to visually indicate spans.
+    color_palette : list[str]
+        CSS color values for span highlighting.
+    show_labels : bool
+        Whether to show span labels inline.
+    show_tooltips : bool
+        Whether to show tooltips on hover.
+    token_delimiter : str
+        Delimiter between tokens in display.
+    label_position : Literal["inline", "below", "tooltip"]
+        Where to display span labels.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    highlight_style: Literal["background", "underline", "border"] = "background"
+    color_palette: list[str] = Field(
+        default_factory=_default_span_color_palette
+    )
+    show_labels: bool = True
+    show_tooltips: bool = True
+    token_delimiter: str = " "
+    label_position: Literal["inline", "below", "tooltip"] = "inline"
 
 
 class DemographicsFieldConfig(BaseModel):
@@ -332,6 +378,10 @@ class ExperimentConfig(BaseModel):
     slopit: SlopitIntegrationConfig = Field(
         default_factory=SlopitIntegrationConfig,
         description="Slopit behavioral capture integration (opt-in, disabled)",
+    )
+    span_display: SpanDisplayConfig | None = Field(
+        default=None,
+        description="Span display config (auto-enabled when items have spans)",
     )
 
 

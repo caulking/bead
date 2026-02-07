@@ -1,1 +1,44 @@
 /* Minimal custom styles - let jsPsych handle the layout */
+
+/* === Span labeling styles === */
+
+/* Token grid */
+.bead-span-container { display: flex; flex-wrap: wrap; gap: 2px; line-height: 2; }
+.bead-token { display: inline; padding: 2px 4px; border-radius: 3px; cursor: default; transition: background-color 0.15s; }
+.bead-token.interactive { cursor: pointer; }
+.bead-token.interactive:hover { background-color: rgba(0,0,0,0.08); }
+
+/* Span highlights - layered for overlaps */
+.bead-token.highlighted { position: relative; }
+.bead-token[data-span-count="1"] { background-color: var(--span-color-0); }
+.bead-token[data-span-count="2"] { background: linear-gradient(var(--span-color-0), var(--span-color-1)); }
+
+/* Selection feedback */
+.bead-token.selecting { background-color: #C8E6C9; }
+.bead-token.selecting.invalid { background-color: #FFCDD2; }
+
+/* Label panel */
+.bead-label-selector { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+.bead-label-button { padding: 4px 12px; border-radius: 16px; border: 1px solid #ccc; cursor: pointer; background: white; font-size: 0.9em; }
+.bead-label-button:hover, .bead-label-button.active { border-color: #1976D2; background: #E3F2FD; }
+
+/* Span list */
+.bead-span-list { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 12px; }
+.bead-span-badge { padding: 2px 8px; border-radius: 12px; font-size: 0.85em; }
+
+/* Relation arcs (SVG overlay) */
+.bead-relation-layer { position: absolute; top: 0; left: 0; width: 100%; pointer-events: none; }
+.bead-relation-arc { fill: none; stroke-width: 1.5; }
+.bead-relation-arc.directed { marker-end: url(#arrowhead); }
+.bead-relation-label-text { font-size: 0.75em; fill: #424242; }
+.bead-relation-list { margin-top: 8px; }
+.bead-relation-entry { display: flex; align-items: center; gap: 4px; padding: 2px 0; }
+
+/* Wikidata autocomplete */
+.bead-wikidata-search { position: relative; }
+.bead-wikidata-search input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+.bead-wikidata-results { position: absolute; z-index: 10; width: 100%; max-height: 200px; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 4px; background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+.bead-wikidata-result { padding: 6px 8px; cursor: pointer; }
+.bead-wikidata-result:hover { background: #F5F5F5; }
+.bead-wikidata-result .qid { color: #9E9E9E; font-size: 0.85em; }
+.bead-wikidata-result .description { color: #757575; font-size: 0.85em; }

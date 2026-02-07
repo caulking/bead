@@ -193,8 +193,12 @@ class JsPsychExperimentGenerator:
         self._write_distribution_config()
         self._write_trials_json(lists, items, templates)
 
+        # Detect span usage for HTML template
+        span_enabled = self._detect_span_usage(items, templates)
+        span_wikidata = self._detect_wikidata_usage(templates)
+
         # Generate HTML/CSS/JS files
-        self._generate_html()
+        self._generate_html(span_enabled, span_wikidata)
         self._generate_css()
         self._generate_experiment_script()
         self._generate_config_file()
@@ -203,6 +207,10 @@ class JsPsychExperimentGenerator:
         # Copy slopit bundle if enabled
         if self.config.slopit.enabled:
             self._copy_slopit_bundle()
+
+        # Copy span plugin scripts if needed
+        if span_enabled:
+            self._copy_span_plugin_scripts(span_wikidata)
 
         return self.output_dir
 
@@ -427,9 +435,15 @@ class JsPsychExperimentGenerator:
         self.output_dir.mkdir(parents=True, exist_ok=True)
         (self.output_dir / "css").mkdir(exist_ok=True)
         (self.output_dir / "js").mkdir(exist_ok=True)
+        (self.output_dir / "js" / "plugins").mkdir(parents=True, exist_ok=True)
+        (self.output_dir / "js" / "lib").mkdir(parents=True, exist_ok=True)
         (self.output_dir / "data").mkdir(exist_ok=True)
 
-    def _generate_html(self) -> None:
+    def _generate_html(
+        self,
+        span_enabled: bool = False,
+        span_wikidata: bool = False,
+    ) -> None:
         """Generate index.html file."""
         template = self.jinja_env.get_template("index.html")
 
@@ -438,6 +452,8 @@ class JsPsychExperimentGenerator:
             ui_theme=self.config.ui_theme,
             use_jatos=self.config.use_jatos,
             slopit_enabled=self.config.slopit.enabled,
+            span_enabled=span_enabled,
+            span_wikidata=span_wikidata,
         )
 
         output_file = self.output_dir / "index.html"
@@ -596,3 +612,94 @@ class JsPsychExperimentGenerator:
                 f"Failed to copy slopit bundle to {output_path}: {e}. "
                 f"Check write permissions."
             ) from e
+
+    def _detect_span_usage(
+        self,
+        items: dict[UUID, Item],
+        templates: dict[UUID, ItemTemplate],
+    ) -> bool:
+        """Detect whether any items or templates use span features.
+
+        Parameters
+        ----------
+        items : dict[UUID, Item]
+            Items dictionary.
+        templates : dict[UUID, ItemTemplate]
+            Templates dictionary.
+
+        Returns
+        -------
+        bool
+            True if spans are used.
+        """
+        # Check experiment type
+        if self.config.experiment_type == "span_labeling":
+            return True
+
+        # Check items for span data
+        for item in items.values():
+            if item.spans or item.tokenized_elements:
+                return True
+
+        # Check templates for span_spec
+        for template in templates.values():
+            if template.task_spec.span_spec is not None:
+                return True
+
+        return False
+
+    def _detect_wikidata_usage(
+        self,
+        templates: dict[UUID, ItemTemplate],
+    ) -> bool:
+        """Detect whether any templates use Wikidata label source.
+
+        Parameters
+        ----------
+        templates : dict[UUID, ItemTemplate]
+            Templates dictionary.
+
+        Returns
+        -------
+        bool
+            True if Wikidata is used.
+        """
+        for template in templates.values():
+            if template.task_spec.span_spec is not None:
+                spec = template.task_spec.span_spec
+                if spec.label_source == "wikidata":
+                    return True
+                if spec.relation_label_source == "wikidata":
+                    return True
+        return False
+
+    def _copy_span_plugin_scripts(self, include_wikidata: bool = False) -> None:
+        """Copy span plugin scripts from compiled dist/ to js/ directory.
+
+        Parameters
+        ----------
+        include_wikidata : bool
+            Whether to include the Wikidata search script.
+        """
+        dist_dir = Path(__file__).parent / "dist"
+
+        # Create subdirectories
+        (self.output_dir / "js" / "plugins").mkdir(parents=True, exist_ok=True)
+        (self.output_dir / "js" / "lib").mkdir(parents=True, exist_ok=True)
+
+        scripts = [
+            ("plugins/span-label.js", "js/plugins/span-label.js"),
+            ("lib/span-renderer.js", "js/lib/span-renderer.js"),
+        ]
+
+        if include_wikidata:
+            scripts.append(
+                ("lib/wikidata-search.js", "js/lib/wikidata-search.js")
+            )
+
+        for src_name, dest_name in scripts:
+            src_path = dist_dir / src_name
+            dest_path = self.output_dir / dest_name
+            if src_path.exists():
+                dest_path.write_text(src_path.read_text())
+            # Silently skip if not built yet (TypeScript may not be compiled)

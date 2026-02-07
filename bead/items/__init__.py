@@ -16,6 +16,16 @@ from bead.items.item_template import (
     TaskType,
     TimingParams,
 )
+from bead.items.spans import (
+    LabelSourceType,
+    Span,
+    SpanIndexMode,
+    SpanInteractionMode,
+    SpanLabel,
+    SpanRelation,
+    SpanSegment,
+    SpanSpec,
+)
 
 __all__ = [
     # Item template types
@@ -37,4 +47,13 @@ __all__ = [
     "ItemCollection",
     "ModelOutput",
     "UnfilledSlot",
+    # Span types
+    "LabelSourceType",
+    "Span",
+    "SpanIndexMode",
+    "SpanInteractionMode",
+    "SpanLabel",
+    "SpanRelation",
+    "SpanSegment",
+    "SpanSpec",
 ]

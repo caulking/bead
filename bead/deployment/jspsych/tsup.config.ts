@@ -6,9 +6,13 @@ export default defineConfig({
     "plugins/rating": "src/plugins/rating.ts",
     "plugins/forced-choice": "src/plugins/forced-choice.ts",
     "plugins/cloze-dropdown": "src/plugins/cloze-dropdown.ts",
+    // Span labeling
+    "plugins/span-label": "src/plugins/span-label.ts",
     // Library
     "lib/list-distributor": "src/lib/list-distributor.ts",
     "lib/randomizer": "src/lib/randomizer.ts",
+    "lib/span-renderer": "src/lib/span-renderer.ts",
+    "lib/wikidata-search": "src/lib/wikidata-search.ts",
     // Slopit bundle (behavioral capture)
     "slopit-bundle": "src/slopit/index.ts",
   },
