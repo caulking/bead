@@ -16,6 +16,7 @@
   },
   "scripts": {
     "build": "tsup",
+    "build:gallery": "tsup --config tsup.gallery.config.ts",
     "build:watch": "tsup --watch",
     "typecheck": "tsc --noEmit",
     "lint": "biome lint src",
