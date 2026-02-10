@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Callable, Iterator
+from typing import Protocol
 
 from pydantic import BaseModel, ConfigDict
 
@@ -172,7 +173,7 @@ class SpacyTokenizer:
         try:
             nlp: Callable[..., _SpacyDocProtocol] = spacy.load(model)  # type: ignore[assignment]
         except OSError:
-            # Fall back to blank model
+            # fall back to blank model
             nlp = spacy.blank(self._language)  # type: ignore[assignment]
 
         self._nlp = nlp
@@ -250,7 +251,7 @@ class StanzaTokenizer:
                 **pkg_kwarg,  # type: ignore[reportArgumentType]
             )
         except Exception:
-            # Download model and retry
+            # download model and retry
             stanza.download(self._language, verbose=False)
             nlp = stanza.Pipeline(  # type: ignore[assignment]
                 lang=self._language,
@@ -282,7 +283,7 @@ class StanzaTokenizer:
             for token in sentence.tokens:
                 start_char = token.start_char
                 end_char = token.end_char
-                # Stanza tokens have a misc field; space_after can be
+                # stanza tokens have a misc field; space_after can be
                 # inferred from character offsets or the SpaceAfter=No
                 # annotation in the misc field.
                 space_after = True
@@ -333,31 +334,31 @@ def create_tokenizer(config: TokenizerConfig) -> Callable[[str], TokenizedText]:
         raise ValueError(f"Unknown tokenizer backend: {config.backend}")
 
 
-# Structural typing protocols for spaCy/Stanza (avoids hard imports)
-class _SpacyTokenProtocol:
+# structural typing protocols for spaCy/Stanza (avoids hard imports)
+class _SpacyTokenProtocol(Protocol):
     text: str
     whitespace_: str
     idx: int
 
 
-class _SpacyDocProtocol:
+class _SpacyDocProtocol(Protocol):
     def __iter__(self) -> Iterator[_SpacyTokenProtocol]: ...  # noqa: D105
 
 
-class _StanzaTokenProtocol:
+class _StanzaTokenProtocol(Protocol):
     text: str
     start_char: int
     end_char: int
     misc: str | None
 
 
-class _StanzaSentenceProtocol:
+class _StanzaSentenceProtocol(Protocol):
     tokens: list[_StanzaTokenProtocol]
 
 
-class _StanzaDocProtocol:
+class _StanzaDocProtocol(Protocol):
     sentences: list[_StanzaSentenceProtocol]
 
 
-class _StanzaPipelineProtocol:
+class _StanzaPipelineProtocol(Protocol):
     def __call__(self, text: str) -> _StanzaDocProtocol: ...  # noqa: D102

@@ -362,14 +362,21 @@ item = create_ordinal_scale_item(
     scale_labels={1: "Very unlikely", 5: "Very likely"},
 )
 
-item = add_spans_to_item(item, spans=[
-    Span(span_id="span_0",
-         segments=[SpanSegment(element_name="text", indices=[0, 1])],
-         label=SpanLabel(label="breaker")),
-    Span(span_id="span_1",
-         segments=[SpanSegment(element_name="text", indices=[2])],
-         label=SpanLabel(label="event")),
-])
+item = add_spans_to_item(
+    item,
+    spans=[
+        Span(
+            span_id="span_0",
+            segments=[SpanSegment(element_name="text", indices=[0, 1])],
+            label=SpanLabel(label="breaker"),
+        ),
+        Span(
+            span_id="span_1",
+            segments=[SpanSegment(element_name="text", indices=[2])],
+            label=SpanLabel(label="event"),
+        ),
+    ],
+)
 ```
 
 Color consistency is guaranteed: the same `_assign_span_colors()` function assigns deterministic light/dark color pairs to each unique label. Both the stimulus renderer and the prompt resolver use these assignments, so a span labeled "event" always gets the same background color in the target text and the same highlight color in the question text. The `SpanDisplayConfig.color_palette` (light backgrounds) and `SpanDisplayConfig.dark_color_palette` (subscript badge colors) are index-aligned, producing visually matched pairs.
@@ -524,7 +531,11 @@ output_dir/
 ├── index.html
 ├── js/
 │   ├── experiment.js
-│   └── list_distributor.js
+│   ├── list_distributor.js
+│   ├── plugins/          # span plugin (when spans are used)
+│   │   └── span-label.js
+│   └── lib/              # shared libraries
+│       └── span-renderer.js
 ├── css/
 │   └── experiment.css
 └── data/
@@ -532,7 +543,7 @@ output_dir/
     ├── lists.jsonl
     ├── items.jsonl
     ├── distribution.json
-    └── templates.json
+    └── trials.json
 ```
 
 ## Complete Example

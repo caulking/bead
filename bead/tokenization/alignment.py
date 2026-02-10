@@ -7,6 +7,8 @@ display-token space.
 
 from __future__ import annotations
 
+from typing import Protocol
+
 
 def align_display_to_subword(
     display_tokens: list[str],
@@ -18,9 +20,9 @@ def align_display_to_subword(
     ----------
     display_tokens : list[str]
         Display-level token strings (word-level).
-    subword_tokenizer : PreTrainedTokenizerBase
-        A HuggingFace tokenizer with ``encode`` and ``convert_ids_to_tokens``
-        methods.
+    subword_tokenizer : _PreTrainedTokenizerProtocol
+        A HuggingFace-compatible tokenizer with ``__call__`` and
+        ``convert_ids_to_tokens`` methods.
 
     Returns
     -------
@@ -30,24 +32,24 @@ def align_display_to_subword(
         excluded.
     """
     alignment: list[list[int]] = []
-    # Tokenize each display token individually to get the mapping
+    # tokenize each display token individually to get the mapping
     subword_offset = 0
 
-    # First, tokenize the full text to get the complete subword sequence
+    # first, tokenize the full text to get the complete subword sequence
     full_text = " ".join(display_tokens)
     full_encoding = subword_tokenizer(full_text, add_special_tokens=False)
     full_ids: list[int] = full_encoding["input_ids"]
     full_subword_tokens = subword_tokenizer.convert_ids_to_tokens(full_ids)
 
-    # Now align by tokenizing each display token
+    # now align by tokenizing each display token
     for display_token in display_tokens:
         token_encoding = subword_tokenizer(display_token, add_special_tokens=False)
         token_ids: list[int] = token_encoding["input_ids"]
         n_subwords = len(token_ids)
 
-        # Map to indices in the full subword sequence
+        # map to indices in the full subword sequence
         indices = list(range(subword_offset, subword_offset + n_subwords))
-        # Clamp to valid range
+        # clamp to valid range
         indices = [i for i in indices if i < len(full_subword_tokens)]
         alignment.append(indices)
         subword_offset += n_subwords
@@ -89,8 +91,13 @@ def convert_span_indices(
     return sorted(set(subword_indices))
 
 
-class _PreTrainedTokenizerProtocol:
-    """Structural typing protocol for HuggingFace tokenizers."""
+class _PreTrainedTokenizerProtocol(Protocol):
+    """Structural typing protocol for HuggingFace tokenizers.
+
+    Defines the minimal interface expected from a HuggingFace
+    ``PreTrainedTokenizerBase`` instance: callable tokenization
+    and ID-to-token conversion.
+    """
 
     def __call__(
         self,

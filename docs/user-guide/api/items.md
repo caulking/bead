@@ -310,14 +310,21 @@ item = create_ordinal_scale_item(
     scale_labels={1: "Very unlikely", 5: "Very likely"},
 )
 
-item = add_spans_to_item(item, spans=[
-    Span(span_id="span_0",
-         segments=[SpanSegment(element_name="text", indices=[0, 1])],
-         label=SpanLabel(label="breaker")),
-    Span(span_id="span_1",
-         segments=[SpanSegment(element_name="text", indices=[2])],
-         label=SpanLabel(label="event")),
-])
+item = add_spans_to_item(
+    item,
+    spans=[
+        Span(
+            span_id="span_0",
+            segments=[SpanSegment(element_name="text", indices=[0, 1])],
+            label=SpanLabel(label="breaker"),
+        ),
+        Span(
+            span_id="span_1",
+            segments=[SpanSegment(element_name="text", indices=[2])],
+            label=SpanLabel(label="event"),
+        ),
+    ],
+)
 ```
 
 When this item is deployed, the prompt renders as:

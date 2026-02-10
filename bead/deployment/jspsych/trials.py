@@ -44,19 +44,19 @@ def _serialize_item_metadata(
         Metadata dictionary containing all item and template fields.
     """
     return {
-        # Item identification
+        # item identification
         "item_id": str(item.id),
         "item_created": item.created_at.isoformat(),
         "item_modified": item.modified_at.isoformat(),
-        # Item template reference
+        # item template reference
         "item_template_id": str(item.item_template_id),
-        # Filled template references
+        # filled template references
         "filled_template_refs": [str(ref) for ref in item.filled_template_refs],
-        # Options (for forced_choice/multi_select)
+        # options (for forced_choice/multi_select)
         "options": list(item.options),
-        # Rendered elements
+        # rendered elements
         "rendered_elements": dict(item.rendered_elements),
-        # Unfilled slots (for cloze tasks)
+        # unfilled slots (for cloze tasks)
         "unfilled_slots": [
             {
                 "slot_name": slot.slot_name,
@@ -65,7 +65,7 @@ def _serialize_item_metadata(
             }
             for slot in item.unfilled_slots
         ],
-        # Model outputs
+        # model outputs
         "model_outputs": [
             {
                 "model_name": output.model_name,
@@ -78,18 +78,18 @@ def _serialize_item_metadata(
             }
             for output in item.model_outputs
         ],
-        # Constraint satisfaction
+        # constraint satisfaction
         "constraint_satisfaction": {
             str(k): v for k, v in item.constraint_satisfaction.items()
         },
-        # Item-specific metadata
+        # item-specific metadata
         "item_metadata": dict(item.item_metadata),
-        # Template information
+        # template information
         "template_name": template.name,
         "template_description": template.description,
         "judgment_type": template.judgment_type,
         "task_type": template.task_type,
-        # Template elements
+        # template elements
         "template_elements": [
             {
                 "element_type": elem.element_type,
@@ -105,9 +105,9 @@ def _serialize_item_metadata(
             }
             for elem in template.elements
         ],
-        # Template constraints
+        # template constraints
         "template_constraints": [str(c) for c in template.constraints],
-        # Task specification
+        # task specification
         "task_spec": {
             "prompt": template.task_spec.prompt,
             "scale_bounds": template.task_spec.scale_bounds,
@@ -118,7 +118,7 @@ def _serialize_item_metadata(
             "text_validation_pattern": template.task_spec.text_validation_pattern,
             "max_length": template.task_spec.max_length,
         },
-        # Presentation specification
+        # presentation specification
         "presentation_spec": {
             "mode": template.presentation_spec.mode,
             "chunking": (
@@ -152,11 +152,11 @@ def _serialize_item_metadata(
             ),
             "display_format": template.presentation_spec.display_format,
         },
-        # Presentation order
+        # presentation order
         "presentation_order": template.presentation_order,
-        # Template metadata
+        # template metadata
         "template_metadata": dict(template.template_metadata),
-        # Span annotation data
+        # span annotation data
         "spans": [
             {
                 "span_id": span.span_id,
@@ -296,17 +296,17 @@ def create_trial(
     >>> trial["type"]
     'bead-slider-rating'
     """
-    # Standalone span_labeling experiment type
+    # standalone span_labeling experiment type
     if experiment_config.experiment_type == "span_labeling":
         span_display = experiment_config.span_display or SpanDisplayConfig()
         return _create_span_labeling_trial(item, template, span_display, trial_number)
 
-    # For composite tasks: detect spans and use span-enhanced stimulus HTML
+    # for composite tasks: detect spans and use span-enhanced stimulus HTML
     has_spans = bool(item.spans) and bool(
         template.task_spec.span_spec if template.task_spec else False
     )
 
-    # Resolve span display config for composite tasks with spans
+    # resolve span display config for composite tasks with spans
     span_display = experiment_config.span_display or SpanDisplayConfig()
 
     if experiment_config.experiment_type == "likert_rating":
@@ -389,21 +389,21 @@ def _create_likert_trial(
     dict[str, JsonValue]
         A jsPsych bead-rating trial object.
     """
-    # Generate stimulus HTML from rendered elements
+    # generate stimulus HTML from rendered elements
     if has_spans and span_display:
         stimulus_html = _generate_span_stimulus_html(item, span_display)
     else:
         stimulus_html = _generate_stimulus_html(item)
 
-    # Build scale labels dict for endpoint labels
-    # Keys are stringified ints (JSON object keys are always strings)
+    # build scale labels dict for endpoint labels
+    # keys are stringified ints (JSON object keys are always strings)
     scale_labels: dict[str, JsonValue] = {}
     if config.min_label:
         scale_labels[str(config.scale.min)] = config.min_label
     if config.max_label:
         scale_labels[str(config.scale.max)] = config.max_label
 
-    # Build prompt: stimulus HTML + task prompt if available
+    # build prompt: stimulus HTML + task prompt if available
     prompt = stimulus_html
     if template.task_spec and template.task_spec.prompt:
         task_prompt = template.task_spec.prompt
@@ -412,7 +412,7 @@ def _create_likert_trial(
             task_prompt = _resolve_prompt_references(task_prompt, item, color_map)
         prompt += f'<p class="bead-task-prompt">{task_prompt}</p>'
 
-    # Serialize complete metadata
+    # serialize complete metadata
     metadata = _serialize_item_metadata(item, template)
     metadata["trial_number"] = trial_number
     metadata["trial_type"] = "likert_rating"
@@ -464,7 +464,7 @@ def _create_slider_trial(
     else:
         stimulus_html = _generate_stimulus_html(item)
 
-    # Build prompt: stimulus HTML + resolved task prompt
+    # build prompt: stimulus HTML + resolved task prompt
     prompt_html = stimulus_html
     if template.task_spec and template.task_spec.prompt:
         task_prompt = template.task_spec.prompt
@@ -473,7 +473,7 @@ def _create_slider_trial(
             task_prompt = _resolve_prompt_references(task_prompt, item, color_map)
         prompt_html += f'<p class="bead-task-prompt">{task_prompt}</p>'
 
-    # Serialize complete metadata
+    # serialize complete metadata
     metadata = _serialize_item_metadata(item, template)
     metadata["trial_number"] = trial_number
     metadata["trial_type"] = "slider_rating"
@@ -527,7 +527,7 @@ def _create_binary_choice_trial(
     else:
         stimulus_html = _generate_stimulus_html(item)
 
-    # Serialize complete metadata
+    # serialize complete metadata
     metadata = _serialize_item_metadata(item, template)
     metadata["trial_number"] = trial_number
     metadata["trial_type"] = "binary_choice"
@@ -594,7 +594,7 @@ def _create_forced_choice_trial(
         else "Which option do you choose?"
     )
 
-    # Extract alternatives from item.options (single source of truth)
+    # extract alternatives from item.options (single source of truth)
     if not item.options:
         raise ValueError(
             f"Item {item.id} has no options. "
@@ -607,7 +607,7 @@ def _create_forced_choice_trial(
             f"Forced choice items require at least 2 options."
         )
 
-    # For composite span tasks, render span-highlighted HTML into each alternative
+    # for composite span tasks, render span-highlighted HTML into each alternative
     alternatives: list[str] = list(item.options)
     if has_spans and span_display:
         color_map = _assign_span_colors(item.spans, span_display)
@@ -615,7 +615,7 @@ def _create_forced_choice_trial(
         stimulus_html = _generate_span_stimulus_html(item, span_display)
         prompt = stimulus_html + f"<p>{prompt}</p>"
 
-    # Serialize complete metadata
+    # serialize complete metadata
     metadata = _serialize_item_metadata(item, template)
     metadata["trial_number"] = trial_number
     metadata["trial_type"] = "forced_choice"
@@ -651,18 +651,18 @@ def _generate_stimulus_html(item: Item, include_all: bool = True) -> str:
     if not item.rendered_elements:
         return "<p>No stimulus available</p>"
 
-    # Get rendered elements in a consistent order
+    # get rendered elements in a consistent order
     sorted_keys = sorted(item.rendered_elements.keys())
 
     if include_all:
-        # Include all rendered elements
+        # include all rendered elements
         elements = [
             f'<div class="stimulus-element"><p>{item.rendered_elements[k]}</p></div>'
             for k in sorted_keys
         ]
         return '<div class="stimulus-container">' + "".join(elements) + "</div>"
     else:
-        # Include only the first element (for forced choice where others are options)
+        # include only the first element (for forced choice where others are options)
         first_key = sorted_keys[0]
         element_html = item.rendered_elements[first_key]
         return f'<div class="stimulus-container"><p>{element_html}</p></div>'
@@ -861,7 +861,7 @@ def create_instructions_trial(
     2
     """
     if isinstance(instructions, str):
-        # Simple string: use html-keyboard-response (backward compatible)
+        # simple string: use html-keyboard-response (backward compatible)
         stimulus_html = (
             f'<div class="instructions">'
             f"<h2>Instructions</h2>"
@@ -877,7 +877,7 @@ def create_instructions_trial(
             },
         }
 
-    # InstructionsConfig: use jsPsych instructions plugin
+    # use jsPsych instructions plugin for InstructionsConfig (multi-page)
     pages: list[str] = []
     for i, page in enumerate(instructions.pages):
         page_html = '<div class="instructions-page">'
@@ -885,7 +885,7 @@ def create_instructions_trial(
             page_html += f"<h2>{page.title}</h2>"
         page_html += f"<div>{page.content}</div>"
 
-        # Add page numbers if enabled
+        # add page numbers if enabled
         if instructions.show_page_numbers and len(instructions.pages) > 1:
             page_html += (
                 f'<p class="page-number">Page {i + 1} of {len(instructions.pages)}</p>'
@@ -910,7 +910,19 @@ def create_instructions_trial(
 
 @dataclass(frozen=True)
 class SpanColorMap:
-    """Light and dark color assignments for spans."""
+    """Light and dark color assignments for spans.
+
+    Attributes
+    ----------
+    light_by_span_id : dict[str, str]
+        Light (background) colors keyed by span_id.
+    dark_by_span_id : dict[str, str]
+        Dark (badge) colors keyed by span_id.
+    light_by_label : dict[str, str]
+        Light (background) colors keyed by label name.
+    dark_by_label : dict[str, str]
+        Dark (badge) colors keyed by label name.
+    """
 
     light_by_span_id: dict[str, str]
     dark_by_span_id: dict[str, str]
@@ -1006,7 +1018,7 @@ def _generate_span_stimulus_html(
         tokens = item.tokenized_elements[element_name]
         space_flags = item.token_space_after.get(element_name, [])
 
-        # Build token-to-span mapping
+        # build token-to-span mapping
         token_spans: dict[int, list[str]] = {}
         for span in item.spans:
             for segment in span.segments:
@@ -1016,7 +1028,7 @@ def _generate_span_stimulus_html(
                             token_spans[idx] = []
                         token_spans[idx].append(span.span_id)
 
-        # Assign colors (shared with prompt reference resolution)
+        # assign colors (shared with prompt reference resolution)
         color_map = _assign_span_colors(item.spans, span_display)
         span_colors = color_map.light_by_span_id
 
@@ -1039,7 +1051,7 @@ def _generate_span_stimulus_html(
                 color = span_colors.get(span_ids[0], fallback)
                 style_parts.append(f"background-color: {color}")
             elif n_spans > 1:
-                # Layer multiple spans
+                # layer multiple spans
                 colors = [span_colors.get(sid, fallback) for sid in span_ids]
                 gradient = ", ".join(colors)
                 style_parts.append(f"background: linear-gradient({gradient})")
@@ -1055,7 +1067,7 @@ def _generate_span_stimulus_html(
                 f"{token_text}</span>"
             )
 
-            # Add spacing
+            # add spacing
             if i < len(space_flags) and space_flags[i]:
                 html_parts.append(" ")
 
@@ -1065,7 +1077,7 @@ def _generate_span_stimulus_html(
     return "".join(html_parts)
 
 
-# ── Prompt span reference resolution ──────────────────────────────
+# prompt span reference resolution
 
 _SPAN_REF_PATTERN = re.compile(r"\[\[([^\]:]+?)(?::([^\]]+?))?\]\]")
 
@@ -1258,7 +1270,7 @@ def _create_span_labeling_trial(
         color_map = _assign_span_colors(item.spans, span_display)
         prompt = _resolve_prompt_references(prompt, item, color_map)
 
-    # Serialize span data for the plugin
+    # serialize span data for the plugin
     spans_data = [
         {
             "span_id": span.span_id,
@@ -1300,7 +1312,7 @@ def _create_span_labeling_trial(
         for rel in item.span_relations
     ]
 
-    # Serialize span_spec
+    # serialize span_spec
     span_spec_data = None
     if template.task_spec.span_spec:
         ss = template.task_spec.span_spec
@@ -1324,7 +1336,7 @@ def _create_span_labeling_trial(
             "wikidata_result_limit": ss.wikidata_result_limit,
         }
 
-    # Serialize display config
+    # serialize display config
     display_config_data = {
         "highlight_style": span_display.highlight_style,
         "color_palette": span_display.color_palette,

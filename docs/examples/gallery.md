@@ -476,17 +476,26 @@ Proto-role property rating with highlighted arguments using thematic role labels
         scale_labels={1: "Very unlikely", 5: "Very likely"},
     )
 
-    item = add_spans_to_item(item, spans=[
-        Span(span_id="span_0",
-             segments=[SpanSegment(element_name="text", indices=[0, 1])],
-             label=SpanLabel(label="breaker")),
-        Span(span_id="span_1",
-             segments=[SpanSegment(element_name="text", indices=[2])],
-             label=SpanLabel(label="event")),
-        Span(span_id="span_2",
-             segments=[SpanSegment(element_name="text", indices=[3, 4])],
-             label=SpanLabel(label="breakee")),
-    ])
+    item = add_spans_to_item(
+        item,
+        spans=[
+            Span(
+                span_id="span_0",
+                segments=[SpanSegment(element_name="text", indices=[0, 1])],
+                label=SpanLabel(label="breaker"),
+            ),
+            Span(
+                span_id="span_1",
+                segments=[SpanSegment(element_name="text", indices=[2])],
+                label=SpanLabel(label="event"),
+            ),
+            Span(
+                span_id="span_2",
+                segments=[SpanSegment(element_name="text", indices=[3, 4])],
+                label=SpanLabel(label="breakee"),
+            ),
+        ],
+    )
     ```
 
 === "Trial JSON"
@@ -523,14 +532,21 @@ Veridicality inference with highlighted spans but no labels (null labels). The h
         scale_bounds=(0, 100),
     )
 
-    item = add_spans_to_item(item, spans=[
-        Span(span_id="span_0",
-             segments=[SpanSegment(element_name="text", indices=[1])],
-             label=None),
-        Span(span_id="span_1",
-             segments=[SpanSegment(element_name="text", indices=[3, 4])],
-             label=None),
-    ])
+    item = add_spans_to_item(
+        item,
+        spans=[
+            Span(
+                span_id="span_0",
+                segments=[SpanSegment(element_name="text", indices=[1])],
+                label=None,
+            ),
+            Span(
+                span_id="span_1",
+                segments=[SpanSegment(element_name="text", indices=[3, 4])],
+                label=None,
+            ),
+        ],
+    )
     ```
 
 === "Trial JSON"
@@ -605,20 +621,31 @@ Change-of-location property with four thematic role arguments. Question text use
         options=["Yes", "No"],
     )
 
-    item = add_spans_to_item(item, spans=[
-        Span(span_id="span_0",
-             segments=[SpanSegment(element_name="text", indices=[0, 1])],
-             label=SpanLabel(label="trader")),
-        Span(span_id="span_1",
-             segments=[SpanSegment(element_name="text", indices=[2])],
-             label=SpanLabel(label="event")),
-        Span(span_id="span_2",
-             segments=[SpanSegment(element_name="text", indices=[3, 4])],
-             label=SpanLabel(label="traded-away")),
-        Span(span_id="span_3",
-             segments=[SpanSegment(element_name="text", indices=[6, 7])],
-             label=SpanLabel(label="traded-for")),
-    ])
+    item = add_spans_to_item(
+        item,
+        spans=[
+            Span(
+                span_id="span_0",
+                segments=[SpanSegment(element_name="text", indices=[0, 1])],
+                label=SpanLabel(label="trader"),
+            ),
+            Span(
+                span_id="span_1",
+                segments=[SpanSegment(element_name="text", indices=[2])],
+                label=SpanLabel(label="event"),
+            ),
+            Span(
+                span_id="span_2",
+                segments=[SpanSegment(element_name="text", indices=[3, 4])],
+                label=SpanLabel(label="traded-away"),
+            ),
+            Span(
+                span_id="span_3",
+                segments=[SpanSegment(element_name="text", indices=[6, 7])],
+                label=SpanLabel(label="traded-for"),
+            ),
+        ],
+    )
     ```
 
 === "Trial JSON"
@@ -657,11 +684,16 @@ Event summarization with a highlighted event span. The annotated span draws atte
         max_length=200,
     )
 
-    item = add_spans_to_item(item, spans=[
-        Span(span_id="span_0",
-             segments=[SpanSegment(element_name="text", indices=[21])],
-             label=SpanLabel(label="event")),
-    ])
+    item = add_spans_to_item(
+        item,
+        spans=[
+            Span(
+                span_id="span_0",
+                segments=[SpanSegment(element_name="text", indices=[21])],
+                label=SpanLabel(label="event"),
+            ),
+        ],
+    )
     ```
 
 === "Trial JSON"

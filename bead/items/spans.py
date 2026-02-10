@@ -14,7 +14,7 @@ from pydantic import Field, field_validator
 
 from bead.data.base import BeadBaseModel
 
-# Same recursive type as in item.py and item_template.py; duplicated here
+# same recursive type as in item.py and item_template.py; duplicated here
 # to avoid circular imports (item.py imports Span from this module).
 type MetadataValue = (
     str | int | float | bool | None | dict[str, MetadataValue] | list[MetadataValue]
@@ -25,7 +25,7 @@ SpanInteractionMode = Literal["static", "interactive"]
 LabelSourceType = Literal["fixed", "wikidata"]
 
 
-# Factory functions for default values
+# factory functions for default values
 def _empty_span_segment_list() -> list[SpanSegment]:
     """Return empty SpanSegment list."""
     return []
@@ -346,7 +346,7 @@ class SpanSpec(BeadBaseModel):
     interaction_mode: SpanInteractionMode = Field(
         default="static", description="Span interaction mode"
     )
-    # Span label config
+    # span label config
     label_source: LabelSourceType = Field(
         default="fixed", description="Span label source"
     )
@@ -363,7 +363,7 @@ class SpanSpec(BeadBaseModel):
     max_spans: int | None = Field(
         default=None, description="Maximum allowed spans (interactive)"
     )
-    # Relation config
+    # relation config
     enable_relations: bool = Field(
         default=False, description="Whether relation annotation is enabled"
     )
@@ -385,7 +385,7 @@ class SpanSpec(BeadBaseModel):
     max_relations: int | None = Field(
         default=None, description="Maximum allowed relations (interactive)"
     )
-    # Wikidata config (shared by span labels and relation labels)
+    # wikidata config (shared by span labels and relation labels)
     wikidata_language: str = Field(
         default="en", description="Language for Wikidata entity search"
     )

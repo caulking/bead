@@ -9,13 +9,13 @@ from pydantic import Field, field_validator, model_validator
 from bead.data.base import BeadBaseModel
 from bead.items.spans import Span, SpanRelation
 
-# Type aliases for JSON-serializable metadata values
+# type aliases for JSON-serializable metadata values
 type MetadataValue = (
     str | int | float | bool | None | dict[str, MetadataValue] | list[MetadataValue]
 )
 
 
-# Factory functions for default values with explicit types
+# factory functions for default values with explicit types
 def _empty_uuid_list() -> list[UUID]:
     """Return empty UUID list."""
     return []
@@ -233,6 +233,16 @@ class Item(BeadBaseModel):
         Constraint UUIDs mapped to satisfaction status.
     item_metadata : dict[str, MetadataValue]
         Additional metadata for this item.
+    spans : list[Span]
+        Span annotations for this item (default: empty).
+    span_relations : list[SpanRelation]
+        Relations between spans, directed or undirected (default: empty).
+    tokenized_elements : dict[str, list[str]]
+        Tokenized text for span indexing, keyed by element name
+        (default: empty).
+    token_space_after : dict[str, list[bool]]
+        Per-token space_after flags for artifact-free rendering
+        (default: empty).
 
     Examples
     --------
@@ -284,7 +294,7 @@ class Item(BeadBaseModel):
     item_metadata: dict[str, MetadataValue] = Field(
         default_factory=_empty_metadata_dict, description="Additional metadata"
     )
-    # Span annotation fields (all default empty, backward compatible)
+    # span annotation fields (all default empty, backward compatible)
     spans: list[Span] = Field(
         default_factory=_empty_span_list,
         description="Span annotations for this item",

@@ -87,7 +87,7 @@ class JsPsychExperimentGenerator:
         self.rating_config = rating_config or RatingScaleConfig()
         self.choice_config = choice_config or ChoiceConfig()
 
-        # Setup Jinja2 environment
+        # setup Jinja2 environment
         template_dir = Path(__file__).parent / "templates"
         self.jinja_env = Environment(loader=FileSystemLoader(str(template_dir)))
 
@@ -156,7 +156,7 @@ class JsPsychExperimentGenerator:
         ... )
         >>> # output_dir = generator.generate(lists, items, templates)
         """
-        # Validate inputs (no fallbacks)
+        # validate inputs (no fallbacks)
         if not lists:
             raise ValueError(
                 "generate() requires at least one ExperimentList. Got empty list."
@@ -178,37 +178,37 @@ class JsPsychExperimentGenerator:
                 "provide an empty template: {item.item_template_id: ItemTemplate(...)}."
             )
 
-        # Validate all item references can be resolved
+        # validate all item references can be resolved
         self._validate_item_references(lists, items)
 
-        # Validate all template references can be resolved
+        # validate all template references can be resolved
         self._validate_template_references(items, templates)
 
-        # Create directory structure
+        # create directory structure
         self._create_directory_structure()
 
-        # Write batch data files (lists, items, distribution config, trials)
+        # write batch data files (lists, items, distribution config, trials)
         self._write_lists_jsonl(lists)
         self._write_items_jsonl(items)
         self._write_distribution_config()
         self._write_trials_json(lists, items, templates)
 
-        # Detect span usage for HTML template
+        # detect span usage for HTML template
         span_enabled = self._detect_span_usage(items, templates)
         span_wikidata = self._detect_wikidata_usage(templates)
 
-        # Generate HTML/CSS/JS files
+        # generate HTML/CSS/JS files
         self._generate_html(span_enabled, span_wikidata)
         self._generate_css()
         self._generate_experiment_script()
         self._generate_config_file()
         self._copy_list_distributor_script()
 
-        # Copy slopit bundle if enabled
+        # copy slopit bundle if enabled
         if self.config.slopit.enabled:
             self._copy_slopit_bundle()
 
-        # Copy span plugin scripts if needed
+        # copy span plugin scripts if needed
         if span_enabled:
             self._copy_span_plugin_scripts(span_wikidata)
 
@@ -313,7 +313,7 @@ class JsPsychExperimentGenerator:
         """
         output_path = self.output_dir / "data" / "items.jsonl"
         try:
-            # Convert dict values to list for serialization
+            # convert dict values to list for serialization
             items_list = list(items.values())
             write_jsonlines(items_list, output_path)
         except SerializationError as e:
@@ -385,7 +385,7 @@ class JsPsychExperimentGenerator:
         """
         output_path = self.output_dir / "data" / "distribution.json"
         try:
-            # Use model_dump_json() to handle UUID serialization
+            # use model_dump_json() to handle UUID serialization
             json_str = self.config.distribution_strategy.model_dump_json(indent=2)
             output_path.write_text(json_str)
         except (OSError, TypeError) as e:
@@ -464,14 +464,14 @@ class JsPsychExperimentGenerator:
         template_file = Path(__file__).parent / "templates" / "experiment.css"
         output_file = self.output_dir / "css" / "experiment.css"
 
-        # Copy CSS template directly (no rendering needed)
+        # copy CSS template directly (no rendering needed)
         output_file.write_text(template_file.read_text())
 
     def _generate_experiment_script(self) -> None:
         """Generate experiment.js file."""
         template = self.jinja_env.get_template("experiment.js.template")
 
-        # Auto-generate Prolific redirect URL if completion code is provided
+        # auto-generate Prolific redirect URL if completion code is provided
         on_finish_url = self.config.on_finish_url
         if self.config.prolific_completion_code:
             on_finish_url = (
@@ -479,7 +479,7 @@ class JsPsychExperimentGenerator:
                 f"cc={self.config.prolific_completion_code}"
             )
 
-        # Prepare slopit config for template
+        # prepare slopit config for template
         slopit_config = None
         if self.config.slopit.enabled:
             slopit_config = {
@@ -489,7 +489,7 @@ class JsPsychExperimentGenerator:
                 "target_selectors": self.config.slopit.target_selectors,
             }
 
-        # Prepare demographics config for template
+        # prepare demographics config for template
         demographics_enabled = False
         demographics_title = "Participant Information"
         demographics_fields: list[dict[str, JsonValue]] = []
@@ -515,7 +515,7 @@ class JsPsychExperimentGenerator:
                     field_data["range_max"] = field.range.max
                 demographics_fields.append(field_data)
 
-        # Prepare instructions config for template
+        # prepare instructions config for template
         instructions_is_multi_page = isinstance(
             self.config.instructions, InstructionsConfig
         )
@@ -540,7 +540,7 @@ class JsPsychExperimentGenerator:
                     }
                 )
         else:
-            # Simple string instructions
+            # simple string instructions
             simple_instructions = (
                 self.config.instructions
                 if isinstance(self.config.instructions, str)
@@ -556,12 +556,12 @@ class JsPsychExperimentGenerator:
             on_finish_url=on_finish_url,
             slopit_enabled=self.config.slopit.enabled,
             slopit_config=slopit_config,
-            # Demographics variables
+            # demographics variables
             demographics_enabled=demographics_enabled,
             demographics_title=demographics_title,
             demographics_fields=demographics_fields,
             demographics_submit_text=demographics_submit_text,
-            # Instructions variables
+            # instructions variables
             instructions_is_multi_page=instructions_is_multi_page,
             instructions_pages=instructions_pages,
             instructions_show_page_numbers=instructions_show_page_numbers,
@@ -592,7 +592,7 @@ class JsPsychExperimentGenerator:
         OSError
             If copying fails.
         """
-        # Look for slopit bundle in dist directory
+        # look for slopit bundle in dist directory
         dist_dir = Path(__file__).parent / "dist"
         bundle_path = dist_dir / "slopit-bundle.js"
 
@@ -632,16 +632,16 @@ class JsPsychExperimentGenerator:
         bool
             True if spans are used.
         """
-        # Check experiment type
+        # check experiment type
         if self.config.experiment_type == "span_labeling":
             return True
 
-        # Check items for span data
+        # check items for span data
         for item in items.values():
             if item.spans or item.tokenized_elements:
                 return True
 
-        # Check templates for span_spec
+        # check templates for span_spec
         for template in templates.values():
             if template.task_spec.span_spec is not None:
                 return True
@@ -683,7 +683,7 @@ class JsPsychExperimentGenerator:
         """
         dist_dir = Path(__file__).parent / "dist"
 
-        # Create subdirectories
+        # create subdirectories
         (self.output_dir / "js" / "plugins").mkdir(parents=True, exist_ok=True)
         (self.output_dir / "js" / "lib").mkdir(parents=True, exist_ok=True)
 
@@ -700,4 +700,4 @@ class JsPsychExperimentGenerator:
             dest_path = self.output_dir / dest_name
             if src_path.exists():
                 dest_path.write_text(src_path.read_text())
-            # Silently skip if not built yet (TypeScript may not be compiled)
+            # silently skip if not built yet (TypeScript may not be compiled)

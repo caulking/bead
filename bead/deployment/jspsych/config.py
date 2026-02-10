@@ -14,7 +14,7 @@ from bead.config.deployment import SlopitIntegrationConfig
 from bead.data.range import Range
 from bead.deployment.distribution import ListDistributionStrategy
 
-# Type alias for experiment types
+# type alias for experiment types
 type ExperimentType = Literal[
     "likert_rating",
     "slider_rating",
@@ -23,11 +23,11 @@ type ExperimentType = Literal[
     "span_labeling",
 ]
 
-# Type alias for UI themes
+# type alias for UI themes
 type UITheme = Literal["light", "dark", "auto"]
 
 
-# Factory functions for default lists
+# factory functions for default lists
 def _empty_demographics_fields() -> list[DemographicsFieldConfig]:
     """Return empty demographics field list."""
     return []
@@ -303,7 +303,8 @@ class ExperimentConfig(BaseModel):
     Attributes
     ----------
     experiment_type : ExperimentType
-        Type of experiment (likert_rating, slider_rating, binary_choice, forced_choice)
+        Type of experiment (likert_rating, slider_rating, binary_choice,
+        forced_choice, span_labeling).
     title : str
         Experiment title displayed to participants
     description : str
@@ -343,6 +344,10 @@ class ExperimentConfig(BaseModel):
         Slopit behavioral capture integration configuration (default: disabled).
         When enabled, captures keystroke dynamics, focus patterns, and paste events
         during experiment trials for AI-assisted response detection.
+    span_display : SpanDisplayConfig | None
+        Span display configuration (default: None). Auto-enabled when items
+        contain span annotations. Controls highlight style, colors, and
+        label placement for span rendering.
 
     Examples
     --------

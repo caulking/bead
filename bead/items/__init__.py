@@ -1,5 +1,7 @@
 """Item models for experimental stimuli."""
 
+from __future__ import annotations
+
 from bead.items.item import Item, ItemCollection, ModelOutput, UnfilledSlot
 from bead.items.item_template import (
     ChunkingSpec,
