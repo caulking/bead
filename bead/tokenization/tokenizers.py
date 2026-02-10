@@ -159,7 +159,7 @@ class SpacyTokenizer:
             return self._nlp
 
         try:
-            import spacy  # noqa: PLC0415
+            import spacy  # noqa: PLC0415  # type: ignore[reportMissingImports]
         except ImportError as e:
             raise ImportError(
                 "spaCy is required for SpacyTokenizer. "
@@ -233,7 +233,7 @@ class StanzaTokenizer:
             return self._nlp
 
         try:
-            import stanza  # noqa: PLC0415
+            import stanza  # noqa: PLC0415  # type: ignore[reportMissingImports]
         except ImportError as e:
             raise ImportError(
                 "Stanza is required for StanzaTokenizer. "
