@@ -202,9 +202,7 @@ def _serialize_item_metadata(
             for rel in item.span_relations
         ],
         "tokenized_elements": dict(item.tokenized_elements),
-        "token_space_after": {
-            k: list(v) for k, v in item.token_space_after.items()
-        },
+        "token_space_after": {k: list(v) for k, v in item.token_space_after.items()},
         "span_spec": (
             {
                 "index_mode": template.task_spec.span_spec.index_mode,
@@ -301,9 +299,7 @@ def create_trial(
     # Standalone span_labeling experiment type
     if experiment_config.experiment_type == "span_labeling":
         span_display = experiment_config.span_display or SpanDisplayConfig()
-        return _create_span_labeling_trial(
-            item, template, span_display, trial_number
-        )
+        return _create_span_labeling_trial(item, template, span_display, trial_number)
 
     # For composite tasks: detect spans and use span-enhanced stimulus HTML
     has_spans = bool(item.spans) and bool(
@@ -317,29 +313,45 @@ def create_trial(
         if rating_config is None:
             raise ValueError("rating_config required for likert_rating experiments")
         return _create_likert_trial(
-            item, template, rating_config, trial_number,
-            has_spans=has_spans, span_display=span_display,
+            item,
+            template,
+            rating_config,
+            trial_number,
+            has_spans=has_spans,
+            span_display=span_display,
         )
     elif experiment_config.experiment_type == "slider_rating":
         if rating_config is None:
             raise ValueError("rating_config required for slider_rating experiments")
         return _create_slider_trial(
-            item, template, rating_config, trial_number,
-            has_spans=has_spans, span_display=span_display,
+            item,
+            template,
+            rating_config,
+            trial_number,
+            has_spans=has_spans,
+            span_display=span_display,
         )
     elif experiment_config.experiment_type == "binary_choice":
         if choice_config is None:
             raise ValueError("choice_config required for binary_choice experiments")
         return _create_binary_choice_trial(
-            item, template, choice_config, trial_number,
-            has_spans=has_spans, span_display=span_display,
+            item,
+            template,
+            choice_config,
+            trial_number,
+            has_spans=has_spans,
+            span_display=span_display,
         )
     elif experiment_config.experiment_type == "forced_choice":
         if choice_config is None:
             raise ValueError("choice_config required for forced_choice experiments")
         return _create_forced_choice_trial(
-            item, template, choice_config, trial_number,
-            has_spans=has_spans, span_display=span_display,
+            item,
+            template,
+            choice_config,
+            trial_number,
+            has_spans=has_spans,
+            span_display=span_display,
         )
     else:
         raise ValueError(
@@ -397,9 +409,7 @@ def _create_likert_trial(
         task_prompt = template.task_spec.prompt
         if has_spans and span_display:
             color_map = _assign_span_colors(item.spans, span_display)
-            task_prompt = _resolve_prompt_references(
-                task_prompt, item, color_map
-            )
+            task_prompt = _resolve_prompt_references(task_prompt, item, color_map)
         prompt += f'<p class="bead-task-prompt">{task_prompt}</p>'
 
     # Serialize complete metadata
@@ -460,9 +470,7 @@ def _create_slider_trial(
         task_prompt = template.task_spec.prompt
         if has_spans and span_display:
             color_map = _assign_span_colors(item.spans, span_display)
-            task_prompt = _resolve_prompt_references(
-                task_prompt, item, color_map
-            )
+            task_prompt = _resolve_prompt_references(task_prompt, item, color_map)
         prompt_html += f'<p class="bead-task-prompt">{task_prompt}</p>'
 
     # Serialize complete metadata
@@ -948,9 +956,7 @@ def _assign_span_colors(
                 light_by_label[label_name] = light_palette[
                     color_idx % len(light_palette)
                 ]
-                dark_by_label[label_name] = dark_palette[
-                    color_idx % len(dark_palette)
-                ]
+                dark_by_label[label_name] = dark_palette[color_idx % len(dark_palette)]
                 color_idx += 1
             light_by_span_id[span.span_id] = light_by_label[label_name]
             dark_by_span_id[span.span_id] = dark_by_label[label_name]
@@ -958,9 +964,7 @@ def _assign_span_colors(
             light_by_span_id[span.span_id] = light_palette[
                 color_idx % len(light_palette)
             ]
-            dark_by_span_id[span.span_id] = dark_palette[
-                color_idx % len(dark_palette)
-            ]
+            dark_by_span_id[span.span_id] = dark_palette[color_idx % len(dark_palette)]
             color_idx += 1
 
     return SpanColorMap(
@@ -1036,21 +1040,13 @@ def _generate_span_stimulus_html(
                 style_parts.append(f"background-color: {color}")
             elif n_spans > 1:
                 # Layer multiple spans
-                colors = [
-                    span_colors.get(sid, fallback) for sid in span_ids
-                ]
+                colors = [span_colors.get(sid, fallback) for sid in span_ids]
                 gradient = ", ".join(colors)
-                style_parts.append(
-                    f"background: linear-gradient({gradient})"
-                )
+                style_parts.append(f"background: linear-gradient({gradient})")
 
             style_attr = f' style="{"; ".join(style_parts)}"' if style_parts else ""
-            span_id_attr = (
-                f' data-span-ids="{",".join(span_ids)}"' if span_ids else ""
-            )
-            count_attr = (
-                f' data-span-count="{n_spans}"' if n_spans > 0 else ""
-            )
+            span_id_attr = f' data-span-ids="{",".join(span_ids)}"' if span_ids else ""
+            count_attr = f' data-span-count="{n_spans}"' if n_spans > 0 else ""
 
             html_parts.append(
                 f'<span class="{" ".join(classes)}" '
@@ -1139,9 +1135,7 @@ def _auto_fill_span_text(label: str, item: Item) -> str:
             break
 
     if target_span is None:
-        available = [
-            s.label.label for s in item.spans if s.label and s.label.label
-        ]
+        available = [s.label.label for s in item.spans if s.label and s.label.label]
         raise ValueError(
             f"Prompt references span label '{label}' but no span with "
             f"that label exists. Available labels: {available}"
@@ -1196,9 +1190,7 @@ def _resolve_prompt_references(
     if not refs:
         return prompt
 
-    available = {
-        s.label.label for s in item.spans if s.label and s.label.label
-    }
+    available = {s.label.label for s in item.spans if s.label and s.label.label}
     for ref in refs:
         if ref.label not in available:
             raise ValueError(
@@ -1259,9 +1251,7 @@ def _create_span_labeling_trial(
     metadata["trial_type"] = "span_labeling"
 
     prompt = (
-        template.task_spec.prompt
-        if template.task_spec
-        else "Select and label spans"
+        template.task_spec.prompt if template.task_spec else "Select and label spans"
     )
 
     if item.spans:
@@ -1347,9 +1337,7 @@ def _create_span_labeling_trial(
     return {
         "type": "bead-span-label",
         "tokens": dict(item.tokenized_elements),
-        "space_after": {
-            k: list(v) for k, v in item.token_space_after.items()
-        },
+        "space_after": {k: list(v) for k, v in item.token_space_after.items()},
         "spans": spans_data,
         "relations": relations_data,
         "span_spec": span_spec_data,

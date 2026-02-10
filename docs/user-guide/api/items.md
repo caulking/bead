@@ -249,7 +249,7 @@ item = create_interactive_span_item(
     label_source="fixed",
 )
 
-print(f"Created interactive span item")
+print("Created interactive span item")
 print(f"Tokens: {item.tokenized_elements['text']}")
 ```
 

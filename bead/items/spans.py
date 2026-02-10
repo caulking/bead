@@ -183,9 +183,7 @@ class Span(BeadBaseModel):
     label: SpanLabel | None = Field(
         default=None, description="Span label (None = to-be-labeled)"
     )
-    span_type: str | None = Field(
-        default=None, description="Semantic category"
-    )
+    span_type: str | None = Field(default=None, description="Semantic category")
     span_metadata: dict[str, MetadataValue] = Field(
         default_factory=_empty_span_metadata, description="Span metadata"
     )
@@ -240,12 +238,8 @@ class SpanRelation(BeadBaseModel):
     relation_id: str = Field(..., description="Unique relation ID within item")
     source_span_id: str = Field(..., description="Source span ID")
     target_span_id: str = Field(..., description="Target span ID")
-    label: SpanLabel | None = Field(
-        default=None, description="Relation label"
-    )
-    directed: bool = Field(
-        default=True, description="Whether relation is directed"
-    )
+    label: SpanLabel | None = Field(default=None, description="Relation label")
+    directed: bool = Field(default=True, description="Whether relation is directed")
     relation_metadata: dict[str, MetadataValue] = Field(
         default_factory=_empty_relation_metadata,
         description="Relation metadata",
@@ -348,9 +342,7 @@ class SpanSpec(BeadBaseModel):
         Maximum number of Wikidata search results.
     """
 
-    index_mode: SpanIndexMode = Field(
-        default="token", description="Span indexing mode"
-    )
+    index_mode: SpanIndexMode = Field(default="token", description="Span indexing mode")
     interaction_mode: SpanInteractionMode = Field(
         default="static", description="Span interaction mode"
     )
@@ -358,9 +350,7 @@ class SpanSpec(BeadBaseModel):
     label_source: LabelSourceType = Field(
         default="fixed", description="Span label source"
     )
-    labels: list[str] | None = Field(
-        default=None, description="Fixed span label set"
-    )
+    labels: list[str] | None = Field(default=None, description="Fixed span label set")
     label_colors: dict[str, str] | None = Field(
         default=None, description="CSS colors per span label"
     )

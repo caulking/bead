@@ -41,9 +41,7 @@ def align_display_to_subword(
 
     # Now align by tokenizing each display token
     for display_token in display_tokens:
-        token_encoding = subword_tokenizer(
-            display_token, add_special_tokens=False
-        )
+        token_encoding = subword_tokenizer(display_token, add_special_tokens=False)
         token_ids: list[int] = token_encoding["input_ids"]
         n_subwords = len(token_ids)
 
@@ -100,6 +98,4 @@ class _PreTrainedTokenizerProtocol:
         add_special_tokens: bool = True,
     ) -> dict[str, list[int]]: ...
 
-    def convert_ids_to_tokens(
-        self, ids: list[int]
-    ) -> list[str]: ...
+    def convert_ids_to_tokens(self, ids: list[int]) -> list[str]: ...

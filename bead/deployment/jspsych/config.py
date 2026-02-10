@@ -91,12 +91,8 @@ class SpanDisplayConfig(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     highlight_style: Literal["background", "underline", "border"] = "background"
-    color_palette: list[str] = Field(
-        default_factory=_default_span_color_palette
-    )
-    dark_color_palette: list[str] = Field(
-        default_factory=_default_span_dark_palette
-    )
+    color_palette: list[str] = Field(default_factory=_default_span_color_palette)
+    dark_color_palette: list[str] = Field(default_factory=_default_span_dark_palette)
     show_labels: bool = True
     show_tooltips: bool = True
     token_delimiter: str = " "

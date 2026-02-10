@@ -170,12 +170,13 @@ class SpacyTokenizer:
             model = f"{self._language}_core_web_sm"
 
         try:
-            self._nlp = spacy.load(model)
+            nlp: Callable[..., _SpacyDocProtocol] = spacy.load(model)  # type: ignore[assignment]
         except OSError:
             # Fall back to blank model
-            self._nlp = spacy.blank(self._language)
+            nlp = spacy.blank(self._language)  # type: ignore[assignment]
 
-        return self._nlp
+        self._nlp = nlp
+        return nlp
 
     def __call__(self, text: str) -> TokenizedText:
         """Tokenize text using spaCy.
@@ -238,22 +239,28 @@ class StanzaTokenizer:
                 "Install it with: pip install 'bead[tokenization]'"
             ) from e
 
-        kwargs: dict[str, str | bool] = {
-            "lang": self._language,
-            "processors": "tokenize",
-            "verbose": False,
-        }
-        if self._model_name is not None:
-            kwargs["package"] = self._model_name
+        pkg = self._model_name
+        pkg_kwarg = {"package": pkg} if pkg is not None else {}
 
         try:
-            self._nlp = stanza.Pipeline(**kwargs)
+            nlp: _StanzaPipelineProtocol = stanza.Pipeline(  # type: ignore[assignment]
+                lang=self._language,
+                processors="tokenize",
+                verbose=False,
+                **pkg_kwarg,  # type: ignore[reportArgumentType]
+            )
         except Exception:
             # Download model and retry
             stanza.download(self._language, verbose=False)
-            self._nlp = stanza.Pipeline(**kwargs)
+            nlp = stanza.Pipeline(  # type: ignore[assignment]
+                lang=self._language,
+                processors="tokenize",
+                verbose=False,
+                **pkg_kwarg,  # type: ignore[reportArgumentType]
+            )
 
-        return self._nlp
+        self._nlp = nlp
+        return nlp
 
     def __call__(self, text: str) -> TokenizedText:
         """Tokenize text using Stanza.
@@ -319,13 +326,9 @@ def create_tokenizer(config: TokenizerConfig) -> Callable[[str], TokenizedText]:
     if config.backend == "whitespace":
         return WhitespaceTokenizer()
     elif config.backend == "spacy":
-        return SpacyTokenizer(
-            language=config.language, model_name=config.model_name
-        )
+        return SpacyTokenizer(language=config.language, model_name=config.model_name)
     elif config.backend == "stanza":
-        return StanzaTokenizer(
-            language=config.language, model_name=config.model_name
-        )
+        return StanzaTokenizer(language=config.language, model_name=config.model_name)
     else:
         raise ValueError(f"Unknown tokenizer backend: {config.backend}")
 

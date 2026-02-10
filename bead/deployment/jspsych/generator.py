@@ -693,9 +693,7 @@ class JsPsychExperimentGenerator:
         ]
 
         if include_wikidata:
-            scripts.append(
-                ("lib/wikidata-search.js", "js/lib/wikidata-search.js")
-            )
+            scripts.append(("lib/wikidata-search.js", "js/lib/wikidata-search.js"))
 
         for src_name, dest_name in scripts:
             src_path = dist_dir / src_name

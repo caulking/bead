@@ -323,9 +323,7 @@ def add_spans_to_item(
     prompt_text = item.rendered_elements.get("prompt", "")
     if prompt_text:
         all_spans = list(item.spans) + spans
-        span_labels = {
-            s.label.label for s in all_spans if s.label is not None
-        }
+        span_labels = {s.label.label for s in all_spans if s.label is not None}
         for match in _SPAN_REF_PATTERN.finditer(prompt_text):
             ref_label = match.group(1)
             if ref_label not in span_labels:
