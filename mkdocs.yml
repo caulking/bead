@@ -93,6 +93,7 @@ nav:
     - bead.items: api/items.md
     - bead.lists: api/lists.md
     - bead.deployment: api/deployment.md
+    - bead.tokenization: api/tokenization.md
     - bead.active_learning: api/active_learning.md
     - bead.config: api/config.md
     - bead.data: api/data.md
@@ -101,4 +102,4 @@ nav:
     - Setup: developer-guide/setup.md
     - Testing: developer-guide/testing.md
     - Contributing: developer-guide/contributing.md
-  - Examples: examples/gallery.md
+  - Task Gallery: examples/gallery.md

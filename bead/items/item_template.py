@@ -8,14 +8,16 @@ from uuid import UUID
 from pydantic import Field, ValidationInfo, field_validator
 
 from bead.data.base import BeadBaseModel
+from bead.items.spans import SpanSpec
+from bead.tokenization.config import TokenizerConfig
 
-# Type aliases for JSON-serializable metadata values
+# type aliases for JSON-serializable metadata values
 type MetadataValue = (
     str | int | float | bool | None | dict[str, MetadataValue] | list[MetadataValue]
 )
 
 
-# Factory functions for default values with explicit types
+# factory functions for default values with explicit types
 def _empty_item_element_list() -> list[ItemElement]:
     """Return empty ItemElement list."""
     return []
@@ -41,7 +43,7 @@ def _empty_uuid_list() -> list[UUID]:
     return []
 
 
-# Type aliases for judgment and task types
+# type aliases for judgment and task types
 JudgmentType = Literal[
     "acceptability",  # Linguistic acceptability/grammaticality/naturalness
     "inference",  # Semantic relationship (NLI: entailment/neutral/contradiction)
@@ -49,6 +51,7 @@ JudgmentType = Literal[
     "plausibility",  # Likelihood/plausibility of events or statements
     "comprehension",  # Understanding/recall of content
     "preference",  # Subjective preference between alternatives
+    "extraction",  # Extracting structured info (labeled spans) from text
 ]
 
 TaskType = Literal[
@@ -60,6 +63,7 @@ TaskType = Literal[
     "categorical",  # Pick from unordered categories (UI: dropdown, radio)
     "free_text",  # Open-ended text (UI: text input, textarea)
     "cloze",  # Fill-in-the-blank with unfilled slots (UI: inferred)
+    "span_labeling",  # Select and label text spans (UI: token selection)
 ]
 
 ElementRefType = Literal["text", "filled_template_ref"]
@@ -216,6 +220,9 @@ class TaskSpec(BeadBaseModel):
         Regular expression pattern for validating free_text responses.
     max_length : int | None
         Maximum character length for free_text responses.
+    span_spec : SpanSpec | None
+        Span labeling specification (for span_labeling tasks or
+        composite tasks with span overlays).
 
     Examples
     --------
@@ -273,6 +280,9 @@ class TaskSpec(BeadBaseModel):
         default=None, description="Regex pattern for text validation"
     )
     max_length: int | None = Field(default=None, description="Maximum text length")
+    span_spec: SpanSpec | None = Field(
+        default=None, description="Span labeling specification"
+    )
 
     @field_validator("prompt")
     @classmethod
@@ -320,6 +330,9 @@ class PresentationSpec(BeadBaseModel):
         display with no fixed durations.
     display_format : dict[str, str | int | float | bool]
         Additional display formatting options.
+    tokenizer_config : TokenizerConfig | None
+        Display tokenizer configuration for span annotation. When set,
+        controls how text is tokenized for span indexing and display.
 
     Examples
     --------
@@ -359,6 +372,10 @@ class PresentationSpec(BeadBaseModel):
     display_format: dict[str, str | int | float | bool] = Field(
         default_factory=_empty_display_format_dict,
         description="Display formatting options",
+    )
+    tokenizer_config: TokenizerConfig | None = Field(
+        default=None,
+        description="Display tokenizer config for span annotation",
     )
 
 
@@ -655,7 +672,7 @@ class ItemTemplate(BeadBaseModel):
         if v is None:
             return v
 
-        # Get elements from validation info
+        # get elements from validation info
         elements = info.data.get("elements", [])
         if not elements:
             return v
@@ -663,14 +680,14 @@ class ItemTemplate(BeadBaseModel):
         element_names = {e.element_name for e in elements}
         order_names = set(v)
 
-        # Check for names in order that aren't in elements
+        # check for names in order that aren't in elements
         extra = order_names - element_names
         if extra:
             raise ValueError(
                 f"presentation_order contains element names not in elements: {extra}"
             )
 
-        # Check for names in elements that aren't in order
+        # check for names in elements that aren't in order
         missing = element_names - order_names
         if missing:
             raise ValueError(

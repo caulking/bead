@@ -1,11 +1,11 @@
 # bead
 
-A Python framework for constructing, deploying, and analyzing large-scale linguistic judgment experiments with active learning.
-
 [![CI](https://github.com/FACTSlab/bead/actions/workflows/ci.yml/badge.svg)](https://github.com/FACTSlab/bead/actions/workflows/ci.yml)
 [![Python 3.13](https://img.shields.io/badge/python-3.13-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Documentation](https://img.shields.io/badge/docs-readthedocs-blue.svg)](https://bead.readthedocs.io)
+
+A Python framework for constructing, deploying, and analyzing large-scale linguistic judgment experiments with active learning.
 
 ## Overview
 

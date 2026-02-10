@@ -41,6 +41,15 @@
     <!-- Slopit behavioral capture -->
     <script src="js/slopit-bundle.js"></script>
     {% endif %}
+
+    {% if span_enabled %}
+    <!-- Span labeling -->
+    <script src="js/plugins/span-label.js"></script>
+    <script src="js/lib/span-renderer.js"></script>
+    {% if span_wikidata %}
+    <script src="js/lib/wikidata-search.js"></script>
+    {% endif %}
+    {% endif %}
 </head>
 <body class="theme-{{ ui_theme }}">
     <div id="jspsych-target"></div>

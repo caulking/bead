@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Likert Rating Scale</title>
+  <link href="https://unpkg.com/jspsych@8.0.0/css/jspsych.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&amp;display=swap" rel="stylesheet">
+  <link href="../css/gallery.css" rel="stylesheet">
+  <script src="https://unpkg.com/jspsych@8.0.0"></script>
+  <script src="../js/gallery-bundle.js"></script>
+</head>
+<body>
+  <div class="gallery-demo">
+    <div id="jspsych-target"></div>
+    <div id="response-display"></div>
+  </div>
+  <script>
+    function runDemo() {
+      var target = document.getElementById("jspsych-target");
+      target.innerHTML = "";
+      document.getElementById("response-display").innerHTML = "";
+      var jsPsych = initJsPsych({
+        display_element: "jspsych-target",
+        on_finish: function() {
+          var data = jsPsych.data.get().last(1).values()[0];
+          var display = document.getElementById("response-display");
+          display.innerHTML =
+            '<div class="gallery-response-label">Response Data</div>' +
+            '<div class="gallery-response">' + JSON.stringify(data, null, 2) + '</div>' +
+            '<button class="gallery-reset" onclick="runDemo()">Reset Demo</button>';
+        }
+      });
+      var trial = {
+        type: BeadRatingPlugin,
+        prompt: "How natural is this sentence?",
+        stimulus: "Someone hoped someone to leave.",
+        scale_min: 1,
+        scale_max: 7,
+        scale_labels: {1: "Extremely unnatural", 7: "Totally natural"},
+        require_response: true,
+        button_label: "Continue",
+        metadata: {
+          verb: "hope",
+          frame: "NP_to_VP",
+          item_id: "naturalness-hope-np-to-vp"
+        }
+      };
+      jsPsych.run([trial]);
+    }
+    runDemo();
+  </script>
+  <script>(function(){var last=0;new ResizeObserver(function(){var h=document.documentElement.scrollHeight;if(h!==last){last=h;window.parent.postMessage({type:'bead-resize',height:h},'*');}}).observe(document.body);})()</script>
+</body>
+</html>

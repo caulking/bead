@@ -87,7 +87,7 @@ class JsPsychExperimentGenerator:
         self.rating_config = rating_config or RatingScaleConfig()
         self.choice_config = choice_config or ChoiceConfig()
 
-        # Setup Jinja2 environment
+        # setup Jinja2 environment
         template_dir = Path(__file__).parent / "templates"
         self.jinja_env = Environment(loader=FileSystemLoader(str(template_dir)))
 
@@ -156,7 +156,7 @@ class JsPsychExperimentGenerator:
         ... )
         >>> # output_dir = generator.generate(lists, items, templates)
         """
-        # Validate inputs (no fallbacks)
+        # validate inputs (no fallbacks)
         if not lists:
             raise ValueError(
                 "generate() requires at least one ExperimentList. Got empty list."
@@ -178,31 +178,39 @@ class JsPsychExperimentGenerator:
                 "provide an empty template: {item.item_template_id: ItemTemplate(...)}."
             )
 
-        # Validate all item references can be resolved
+        # validate all item references can be resolved
         self._validate_item_references(lists, items)
 
-        # Validate all template references can be resolved
+        # validate all template references can be resolved
         self._validate_template_references(items, templates)
 
-        # Create directory structure
+        # create directory structure
         self._create_directory_structure()
 
-        # Write batch data files (lists, items, distribution config, trials)
+        # write batch data files (lists, items, distribution config, trials)
         self._write_lists_jsonl(lists)
         self._write_items_jsonl(items)
         self._write_distribution_config()
         self._write_trials_json(lists, items, templates)
 
-        # Generate HTML/CSS/JS files
-        self._generate_html()
+        # detect span usage for HTML template
+        span_enabled = self._detect_span_usage(items, templates)
+        span_wikidata = self._detect_wikidata_usage(templates)
+
+        # generate HTML/CSS/JS files
+        self._generate_html(span_enabled, span_wikidata)
         self._generate_css()
         self._generate_experiment_script()
         self._generate_config_file()
         self._copy_list_distributor_script()
 
-        # Copy slopit bundle if enabled
+        # copy slopit bundle if enabled
         if self.config.slopit.enabled:
             self._copy_slopit_bundle()
+
+        # copy span plugin scripts if needed
+        if span_enabled:
+            self._copy_span_plugin_scripts(span_wikidata)
 
         return self.output_dir
 
@@ -305,7 +313,7 @@ class JsPsychExperimentGenerator:
         """
         output_path = self.output_dir / "data" / "items.jsonl"
         try:
-            # Convert dict values to list for serialization
+            # convert dict values to list for serialization
             items_list = list(items.values())
             write_jsonlines(items_list, output_path)
         except SerializationError as e:
@@ -377,7 +385,7 @@ class JsPsychExperimentGenerator:
         """
         output_path = self.output_dir / "data" / "distribution.json"
         try:
-            # Use model_dump_json() to handle UUID serialization
+            # use model_dump_json() to handle UUID serialization
             json_str = self.config.distribution_strategy.model_dump_json(indent=2)
             output_path.write_text(json_str)
         except (OSError, TypeError) as e:
@@ -427,9 +435,15 @@ class JsPsychExperimentGenerator:
         self.output_dir.mkdir(parents=True, exist_ok=True)
         (self.output_dir / "css").mkdir(exist_ok=True)
         (self.output_dir / "js").mkdir(exist_ok=True)
+        (self.output_dir / "js" / "plugins").mkdir(parents=True, exist_ok=True)
+        (self.output_dir / "js" / "lib").mkdir(parents=True, exist_ok=True)
         (self.output_dir / "data").mkdir(exist_ok=True)
 
-    def _generate_html(self) -> None:
+    def _generate_html(
+        self,
+        span_enabled: bool = False,
+        span_wikidata: bool = False,
+    ) -> None:
         """Generate index.html file."""
         template = self.jinja_env.get_template("index.html")
 
@@ -438,6 +452,8 @@ class JsPsychExperimentGenerator:
             ui_theme=self.config.ui_theme,
             use_jatos=self.config.use_jatos,
             slopit_enabled=self.config.slopit.enabled,
+            span_enabled=span_enabled,
+            span_wikidata=span_wikidata,
         )
 
         output_file = self.output_dir / "index.html"
@@ -448,14 +464,14 @@ class JsPsychExperimentGenerator:
         template_file = Path(__file__).parent / "templates" / "experiment.css"
         output_file = self.output_dir / "css" / "experiment.css"
 
-        # Copy CSS template directly (no rendering needed)
+        # copy CSS template directly (no rendering needed)
         output_file.write_text(template_file.read_text())
 
     def _generate_experiment_script(self) -> None:
         """Generate experiment.js file."""
         template = self.jinja_env.get_template("experiment.js.template")
 
-        # Auto-generate Prolific redirect URL if completion code is provided
+        # auto-generate Prolific redirect URL if completion code is provided
         on_finish_url = self.config.on_finish_url
         if self.config.prolific_completion_code:
             on_finish_url = (
@@ -463,7 +479,7 @@ class JsPsychExperimentGenerator:
                 f"cc={self.config.prolific_completion_code}"
             )
 
-        # Prepare slopit config for template
+        # prepare slopit config for template
         slopit_config = None
         if self.config.slopit.enabled:
             slopit_config = {
@@ -473,7 +489,7 @@ class JsPsychExperimentGenerator:
                 "target_selectors": self.config.slopit.target_selectors,
             }
 
-        # Prepare demographics config for template
+        # prepare demographics config for template
         demographics_enabled = False
         demographics_title = "Participant Information"
         demographics_fields: list[dict[str, JsonValue]] = []
@@ -499,7 +515,7 @@ class JsPsychExperimentGenerator:
                     field_data["range_max"] = field.range.max
                 demographics_fields.append(field_data)
 
-        # Prepare instructions config for template
+        # prepare instructions config for template
         instructions_is_multi_page = isinstance(
             self.config.instructions, InstructionsConfig
         )
@@ -524,7 +540,7 @@ class JsPsychExperimentGenerator:
                     }
                 )
         else:
-            # Simple string instructions
+            # simple string instructions
             simple_instructions = (
                 self.config.instructions
                 if isinstance(self.config.instructions, str)
@@ -540,12 +556,12 @@ class JsPsychExperimentGenerator:
             on_finish_url=on_finish_url,
             slopit_enabled=self.config.slopit.enabled,
             slopit_config=slopit_config,
-            # Demographics variables
+            # demographics variables
             demographics_enabled=demographics_enabled,
             demographics_title=demographics_title,
             demographics_fields=demographics_fields,
             demographics_submit_text=demographics_submit_text,
-            # Instructions variables
+            # instructions variables
             instructions_is_multi_page=instructions_is_multi_page,
             instructions_pages=instructions_pages,
             instructions_show_page_numbers=instructions_show_page_numbers,
@@ -576,7 +592,7 @@ class JsPsychExperimentGenerator:
         OSError
             If copying fails.
         """
-        # Look for slopit bundle in dist directory
+        # look for slopit bundle in dist directory
         dist_dir = Path(__file__).parent / "dist"
         bundle_path = dist_dir / "slopit-bundle.js"
 
@@ -596,3 +612,92 @@ class JsPsychExperimentGenerator:
                 f"Failed to copy slopit bundle to {output_path}: {e}. "
                 f"Check write permissions."
             ) from e
+
+    def _detect_span_usage(
+        self,
+        items: dict[UUID, Item],
+        templates: dict[UUID, ItemTemplate],
+    ) -> bool:
+        """Detect whether any items or templates use span features.
+
+        Parameters
+        ----------
+        items : dict[UUID, Item]
+            Items dictionary.
+        templates : dict[UUID, ItemTemplate]
+            Templates dictionary.
+
+        Returns
+        -------
+        bool
+            True if spans are used.
+        """
+        # check experiment type
+        if self.config.experiment_type == "span_labeling":
+            return True
+
+        # check items for span data
+        for item in items.values():
+            if item.spans or item.tokenized_elements:
+                return True
+
+        # check templates for span_spec
+        for template in templates.values():
+            if template.task_spec.span_spec is not None:
+                return True
+
+        return False
+
+    def _detect_wikidata_usage(
+        self,
+        templates: dict[UUID, ItemTemplate],
+    ) -> bool:
+        """Detect whether any templates use Wikidata label source.
+
+        Parameters
+        ----------
+        templates : dict[UUID, ItemTemplate]
+            Templates dictionary.
+
+        Returns
+        -------
+        bool
+            True if Wikidata is used.
+        """
+        for template in templates.values():
+            if template.task_spec.span_spec is not None:
+                spec = template.task_spec.span_spec
+                if spec.label_source == "wikidata":
+                    return True
+                if spec.relation_label_source == "wikidata":
+                    return True
+        return False
+
+    def _copy_span_plugin_scripts(self, include_wikidata: bool = False) -> None:
+        """Copy span plugin scripts from compiled dist/ to js/ directory.
+
+        Parameters
+        ----------
+        include_wikidata : bool
+            Whether to include the Wikidata search script.
+        """
+        dist_dir = Path(__file__).parent / "dist"
+
+        # create subdirectories
+        (self.output_dir / "js" / "plugins").mkdir(parents=True, exist_ok=True)
+        (self.output_dir / "js" / "lib").mkdir(parents=True, exist_ok=True)
+
+        scripts = [
+            ("plugins/span-label.js", "js/plugins/span-label.js"),
+            ("lib/span-renderer.js", "js/lib/span-renderer.js"),
+        ]
+
+        if include_wikidata:
+            scripts.append(("lib/wikidata-search.js", "js/lib/wikidata-search.js"))
+
+        for src_name, dest_name in scripts:
+            src_path = dist_dir / src_name
+            dest_path = self.output_dir / dest_name
+            if src_path.exists():
+                dest_path.write_text(src_path.read_text())
+            # silently skip if not built yet (TypeScript may not be compiled)

@@ -272,6 +272,117 @@ When slopit is enabled, behavioral data is included in the trial results:
 }
 ```
 
+## Span Labeling Experiments
+
+Generate span labeling experiments where participants annotate text spans.
+
+**Basic span labeling experiment**:
+
+```python
+from bead.deployment.distribution import (
+    DistributionStrategyType,
+    ListDistributionStrategy,
+)
+from bead.deployment.jspsych.config import ExperimentConfig, SpanDisplayConfig
+
+# configure a span labeling experiment
+config = ExperimentConfig(
+    experiment_type="span_labeling",
+    title="Named Entity Annotation",
+    description="Annotate named entities in text",
+    instructions="Select spans of text and assign entity labels.",
+    distribution_strategy=ListDistributionStrategy(
+        strategy_type=DistributionStrategyType.BALANCED
+    ),
+    randomize_trial_order=True,
+    show_progress_bar=True,
+    use_jatos=True,
+    span_display=SpanDisplayConfig(
+        highlight_style="background",
+        show_labels=True,
+        label_position="inline",
+    ),
+)
+```
+
+**Customizing span display**:
+
+```python
+from bead.deployment.jspsych.config import SpanDisplayConfig
+
+# configure visual appearance for span highlights
+span_display = SpanDisplayConfig(
+    highlight_style="underline",
+    color_palette=["#BBDEFB", "#C8E6C9", "#FFE0B2", "#F8BBD0"],
+    show_labels=True,
+    show_tooltips=True,
+    label_position="tooltip",
+)
+```
+
+**Composing spans with other task types**: span annotations can be added to any experiment type. When items contain span data, the span display renders automatically as an overlay on the existing task. For example, a rating experiment can show highlighted spans while participants rate sentences:
+
+```python
+from bead.deployment.distribution import (
+    DistributionStrategyType,
+    ListDistributionStrategy,
+)
+from bead.deployment.jspsych.config import ExperimentConfig, SpanDisplayConfig
+
+# rating experiment with span highlights
+config = ExperimentConfig(
+    experiment_type="likert_rating",
+    title="Acceptability with Entity Highlights",
+    description="Rate sentences with highlighted entities",
+    instructions="Rate how natural each sentence sounds. Entities are highlighted.",
+    distribution_strategy=ListDistributionStrategy(
+        strategy_type=DistributionStrategyType.BALANCED
+    ),
+    use_jatos=True,
+    span_display=SpanDisplayConfig(
+        highlight_style="background",
+        show_labels=True,
+    ),
+)
+```
+
+**Prompt span references**: prompts can reference span labels using `[[label]]` or `[[label:text]]` syntax. At trial generation time, these references are replaced with color-highlighted HTML where the colors match the corresponding span highlights in the stimulus:
+
+```python
+from bead.items.ordinal_scale import create_ordinal_scale_item
+from bead.items.span_labeling import add_spans_to_item
+from bead.items.spans import Span, SpanLabel, SpanSegment
+
+# [[breaker]] auto-fills with the span's token text ("The boy")
+# [[event:the breaking]] uses custom display text
+item = create_ordinal_scale_item(
+    text="The boy broke the vase.",
+    prompt="How likely is it that [[breaker]] existed after [[event:the breaking]]?",
+    scale_bounds=(1, 5),
+    scale_labels={1: "Very unlikely", 5: "Very likely"},
+)
+
+item = add_spans_to_item(
+    item,
+    spans=[
+        Span(
+            span_id="span_0",
+            segments=[SpanSegment(element_name="text", indices=[0, 1])],
+            label=SpanLabel(label="breaker"),
+        ),
+        Span(
+            span_id="span_1",
+            segments=[SpanSegment(element_name="text", indices=[2])],
+            label=SpanLabel(label="event"),
+        ),
+    ],
+)
+```
+
+Color consistency is guaranteed: the same `_assign_span_colors()` function assigns deterministic light/dark color pairs to each unique label. Both the stimulus renderer and the prompt resolver use these assignments, so a span labeled "event" always gets the same background color in the target text and the same highlight color in the question text. The `SpanDisplayConfig.color_palette` (light backgrounds) and `SpanDisplayConfig.dark_color_palette` (subscript badge colors) are index-aligned, producing visually matched pairs.
+
+Prompts without `[[...]]` references pass through unchanged, so existing experiments are unaffected.
+
 ## Experiment Configuration
 
 **ExperimentConfig** parameters:
@@ -420,7 +531,11 @@ output_dir/
 ├── index.html
 ├── js/
 │   ├── experiment.js
-│   └── list_distributor.js
+│   ├── list_distributor.js
+│   ├── plugins/          # span plugin (when spans are used)
+│   │   └── span-label.js
+│   └── lib/              # shared libraries
+│       └── span-renderer.js
 ├── css/
 │   └── experiment.css
 └── data/
@@ -428,7 +543,7 @@ output_dir/
     ├── lists.jsonl
     ├── items.jsonl
     ├── distribution.json
-    └── templates.json
+    └── trials.json
 ```
 
 ## Complete Example

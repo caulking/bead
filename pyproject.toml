@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "bead"
-version = "0.1.0"
+version = "0.2.0"
 description = "Lexicon and Template Collection Construction Pipeline for Acceptability and Inference Judgment Data"
 authors = [{name = "Aaron Steven White", email = "aaron.white@rochester.edu"}]
 readme = "README.md"
@@ -87,6 +87,10 @@ ui = [
 ]
 behavioral-analysis = [
     "slopit>=0.1.0",
+]
+tokenization = [
+    "spacy>=3.7",
+    "stanza>=1.8",
 ]
 
 [project.scripts]

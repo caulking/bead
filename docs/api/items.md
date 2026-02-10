@@ -1,6 +1,6 @@
 # bead.items
 
-Stage 3 of the bead pipeline: experimental item construction with 8 task types.
+Stage 3 of the bead pipeline: experimental item construction with 9 task types.
 
 ## Core Classes
 
@@ -52,6 +52,20 @@ Stage 3 of the bead pipeline: experimental item construction with 8 task types.
       show_source: false
 
 ::: bead.items.cloze
+    options:
+      show_root_heading: true
+      show_source: false
+
+## Span Annotation Models
+
+::: bead.items.spans
+    options:
+      show_root_heading: true
+      show_source: false
+
+## Span Labeling Utilities
+
+::: bead.items.span_labeling
     options:
       show_root_heading: true
       show_source: false
