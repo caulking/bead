@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from bead.active_learning.trainers.base import BaseTrainer, ModelMetadata
+from bead.data.base import BeadBaseModel
 from bead.data.timestamps import format_iso8601, now_iso8601
 
 if TYPE_CHECKING:
@@ -28,7 +29,7 @@ class HuggingFaceTrainer(BaseTrainer):
 
     Parameters
     ----------
-    config : Any
+    config : dict[str, int | str | float | bool | Path] | BeadBaseModel
         Training configuration with the following expected fields:
         - model_name: str - Base model name/path
         - task_type: str - Task type (classification, regression, etc.)
@@ -47,7 +48,7 @@ class HuggingFaceTrainer(BaseTrainer):
 
     Attributes
     ----------
-    config : Any
+    config : dict[str, int | str | float | bool | Path] | BeadBaseModel
         Training configuration.
     model : PreTrainedModel | None
         The trained model.
@@ -79,7 +80,7 @@ class HuggingFaceTrainer(BaseTrainer):
     """
 
     def __init__(
-        self, config: dict[str, int | str | float | bool | Path] | object
+        self, config: dict[str, int | str | float | bool | Path] | BeadBaseModel
     ) -> None:
         super().__init__(config)
         self.model: PreTrainedModel | None = None
@@ -94,12 +95,12 @@ class HuggingFaceTrainer(BaseTrainer):
         ----------
         key : str
             Configuration key.
-        default : Any
+        default : int | str | float | bool | Path | None
             Default value if key not found.
 
         Returns
         -------
-        Any
+        int | str | float | bool | Path | None
             Configuration value.
         """
         if hasattr(self.config, key):
@@ -115,9 +116,9 @@ class HuggingFaceTrainer(BaseTrainer):
 
         Parameters
         ----------
-        train_data : Any
+        train_data : Dataset
             HuggingFace Dataset for training.
-        eval_data : Any | None
+        eval_data : Dataset | None
             HuggingFace Dataset for evaluation.
 
         Returns

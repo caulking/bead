@@ -4,17 +4,18 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 
 from bead.data.base import BeadBaseModel
+from bead.items.spans import Span, SpanRelation
 
-# Type aliases for JSON-serializable metadata values
+# type aliases for JSON-serializable metadata values
 type MetadataValue = (
     str | int | float | bool | None | dict[str, MetadataValue] | list[MetadataValue]
 )
 
 
-# Factory functions for default values with explicit types
+# factory functions for default values with explicit types
 def _empty_uuid_list() -> list[UUID]:
     """Return empty UUID list."""
     return []
@@ -48,6 +49,31 @@ def _empty_uuid_bool_dict() -> dict[UUID, bool]:
 def _empty_metadata_dict() -> dict[str, MetadataValue]:
     """Return empty metadata dict."""
     return {}
+
+
+def _empty_str_list() -> list[str]:
+    """Return empty string list."""
+    return []
+
+
+def _empty_tokenized_dict() -> dict[str, list[str]]:
+    """Return empty tokenized elements dict."""
+    return {}
+
+
+def _empty_space_after_dict() -> dict[str, list[bool]]:
+    """Return empty space_after dict."""
+    return {}
+
+
+def _empty_span_list() -> list[Span]:
+    """Return empty Span list."""
+    return []
+
+
+def _empty_span_relation_list() -> list[SpanRelation]:
+    """Return empty SpanRelation list."""
+    return []
 
 
 class UnfilledSlot(BeadBaseModel):
@@ -196,6 +222,9 @@ class Item(BeadBaseModel):
         UUIDs of filled templates used in this item.
     rendered_elements : dict[str, str]
         Rendered text for each element (by element_name).
+    options : list[str]
+        Choice options for forced_choice/multi_select tasks. Each string
+        is one option text. Order matters (first option is displayed first).
     unfilled_slots : list[UnfilledSlot]
         Unfilled slots for cloze tasks (UI widgets inferred from constraints).
     model_outputs : list[ModelOutput]
@@ -204,6 +233,16 @@ class Item(BeadBaseModel):
         Constraint UUIDs mapped to satisfaction status.
     item_metadata : dict[str, MetadataValue]
         Additional metadata for this item.
+    spans : list[Span]
+        Span annotations for this item (default: empty).
+    span_relations : list[SpanRelation]
+        Relations between spans, directed or undirected (default: empty).
+    tokenized_elements : dict[str, list[str]]
+        Tokenized text for span indexing, keyed by element name
+        (default: empty).
+    token_space_after : dict[str, list[bool]]
+        Per-token space_after flags for artifact-free rendering
+        (default: empty).
 
     Examples
     --------
@@ -212,6 +251,12 @@ class Item(BeadBaseModel):
     ...     item_template_id=UUID("..."),
     ...     filled_template_refs=[UUID("...")],
     ...     rendered_elements={"sentence": "The cat broke the vase"}
+    ... )
+    >>> # Forced-choice item with options
+    >>> fc_item = Item(
+    ...     item_template_id=UUID("..."),
+    ...     options=["The cat sat on the mat.", "The cats sat on the mat."],
+    ...     item_metadata={"n_options": 2}
     ... )
     >>> # Cloze item with unfilled slots
     >>> cloze_item = Item(
@@ -231,6 +276,10 @@ class Item(BeadBaseModel):
     rendered_elements: dict[str, str] = Field(
         default_factory=_empty_str_dict, description="Rendered element text"
     )
+    options: list[str] = Field(
+        default_factory=_empty_str_list,
+        description="Choice options for forced_choice/multi_select tasks",
+    )
     unfilled_slots: list[UnfilledSlot] = Field(
         default_factory=_empty_unfilled_slot_list,
         description="Unfilled slots for cloze tasks",
@@ -245,6 +294,59 @@ class Item(BeadBaseModel):
     item_metadata: dict[str, MetadataValue] = Field(
         default_factory=_empty_metadata_dict, description="Additional metadata"
     )
+    # span annotation fields (all default empty, backward compatible)
+    spans: list[Span] = Field(
+        default_factory=_empty_span_list,
+        description="Span annotations for this item",
+    )
+    span_relations: list[SpanRelation] = Field(
+        default_factory=_empty_span_relation_list,
+        description="Relations between spans (directed or undirected)",
+    )
+    tokenized_elements: dict[str, list[str]] = Field(
+        default_factory=_empty_tokenized_dict,
+        description="Tokenized text for span indexing (element_name -> tokens)",
+    )
+    token_space_after: dict[str, list[bool]] = Field(
+        default_factory=_empty_space_after_dict,
+        description="Per-token space_after flags for artifact-free rendering",
+    )
+
+    @model_validator(mode="after")
+    def validate_span_relations(self) -> Item:
+        """Validate all span_relations reference valid span_ids from spans.
+
+        Returns
+        -------
+        Item
+            Validated item.
+
+        Raises
+        ------
+        ValueError
+            If a relation references a span_id not present in spans.
+        """
+        if self.span_relations:
+            if not self.spans:
+                raise ValueError(
+                    "Item has span_relations but no spans. "
+                    "All relations must reference existing spans."
+                )
+            valid_ids = {s.span_id for s in self.spans}
+            for rel in self.span_relations:
+                if rel.source_span_id not in valid_ids:
+                    raise ValueError(
+                        f"SpanRelation '{rel.relation_id}' references "
+                        f"source_span_id '{rel.source_span_id}' not found "
+                        f"in item spans. Valid span_ids: {valid_ids}"
+                    )
+                if rel.target_span_id not in valid_ids:
+                    raise ValueError(
+                        f"SpanRelation '{rel.relation_id}' references "
+                        f"target_span_id '{rel.target_span_id}' not found "
+                        f"in item spans. Valid span_ids: {valid_ids}"
+                    )
+        return self
 
     def get_model_output(
         self,

@@ -18,7 +18,7 @@ class ConcreteNoiseModel(NoiseModel):
         rng: np.random.RandomState,
     ) -> str | int | float | list[str]:
         """Apply test noise."""
-        if isinstance(value, (int, float)):
+        if isinstance(value, int | float):
             return value + 1.0
         return value
 

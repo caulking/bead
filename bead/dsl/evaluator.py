@@ -75,7 +75,7 @@ class Evaluator:
         EvaluationError
             If evaluation fails (undefined variable, type error, etc.).
         """
-        # Dispatch to specific evaluation methods
+        # dispatch to specific evaluation methods
         if isinstance(node, ast.Literal):
             return self._evaluate_literal(node, context)
         elif isinstance(node, ast.Variable):
@@ -158,7 +158,7 @@ class Evaluator:
         EvaluationError
             If operator is unknown or operation fails.
         """
-        # Short circuit evaluation for logical operators
+        # short-circuit evaluation for logical operators
         if node.operator == "and":
             left = self.evaluate(node.left, context)
             if not left:
@@ -170,12 +170,12 @@ class Evaluator:
                 return True
             return bool(self.evaluate(node.right, context))
 
-        # Evaluate both operands for other operators
+        # evaluate both operands for other operators
         left = self.evaluate(node.left, context)
         right = self.evaluate(node.right, context)
 
         try:
-            # Comparison operators
+            # comparison operators
             if node.operator == "==":
                 return left == right
             elif node.operator == "!=":
@@ -188,12 +188,12 @@ class Evaluator:
                 return left <= right
             elif node.operator == ">=":
                 return left >= right
-            # Membership operators
+            # membership operators
             elif node.operator == "in":
                 return left in right
             elif node.operator == "not in":
                 return left not in right
-            # Arithmetic operators
+            # arithmetic operators
             elif node.operator == "+":
                 return left + right
             elif node.operator == "-":
@@ -277,14 +277,14 @@ class Evaluator:
         EvaluationError
             If function is not defined or call fails.
         """
-        # Evaluate arguments
+        # evaluate arguments
         args = [self.evaluate(arg, context) for arg in node.arguments]
 
-        # Handle method calls (e.g., subject.features.get(...))
+        # handle method calls (e.g., subject.features.get(...))
         if isinstance(node.function, ast.AttributeAccess):
-            # Evaluate the object
+            # evaluate the object
             obj = self.evaluate(node.function.object, context)
-            # Get the method
+            # get the method
             method_name = node.function.attribute
             try:
                 method = getattr(obj, method_name)
@@ -296,7 +296,7 @@ class Evaluator:
             except TypeError as e:
                 raise EvaluationError(f"Error calling method {method_name}: {e}") from e
 
-        # Handle regular function calls (e.g., len(...))
+        # handle regular function calls (e.g., len(...))
         if isinstance(node.function, ast.Variable):
             func_name = node.function.name
             return context.call_function(func_name, args)
@@ -330,13 +330,13 @@ class Evaluator:
         """
         obj = self.evaluate(node.object, context)
 
-        # Try dictionary style access first
+        # try dictionary-style access first
         if isinstance(obj, dict):
             if node.attribute not in obj:
                 raise EvaluationError(f"Dictionary does not have key: {node.attribute}")
             return obj[node.attribute]  # type: ignore[reportUnknownVariableType]
 
-        # Try attribute access
+        # try attribute access
         try:
             return getattr(obj, node.attribute)
         except AttributeError as e:
@@ -413,6 +413,7 @@ class DSLEvaluator:
 
     This class provides a simplified interface for evaluating constraint
     expressions. It handles:
+
     - Parsing expression strings to AST
     - Building evaluation contexts from dictionaries
     - Caching compiled ASTs
@@ -421,6 +422,13 @@ class DSLEvaluator:
 
     The DSLEvaluator is the primary interface for constraint evaluation
     in the bead package. It wraps the lower-level Evaluator class.
+
+    Attributes
+    ----------
+    evaluator : Evaluator
+        The underlying AST evaluator instance.
+    compiled_cache : dict[str, ast.ASTNode]
+        Cache mapping expression strings to their compiled AST nodes.
 
     Examples
     --------
@@ -440,7 +448,6 @@ class DSLEvaluator:
     """
 
     def __init__(self) -> None:
-        """Initialize DSL evaluator with empty compiled cache."""
         self.evaluator = Evaluator(use_cache=True)
         self.compiled_cache: dict[str, ast.ASTNode] = {}
 
@@ -483,22 +490,22 @@ class DSLEvaluator:
         ... )
         False
         """
-        # Get or compile AST
+        # get or compile AST
         if expression in self.compiled_cache:
             ast_node = self.compiled_cache[expression]
         else:
             ast_node = parse(expression)
             self.compiled_cache[expression] = ast_node
 
-        # Build evaluation context
+        # build evaluation context
         eval_context = EvaluationContext()
         register_stdlib(eval_context)
 
-        # Add context variables
+        # add context variables
         for name, value in context.items():
             eval_context.set_variable(name, value)
 
-        # Evaluate
+        # evaluate
         return self.evaluator.evaluate(ast_node, eval_context)
 
     def extract_property_value(

@@ -6,6 +6,7 @@ This module provides commands for filling templates with lexical items
 
 from __future__ import annotations
 
+import csv as csv_module
 import json
 from pathlib import Path
 
@@ -16,6 +17,10 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
 
 from bead.cli.utils import print_error, print_info, print_success
+from bead.data.base import JsonValue
+from bead.dsl.evaluator import DSLEvaluator
+from bead.dsl.parser import parse
+from bead.resources.constraints import Constraint
 from bead.resources.lexicon import Lexicon
 from bead.resources.template_collection import TemplateCollection
 from bead.templates.combinatorics import count_combinations
@@ -50,7 +55,12 @@ def templates() -> None:
 
 @click.command()
 @click.argument("template_file", type=click.Path(exists=True, path_type=Path))
-@click.argument("lexicon_file", type=click.Path(exists=True, path_type=Path))
+@click.argument(
+    "lexicon_files",
+    nargs=-1,
+    type=click.Path(exists=True, path_type=Path),
+    required=True,
+)
 @click.argument("output_file", type=click.Path(path_type=Path))
 @click.option(
     "--strategy",
@@ -76,17 +86,23 @@ def templates() -> None:
     "--language-code",
     help="ISO 639 language code to filter items",
 )
+@click.option(
+    "--constraints",
+    type=click.Path(exists=True, path_type=Path),
+    help="Path to constraints file (JSONL) to apply during filling",
+)
 @click.pass_context
 def fill(
     ctx: click.Context,
     template_file: Path,
-    lexicon_file: Path,
+    lexicon_files: tuple[Path, ...],
     output_file: Path,
     strategy: str,
     max_combinations: int | None,
     random_seed: int | None,
     grouping_property: str | None,
     language_code: str | None,
+    constraints: Path | None,
 ) -> None:
     r"""Fill templates with lexical items.
 
@@ -96,8 +112,8 @@ def fill(
         Click context object.
     template_file : Path
         Path to template file.
-    lexicon_file : Path
-        Path to lexicon file.
+    lexicon_files : tuple[Path, ...]
+        Paths to one or more lexicon files to merge.
     output_file : Path
         Path to output filled templates file.
     strategy : str
@@ -110,11 +126,17 @@ def fill(
         Property for stratified sampling.
     language_code : str | None
         ISO 639 language code filter.
+    constraints : Path | None
+        Path to constraints file (JSONL) to apply.
 
     Examples
     --------
-    # Exhaustive filling
+    # Exhaustive filling with single lexicon
     $ bead templates fill template.jsonl lexicon.jsonl filled.jsonl \\
+        --strategy exhaustive
+
+    # Multiple lexicons
+    $ bead templates fill tpl.jsonl nouns.jsonl verbs.jsonl filled.jsonl \\
         --strategy exhaustive
 
     # Random sampling
@@ -124,6 +146,10 @@ def fill(
     # Stratified sampling
     $ bead templates fill template.jsonl lexicon.jsonl filled.jsonl \\
         --strategy stratified --max-combinations 100 --grouping-property pos
+
+    # With constraints
+    $ bead templates fill template.jsonl lexicon.jsonl filled.jsonl \\
+        --strategy exhaustive --constraints constraints.jsonl
     """
     try:
         # Validate strategy-specific options
@@ -135,10 +161,22 @@ def fill(
             print_error("--grouping-property required for stratified strategy")
             ctx.exit(1)
 
-        # Load lexicon
-        print_info(f"Loading lexicon from {lexicon_file}")
-        lexicon = Lexicon.from_jsonl(str(lexicon_file), "lexicon")
-        print_info(f"Loaded {len(lexicon)} lexical items")
+        # Load and merge lexicons
+        if not lexicon_files:
+            print_error("At least one lexicon file is required")
+            ctx.exit(1)
+
+        print_info(f"Loading {len(lexicon_files)} lexicon(s)")
+        merged_lexicon = Lexicon(name="merged", items={})
+
+        for lex_file in lexicon_files:
+            lex = Lexicon.from_jsonl(str(lex_file), lex_file.stem)
+            print_info(f"  Loaded {len(lex)} items from {lex_file.name}")
+            # Merge items
+            merged_lexicon.items.update(lex.items)
+
+        print_info(f"Total merged lexicon: {len(merged_lexicon)} items")
+        lexicon = merged_lexicon
 
         # Load templates
         print_info(f"Loading templates from {template_file}")
@@ -146,6 +184,36 @@ def fill(
             str(template_file), "templates"
         )
         print_info(f"Loaded {len(template_collection)} templates")
+
+        # Load and apply constraints if provided
+        if constraints:
+            print_info(f"Loading constraints from {constraints}")
+            loaded_constraints: list[Constraint] = []
+
+            with open(constraints, encoding="utf-8") as f:
+                for line_num, line in enumerate(f, start=1):
+                    line = line.strip()
+                    if not line:
+                        continue
+
+                    try:
+                        constraint_data = json.loads(line)
+                        constraint = Constraint(**constraint_data)
+                        loaded_constraints.append(constraint)
+                    except json.JSONDecodeError as e:
+                        print_error(f"Invalid JSON on line {line_num}: {e}")
+                        ctx.exit(1)
+                    except ValidationError as e:
+                        print_error(f"Invalid constraint on line {line_num}: {e}")
+                        ctx.exit(1)
+
+            print_info(f"Loaded {len(loaded_constraints)} constraints")
+
+            # Apply constraints to all templates
+            for template in template_collection:
+                template.constraints.extend(loaded_constraints)
+
+            print_info(f"Applied constraints to {len(template_collection)} templates")
 
         # Create strategy
         filling_strategy: ExhaustiveStrategy | RandomStrategy | StratifiedStrategy
@@ -225,11 +293,17 @@ def fill(
     default="*.jsonl",
     help="File pattern to match (default: *.jsonl)",
 )
+@click.option(
+    "--filter",
+    "filter_expr",
+    help="DSL expression to filter (e.g., 'slot_fillers.noun.lemma == \"cat\"')",
+)
 @click.pass_context
 def list_filled(
     ctx: click.Context,
     directory: Path,
     pattern: str,
+    filter_expr: str | None,
 ) -> None:
     """List filled template files in a directory.
 
@@ -241,12 +315,16 @@ def list_filled(
         Directory to search.
     pattern : str
         File pattern to match.
+    filter_expr : str | None
+        DSL expression to filter filled templates.
 
     Examples
     --------
     $ bead templates list-filled
     $ bead templates list-filled --directory filled_templates/
     $ bead templates list-filled --pattern "filled_*.jsonl"
+    $ bead templates list-filled --filter "slot_fillers.noun.lemma == 'cat'"
+    $ bead templates list-filled --filter "len(slot_fillers) > 2"
     """
     try:
         files = list(directory.glob(pattern))
@@ -255,9 +333,22 @@ def list_filled(
             print_info(f"No files found in {directory} matching {pattern}")
             return
 
+        # Parse filter expression if provided
+        filter_ast = None
+        evaluator = None
+        if filter_expr:
+            try:
+                filter_ast = parse(filter_expr)
+                evaluator = DSLEvaluator()
+                print_info(f"Filtering with expression: {filter_expr}")
+            except Exception as e:
+                print_error(f"Invalid filter expression: {e}")
+                ctx.exit(1)
+
         table = Table(title=f"Filled Templates in {directory}")
         table.add_column("File", style="cyan")
         table.add_column("Count", justify="right", style="yellow")
+        table.add_column("Filtered", justify="right", style="magenta")
         table.add_column("Strategy", style="green")
         table.add_column("Sample", style="white")
 
@@ -270,7 +361,25 @@ def list_filled(
                 if not lines:
                     continue
 
-                count = len(lines)
+                # Apply filter if provided
+                filtered_count = 0
+                if filter_ast and evaluator:
+                    for line in lines:
+                        try:
+                            filled_data = json.loads(line)
+                            filled_template = FilledTemplate(**filled_data)
+                            # Create evaluation context
+                            context = {"self": filled_template}
+                            # Evaluate filter
+                            if evaluator.evaluate(filter_ast, context):
+                                filtered_count += 1
+                        except Exception:
+                            continue
+                else:
+                    filtered_count = len(lines)
+
+                if filtered_count == 0:
+                    continue
 
                 # Parse first filled template for metadata
                 first_data = json.loads(lines[0])
@@ -283,7 +392,8 @@ def list_filled(
 
                 table.add_row(
                     str(file_path.name),
-                    str(count),
+                    str(len(lines)),
+                    str(filtered_count) if filter_expr else "N/A",
                     strategy_name,
                     rendered,
                 )
@@ -442,7 +552,12 @@ def show_stats(ctx: click.Context, filled_file: Path) -> None:
 
 @click.command()
 @click.argument("template_file", type=click.Path(exists=True, path_type=Path))
-@click.argument("lexicon_file", type=click.Path(exists=True, path_type=Path))
+@click.argument(
+    "lexicon_files",
+    nargs=-1,
+    type=click.Path(exists=True, path_type=Path),
+    required=True,
+)
 @click.option(
     "--language-code",
     help="ISO 639 language code to filter items",
@@ -451,7 +566,7 @@ def show_stats(ctx: click.Context, filled_file: Path) -> None:
 def estimate(
     ctx: click.Context,
     template_file: Path,
-    lexicon_file: Path,
+    lexicon_files: tuple[Path, ...],
     language_code: str | None,
 ) -> None:
     r"""Estimate total combinations for exhaustive filling.
@@ -465,23 +580,37 @@ def estimate(
         Click context object.
     template_file : Path
         Path to template file.
-    lexicon_file : Path
-        Path to lexicon file.
+    lexicon_files : tuple[Path, ...]
+        Paths to one or more lexicon files to merge.
     language_code : str | None
         ISO 639 language code filter.
 
     Examples
     --------
-    # Estimate combinations
+    # Estimate combinations with single lexicon
     $ bead templates estimate template.jsonl lexicon.jsonl
+
+    # With multiple lexicons
+    $ bead templates estimate template.jsonl nouns.jsonl verbs.jsonl
 
     # With language filter
     $ bead templates estimate template.jsonl lexicon.jsonl --language-code eng
     """
     try:
-        # Load lexicon
-        print_info(f"Loading lexicon from {lexicon_file}")
-        lexicon = Lexicon.from_jsonl(str(lexicon_file), "lexicon")
+        # Load and merge lexicons
+        if not lexicon_files:
+            print_error("At least one lexicon file is required")
+            ctx.exit(1)
+
+        print_info(f"Loading {len(lexicon_files)} lexicon(s)")
+        merged_lexicon = Lexicon(name="merged", items={})
+
+        for lex_file in lexicon_files:
+            lex = Lexicon.from_jsonl(str(lex_file), lex_file.stem)
+            merged_lexicon.items.update(lex.items)
+
+        print_info(f"Total merged lexicon: {len(merged_lexicon)} items")
+        lexicon = merged_lexicon
 
         # Load templates
         print_info(f"Loading templates from {template_file}")
@@ -652,7 +781,7 @@ def filter_filled(
                         continue
 
         print_success(
-            f"Filtered {filtered_count} of {total_count} filled templates: {output_file}"
+            f"Filtered {filtered_count} of {total_count} templates: {output_file}"
         )
 
     except Exception as e:
@@ -765,8 +894,6 @@ def export_csv(
     $ bead templates export-csv filled.jsonl filled.csv
     """
     try:
-        import csv as csv_module
-
         print_info(f"Exporting filled templates to CSV: {output_file}")
 
         filled_templates: list[FilledTemplate] = []
@@ -794,27 +921,33 @@ def export_csv(
             writer = csv_module.writer(f)
 
             # Header
-            writer.writerow([
-                "id",
-                "template_id",
-                "template_name",
-                "rendered_text",
-                "strategy_name",
-                "slot_count",
-            ])
+            writer.writerow(
+                [
+                    "id",
+                    "template_id",
+                    "template_name",
+                    "rendered_text",
+                    "strategy_name",
+                    "slot_count",
+                ]
+            )
 
             # Data
             for filled in filled_templates:
-                writer.writerow([
-                    str(filled.id),
-                    str(filled.template_id),
-                    filled.template_name,
-                    filled.rendered_text,
-                    filled.strategy_name,
-                    len(filled.slot_fillers),
-                ])
+                writer.writerow(
+                    [
+                        str(filled.id),
+                        str(filled.template_id),
+                        filled.template_name,
+                        filled.rendered_text,
+                        filled.strategy_name,
+                        len(filled.slot_fillers),
+                    ]
+                )
 
-        print_success(f"Exported {len(filled_templates)} filled templates to CSV: {output_file}")
+        print_success(
+            f"Exported {len(filled_templates)} filled templates to CSV: {output_file}"
+        )
 
     except Exception as e:
         print_error(f"Failed to export to CSV: {e}")
@@ -857,7 +990,7 @@ def export_json(
     try:
         print_info(f"Exporting filled templates to JSON: {output_file}")
 
-        filled_templates: list[dict[str, Any]] = []
+        filled_templates: list[dict[str, JsonValue]] = []
 
         with open(filled_file, encoding="utf-8") as f:
             for line in f:
@@ -884,7 +1017,9 @@ def export_json(
             else:
                 json.dump(filled_templates, f, ensure_ascii=False)
 
-        print_success(f"Exported {len(filled_templates)} filled templates to JSON: {output_file}")
+        print_success(
+            f"Exported {len(filled_templates)} filled templates to JSON: {output_file}"
+        )
 
     except Exception as e:
         print_error(f"Failed to export to JSON: {e}")
@@ -893,7 +1028,12 @@ def export_json(
 
 @click.command()
 @click.argument("template_file", type=click.Path(exists=True, path_type=Path))
-@click.argument("lexicon_file", type=click.Path(exists=True, path_type=Path))
+@click.argument(
+    "lexicon_files",
+    nargs=-1,
+    type=click.Path(exists=True, path_type=Path),
+    required=True,
+)
 @click.argument("output_file", type=click.Path(path_type=Path))
 @click.option(
     "--n-samples",
@@ -914,7 +1054,7 @@ def export_json(
 def sample_combinations(
     ctx: click.Context,
     template_file: Path,
-    lexicon_file: Path,
+    lexicon_files: tuple[Path, ...],
     output_file: Path,
     n_samples: int,
     seed: int | None,
@@ -931,8 +1071,8 @@ def sample_combinations(
         Click context object.
     template_file : Path
         Path to template file.
-    lexicon_file : Path
-        Path to lexicon file.
+    lexicon_files : tuple[Path, ...]
+        Paths to one or more lexicon files to merge.
     output_file : Path
         Path to output sampled combinations.
     n_samples : int
@@ -944,13 +1084,30 @@ def sample_combinations(
 
     Examples
     --------
+    # Single lexicon
     $ bead templates sample-combinations template.jsonl lexicon.jsonl samples.jsonl \\
+        --n-samples 1000 --seed 42
+
+    # Multiple lexicons
+    $ bead templates sample-combinations tpl.jsonl nouns.jsonl verbs.jsonl out.jsonl \\
         --n-samples 1000 --seed 42
     """
     try:
-        # Load lexicon
-        print_info(f"Loading lexicon from {lexicon_file}")
-        lexicon = Lexicon.from_jsonl(str(lexicon_file), "lexicon")
+        # Load and merge lexicons
+        if not lexicon_files:
+            print_error("At least one lexicon file is required")
+            ctx.exit(1)
+
+        print_info(f"Loading {len(lexicon_files)} lexicon(s)")
+        merged_lexicon = Lexicon(name="merged", items={})
+
+        for lex_file in lexicon_files:
+            lex = Lexicon.from_jsonl(str(lex_file), lex_file.stem)
+            print_info(f"  Loaded {len(lex)} items from {lex_file.name}")
+            merged_lexicon.items.update(lex.items)
+
+        print_info(f"Total merged lexicon: {len(merged_lexicon)} items")
+        lexicon = merged_lexicon
 
         # Load templates
         print_info(f"Loading templates from {template_file}")

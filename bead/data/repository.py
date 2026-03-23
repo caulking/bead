@@ -77,15 +77,15 @@ class Repository[T: BaseModel]:
         self.use_cache = use_cache
         self.cache: dict[UUID, T] = {}
 
-        # Load cache on init if enabled and file exists
+        # load cache on init if enabled and file exists
         if self.use_cache and self.storage_path.exists():
             self._load_cache()
 
     def _load_cache(self) -> None:
         """Load all objects from storage into cache.
 
-        This is a private method called during initialization if caching is
-        enabled and the storage file exists.
+        Called during initialization if caching is enabled and the storage
+        file exists.
         """
         objects = read_jsonlines(self.storage_path, self.model_class)
         self.cache = {obj.id: obj for obj in objects}  # type: ignore[attr-defined]
@@ -95,13 +95,13 @@ class Repository[T: BaseModel]:
 
         Parameters
         ----------
-        object_id : UUID
-            ID of the object to retrieve
+        object_id
+            ID of the object to retrieve.
 
         Returns
         -------
         T | None
-            The object if found, None otherwise
+            The object if found, None otherwise.
 
         Examples
         --------
@@ -115,7 +115,7 @@ class Repository[T: BaseModel]:
         if self.use_cache:
             return self.cache.get(object_id)
         else:
-            # Scan file for object
+            # scan file for object
             if not self.storage_path.exists():
                 return None
             objects = read_jsonlines(self.storage_path, self.model_class)
@@ -154,8 +154,8 @@ class Repository[T: BaseModel]:
 
         Parameters
         ----------
-        obj : T
-            Object to add
+        obj
+            Object to add.
 
         Examples
         --------
@@ -165,13 +165,13 @@ class Repository[T: BaseModel]:
         >>> repo.exists(obj.id)
         True
         """
-        # Create parent directories if needed
+        # create parent directories if needed
         self.storage_path.parent.mkdir(parents=True, exist_ok=True)
 
-        # Append to file
+        # append to file
         append_jsonlines([obj], self.storage_path)
 
-        # Update cache
+        # update cache
         if self.use_cache:
             self.cache[obj.id] = obj  # type: ignore[attr-defined]
 
@@ -182,8 +182,8 @@ class Repository[T: BaseModel]:
 
         Parameters
         ----------
-        objects : list[T]
-            List of objects to add
+        objects
+            List of objects to add.
 
         Examples
         --------
@@ -196,13 +196,13 @@ class Repository[T: BaseModel]:
         if not objects:
             return
 
-        # Create parent directories if needed
+        # create parent directories if needed
         self.storage_path.parent.mkdir(parents=True, exist_ok=True)
 
-        # Append to file
+        # append to file
         append_jsonlines(objects, self.storage_path)
 
-        # Update cache
+        # update cache
         if self.use_cache:
             for obj in objects:
                 self.cache[obj.id] = obj  # type: ignore[attr-defined]
@@ -214,8 +214,8 @@ class Repository[T: BaseModel]:
 
         Parameters
         ----------
-        obj : T
-            Object to update (must have existing ID)
+        obj
+            Object to update (must have existing ID).
 
         Examples
         --------
@@ -228,16 +228,16 @@ class Repository[T: BaseModel]:
         >>> loaded.name
         'updated'
         """
-        # Update in cache
+        # update in cache
         if self.use_cache:
             self.cache[obj.id] = obj  # type: ignore[attr-defined]
 
-        # Rewrite file
+        # rewrite file
         objects = list(self.cache.values()) if self.use_cache else self.get_all()
-        # Replace the object in the list
+        # replace the object in the list
         objects = [o if o.id != obj.id else obj for o in objects]  # type: ignore[attr-defined]
 
-        # Create parent directories if needed
+        # create parent directories if needed
         self.storage_path.parent.mkdir(parents=True, exist_ok=True)
 
         write_jsonlines(objects, self.storage_path)
@@ -249,8 +249,8 @@ class Repository[T: BaseModel]:
 
         Parameters
         ----------
-        object_id : UUID
-            ID of object to delete
+        object_id
+            ID of object to delete.
 
         Examples
         --------
@@ -261,11 +261,11 @@ class Repository[T: BaseModel]:
         >>> repo.exists(obj.id)
         False
         """
-        # Remove from cache
+        # remove from cache
         if self.use_cache:
             self.cache.pop(object_id, None)
 
-        # Rewrite file without the object
+        # rewrite file without the object
         objects = list(self.cache.values()) if self.use_cache else self.get_all()
         objects = [o for o in objects if o.id != object_id]  # type: ignore[attr-defined]
 
@@ -273,7 +273,7 @@ class Repository[T: BaseModel]:
             self.storage_path.parent.mkdir(parents=True, exist_ok=True)
             write_jsonlines(objects, self.storage_path)
         elif self.storage_path.exists():
-            # If no objects left, delete the file
+            # if no objects left, delete the file
             self.storage_path.unlink()
 
     def exists(self, object_id: UUID) -> bool:
@@ -281,13 +281,13 @@ class Repository[T: BaseModel]:
 
         Parameters
         ----------
-        object_id : UUID
-            ID of object to check
+        object_id
+            ID of object to check.
 
         Returns
         -------
         bool
-            True if object exists, False otherwise
+            True if object exists, False otherwise.
 
         Examples
         --------
@@ -334,10 +334,10 @@ class Repository[T: BaseModel]:
         >>> repo.count()
         0
         """
-        # Clear cache
+        # clear cache
         self.cache.clear()
 
-        # Delete file
+        # delete file
         if self.storage_path.exists():
             self.storage_path.unlink()
 

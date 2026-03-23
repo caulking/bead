@@ -28,14 +28,6 @@ class AdapterRegistry:
     """
 
     def __init__(self) -> None:
-        """Initialize empty registry.
-
-        Examples
-        --------
-        >>> registry = AdapterRegistry()
-        >>> len(registry._adapters)
-        0
-        """
         self._adapters: dict[str, type[ResourceAdapter]] = {}
 
     def register(self, name: str, adapter_class: type[ResourceAdapter]) -> None:
@@ -63,7 +55,7 @@ class AdapterRegistry:
         """
         if not name or not name.strip():
             raise ValueError("Adapter name must be non-empty")
-        # Runtime check for subclass - pyright can't verify this at compile time
+        # runtime check for subclass; pyright can't verify this at compile time
         if not issubclass(adapter_class, ResourceAdapter):  # type: ignore[reportUnnecessaryIsInstance]
             raise ValueError(f"{adapter_class} must be a subclass of ResourceAdapter")
         self._adapters[name] = adapter_class

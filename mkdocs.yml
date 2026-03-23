@@ -1,0 +1,111 @@
+site_name: bead Documentation
+site_description: Framework for large-scale linguistic judgment experiments
+site_url: https://bead.readthedocs.io
+repo_url: https://github.com/FACTSlab/bead
+repo_name: FACTSlab/bead
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            docstring_style: numpy
+            docstring_section_style: table
+            show_signature_annotations: true
+            show_source: false
+            show_root_heading: true
+            show_root_full_path: false
+            show_object_full_path: false
+            members_order: source
+            heading_level: 2
+            line_length: 75
+          paths: [bead]
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - Quick Start: quickstart.md
+  - User Guide:
+    - Overview: user-guide/index.md
+    - Core Concepts: user-guide/concepts.md
+    - Configuration: user-guide/configuration.md
+    - CLI Guide:
+      - Overview: user-guide/cli/index.md
+      - Resources: user-guide/cli/resources.md
+      - Templates: user-guide/cli/templates.md
+      - Items: user-guide/cli/items.md
+      - Lists: user-guide/cli/lists.md
+      - Deployment: user-guide/cli/deployment.md
+      - Training: user-guide/cli/training.md
+      - Workflows: user-guide/cli/workflows.md
+    - API Guide:
+      - Overview: user-guide/api/index.md
+      - Resources: user-guide/api/resources.md
+      - Templates: user-guide/api/templates.md
+      - Items: user-guide/api/items.md
+      - Lists: user-guide/api/lists.md
+      - Deployment: user-guide/api/deployment.md
+      - Training: user-guide/api/training.md
+      - Workflows: user-guide/api/workflows.md
+  - CLI Reference: cli/reference.md
+  - API Reference:
+    - bead.resources: api/resources.md
+    - bead.templates: api/templates.md
+    - bead.items: api/items.md
+    - bead.lists: api/lists.md
+    - bead.deployment: api/deployment.md
+    - bead.tokenization: api/tokenization.md
+    - bead.active_learning: api/active_learning.md
+    - bead.simulation: api/simulation.md
+    - bead.evaluation: api/evaluation.md
+    - bead.dsl: api/dsl.md
+    - bead.behavioral: api/behavioral.md
+    - bead.participants: api/participants.md
+    - bead.data_collection: api/data_collection.md
+    - bead.config: api/config.md
+    - bead.data: api/data.md
+  - Developer Guide:
+    - Architecture: developer-guide/architecture.md
+    - Setup: developer-guide/setup.md
+    - Testing: developer-guide/testing.md
+    - Contributing: developer-guide/contributing.md
+  - Task Gallery: examples/gallery.md

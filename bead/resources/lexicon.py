@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 from collections.abc import Callable, Iterator
 from pathlib import Path
-from typing import Any, Literal, cast
+from typing import Any, Literal
 from uuid import UUID
 
 import pandas as pd
@@ -314,8 +314,9 @@ class Lexicon(BeadBaseModel):
         1
         """
         return self.filter(
-            lambda item: item.features.get("pos") is not None
-            and item.features.get("pos") == pos
+            lambda item: (
+                item.features.get("pos") is not None and item.features.get("pos") == pos
+            )
         )
 
     def filter_by_lemma(self, lemma: str) -> Lexicon:
@@ -367,8 +368,10 @@ class Lexicon(BeadBaseModel):
         1
         """
         return self.filter(
-            lambda item: feature_name in item.features
-            and item.features[feature_name] == feature_value
+            lambda item: (
+                feature_name in item.features
+                and item.features[feature_name] == feature_value
+            )
         )
 
     def filter_by_attribute(self, attr_name: str, attr_value: Any) -> Lexicon:
@@ -400,8 +403,9 @@ class Lexicon(BeadBaseModel):
         1
         """
         return self.filter(
-            lambda item: attr_name in item.features
-            and item.features[attr_name] == attr_value
+            lambda item: (
+                attr_name in item.features and item.features[attr_name] == attr_value
+            )
         )
 
     def search(self, query: str, field: str = "lemma") -> Lexicon:
@@ -439,8 +443,10 @@ class Lexicon(BeadBaseModel):
             return self.filter(lambda item: query_lower in item.lemma.lower())
         elif field == "pos":
             return self.filter(
-                lambda item: item.features.get("pos") is not None
-                and query_lower in str(item.features.get("pos")).lower()
+                lambda item: (
+                    item.features.get("pos") is not None
+                    and query_lower in str(item.features.get("pos")).lower()
+                )
             )
         elif field == "form":
             return self.filter(
@@ -619,11 +625,11 @@ class Lexicon(BeadBaseModel):
 
         # Get columns, handling both pandas and polars
         if is_polars:
-            df_polars = cast(pl.DataFrame, df)
-            columns_list: list[str] = df_polars.columns
+            assert isinstance(df, pl.DataFrame)
+            columns_list: list[str] = df.columns
         else:
-            df_pandas = cast(pd.DataFrame, df)
-            columns_list = list(df_pandas.columns)
+            assert isinstance(df, pd.DataFrame)
+            columns_list = list(df.columns)
 
         if "lemma" not in columns_list:
             raise ValueError("DataFrame must have a 'lemma' column")
@@ -633,11 +639,11 @@ class Lexicon(BeadBaseModel):
         # Convert to dict format for iteration
         rows: list[dict[str, Any]]
         if is_polars:
-            df_polars = cast(pl.DataFrame, df)
-            rows = df_polars.to_dicts()
+            assert isinstance(df, pl.DataFrame)
+            rows = df.to_dicts()
         else:
-            df_pandas = cast(pd.DataFrame, df)
-            rows = df_pandas.to_dict("records")  # type: ignore[assignment]
+            assert isinstance(df, pd.DataFrame)
+            rows = df.to_dict("records")  # type: ignore[assignment]
 
         for row in rows:
             # Extract base fields

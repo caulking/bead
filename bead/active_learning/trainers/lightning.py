@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from bead.active_learning.trainers.base import BaseTrainer, ModelMetadata
+from bead.data.base import BeadBaseModel
 from bead.data.timestamps import format_iso8601, now_iso8601
 
 if TYPE_CHECKING:
@@ -27,15 +28,16 @@ def create_lightning_module(
 
     Parameters
     ----------
-    model : Any
-        The model to wrap.
-    learning_rate : float
-        Learning rate for optimizer.
+    model
+        The PyTorch model to wrap in a Lightning module.
+    learning_rate
+        Learning rate for the AdamW optimizer.
 
     Returns
     -------
-    Any
-        Lightning module instance.
+    pl.LightningModule
+        Lightning module wrapping the provided model with training,
+        validation, and optimizer configuration.
     """
     import pytorch_lightning as pl  # noqa: PLC0415
     import torch  # noqa: PLC0415
@@ -71,26 +73,28 @@ def create_lightning_module(
 class PyTorchLightningTrainer(BaseTrainer):
     """Trainer using PyTorch Lightning.
 
-    This trainer uses PyTorch Lightning to train models with support for
-    callbacks, logging, and advanced training features.
+    Trains models using PyTorch Lightning with callbacks for checkpointing
+    and early stopping.
 
     Parameters
     ----------
-    config : Any
-        Training configuration with the following expected fields:
-        - model_name: str - Base model name/path
-        - num_labels: int | None - Number of labels
-        - num_epochs: int - Number of training epochs
-        - learning_rate: float - Learning rate
-        - output_dir: Path - Directory for outputs
-        - logging_dir: Path | None - Logging directory
+    config
+        Training configuration as a dict or config object with the following
+        fields:
+
+        - model_name: str, base model name or path
+        - num_labels: int, number of output labels
+        - num_epochs: int, number of training epochs
+        - learning_rate: float, learning rate for optimizer
+        - output_dir: Path, directory for outputs and checkpoints
+        - logging_dir: Path or None, optional TensorBoard logging directory
 
     Attributes
     ----------
-    config : Any
+    config : dict[str, int | str | float | bool | Path] | BeadBaseModel
         Training configuration.
-    lightning_module : Any | None
-        The Lightning module wrapper.
+    lightning_module : pl.LightningModule | None
+        The Lightning module wrapper, set after training.
 
     Examples
     --------
@@ -109,7 +113,7 @@ class PyTorchLightningTrainer(BaseTrainer):
     """
 
     def __init__(
-        self, config: dict[str, int | str | float | bool | Path] | object
+        self, config: dict[str, int | str | float | bool | Path] | BeadBaseModel
     ) -> None:
         super().__init__(config)
         self.lightning_module: pl.LightningModule | None = None
@@ -121,15 +125,15 @@ class PyTorchLightningTrainer(BaseTrainer):
 
         Parameters
         ----------
-        key : str
-            Configuration key.
-        default : Any
-            Default value if key not found.
+        key
+            Configuration key to retrieve.
+        default
+            Default value if key is not found.
 
         Returns
         -------
-        Any
-            Configuration value.
+        int | str | float | bool | Path | None
+            Configuration value for the given key, or default if not found.
         """
         if hasattr(self.config, key):
             return getattr(self.config, key)
@@ -140,19 +144,23 @@ class PyTorchLightningTrainer(BaseTrainer):
     def train(
         self, train_data: DataLoader, eval_data: DataLoader | None = None
     ) -> ModelMetadata:
-        """Train using PyTorch Lightning.
+        """Train a model using PyTorch Lightning.
+
+        Loads a pretrained model, wraps it in a Lightning module, and trains
+        with checkpointing and early stopping callbacks.
 
         Parameters
         ----------
-        train_data : Any
-            Training dataloader.
-        eval_data : Any | None
-            Evaluation dataloader.
+        train_data
+            Training dataloader providing batches for training.
+        eval_data
+            Optional evaluation dataloader for validation during training.
 
         Returns
         -------
         ModelMetadata
-            Training metadata.
+            Metadata containing model name, framework, training config,
+            metrics, checkpoint path, and training time.
 
         Examples
         --------
@@ -167,7 +175,7 @@ class PyTorchLightningTrainer(BaseTrainer):
 
         start_time = time.time()
 
-        # Get config values
+        # get config values
         model_name = self._get_config_value("model_name", "bert-base-uncased")
         num_labels = self._get_config_value("num_labels", 2)
         num_epochs = self._get_config_value("num_epochs", 3)
@@ -175,15 +183,15 @@ class PyTorchLightningTrainer(BaseTrainer):
         output_dir = self._get_config_value("output_dir", Path("output"))
         logging_dir = self._get_config_value("logging_dir", None)
 
-        # Load model
+        # load model
         model = AutoModelForSequenceClassification.from_pretrained(
             model_name, num_labels=num_labels
         )
 
-        # Create Lightning module
+        # create lightning module
         self.lightning_module = create_lightning_module(model, learning_rate)
 
-        # Create callbacks
+        # create callbacks
         callbacks = [
             pl.callbacks.ModelCheckpoint(
                 monitor="val_loss",
@@ -193,12 +201,12 @@ class PyTorchLightningTrainer(BaseTrainer):
             pl.callbacks.EarlyStopping(monitor="val_loss", patience=3),
         ]
 
-        # Create logger
+        # create logger
         logger = None
         if logging_dir:
             logger = pl.loggers.TensorBoardLogger(str(logging_dir))
 
-        # Create trainer
+        # create trainer
         trainer = pl.Trainer(
             max_epochs=num_epochs,
             accelerator="auto",
@@ -207,14 +215,14 @@ class PyTorchLightningTrainer(BaseTrainer):
             callbacks=callbacks,
         )
 
-        # Train
+        # train
         trainer.fit(
             self.lightning_module,
             train_dataloaders=train_data,
             val_dataloaders=eval_data,
         )
 
-        # Evaluate
+        # evaluate
         metrics: dict[str, float] = {}
         if eval_data is not None:
             eval_results = trainer.validate(
@@ -225,14 +233,14 @@ class PyTorchLightningTrainer(BaseTrainer):
 
         training_time = time.time() - start_time
 
-        # Get best checkpoint path
+        # get best checkpoint path
         best_checkpoint = None
         if hasattr(trainer.checkpoint_callback, "best_model_path"):
             best_checkpoint_str = trainer.checkpoint_callback.best_model_path
             if best_checkpoint_str:
                 best_checkpoint = Path(best_checkpoint_str)
 
-        # Create metadata
+        # create metadata
         config_dict = (
             self.config
             if isinstance(self.config, dict)
@@ -256,14 +264,16 @@ class PyTorchLightningTrainer(BaseTrainer):
         return metadata
 
     def save_model(self, output_dir: Path, metadata: ModelMetadata) -> None:
-        """Save model.
+        """Save model and metadata to disk.
+
+        Saves the Lightning module state dict and training metadata as JSON.
 
         Parameters
         ----------
-        output_dir : Path
-            Directory to save model and metadata.
-        metadata : ModelMetadata
-            Training metadata to save.
+        output_dir
+            Directory to save model checkpoint and metadata JSON file.
+        metadata
+            Training metadata to save alongside the model.
 
         Examples
         --------
@@ -274,30 +284,31 @@ class PyTorchLightningTrainer(BaseTrainer):
 
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        # Save Lightning checkpoint
+        # save lightning checkpoint
         if self.lightning_module is not None:
             torch.save(
                 self.lightning_module.state_dict(),
                 output_dir / "lightning_model.pt",
             )
 
-        # Save metadata
+        # save metadata
         with open(output_dir / "metadata.json", "w") as f:
             metadata_dict = metadata.model_dump()
             json.dump(metadata_dict, f, indent=2, default=str)
 
     def load_model(self, model_dir: Path) -> pl.LightningModule | None:
-        """Load model.
+        """Load a saved model from disk.
 
         Parameters
         ----------
-        model_dir : Path
-            Directory containing saved model.
+        model_dir
+            Directory containing the saved Lightning model state dict.
 
         Returns
         -------
-        Any
-            Loaded Lightning module.
+        pl.LightningModule | None
+            The Lightning module with loaded weights, or None if no module
+            has been initialized.
 
         Examples
         --------

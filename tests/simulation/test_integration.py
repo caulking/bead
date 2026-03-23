@@ -212,7 +212,7 @@ def test_ordinal_scale_with_noise(ordinal_scale_template, ordinal_scale_items):
     # (temperature noise can push values slightly outside range)
     for item in ordinal_scale_items:
         rating = annotations[str(item.id)]
-        assert isinstance(rating, (int, float))
+        assert isinstance(rating, int | float)
         # Should be roughly in the expected range (allow some noise margin)
         assert 0 <= rating <= 10  # Relaxed bounds to account for noise
 
@@ -512,7 +512,7 @@ def test_runner_output_saving(forced_choice_template, forced_choice_items, tmp_p
     assert output_path.exists()
 
     # Verify content
-    import json
+    import json  # noqa: PLC0415
 
     with open(output_path) as f:
         saved_results = json.load(f)

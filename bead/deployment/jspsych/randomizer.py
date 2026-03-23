@@ -9,18 +9,18 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
 from uuid import UUID
 
 from jinja2 import Environment, FileSystemLoader
 
+from bead.data.base import JsonValue
 from bead.lists.constraints import OrderingConstraint
 
 
 def generate_randomizer_function(
     item_ids: list[UUID],
     constraints: list[OrderingConstraint],
-    metadata: dict[UUID, dict[str, Any]],
+    metadata: dict[UUID, dict[str, JsonValue]],
 ) -> str:
     """Generate JavaScript code for constraint-aware trial randomization.
 
@@ -35,7 +35,7 @@ def generate_randomizer_function(
         List of item IDs included in the experiment.
     constraints : list[OrderingConstraint]
         Ordering constraints to enforce.
-    metadata : dict[UUID, dict[str, Any]]
+    metadata : dict[UUID, dict[str, JsonValue]]
         Item metadata needed for constraint checking (keyed by item UUID).
 
     Returns
@@ -65,10 +65,10 @@ def generate_randomizer_function(
     >>> "checkNoAdjacentConstraints" in js_code
     True
     """
-    # Prepare template context
+    # prepare template context
     context = _prepare_template_context(item_ids, constraints, metadata)
 
-    # Load and render template
+    # load and render template
     template_dir = Path(__file__).parent / "templates"
     env = Environment(loader=FileSystemLoader(str(template_dir)))
     template = env.get_template("randomizer.js.template")
@@ -79,8 +79,8 @@ def generate_randomizer_function(
 def _prepare_template_context(
     item_ids: list[UUID],
     constraints: list[OrderingConstraint],
-    metadata: dict[UUID, dict[str, Any]],
-) -> dict[str, Any]:
+    metadata: dict[UUID, dict[str, JsonValue]],
+) -> dict[str, JsonValue]:
     """Prepare Jinja2 template context from constraints.
 
     Parameters
@@ -89,15 +89,15 @@ def _prepare_template_context(
         Item IDs in the experiment.
     constraints : list[OrderingConstraint]
         Ordering constraints.
-    metadata : dict[UUID, dict[str, Any]]
+    metadata : dict[UUID, dict[str, JsonValue]]
         Item metadata.
 
     Returns
     -------
-    dict[str, Any]
+    dict[str, JsonValue]
         Template context for Jinja2 rendering.
     """
-    context: dict[str, Any] = {
+    context: dict[str, JsonValue] = {
         "metadata_json": _serialize_metadata(metadata),
         "has_practice_items": False,
         "practice_property": "",
@@ -112,18 +112,18 @@ def _prepare_template_context(
         "distance_constraints_json": "[]",
     }
 
-    # Combine all constraints (multiple OrderingConstraints can be active)
+    # combine all constraints (multiple OrderingConstraints can be active)
     for constraint in constraints:
-        # Practice items
+        # practice items
         if constraint.practice_item_property:
             context["has_practice_items"] = True
-            # Extract property name from path
+            # extract property name from path
             # (e.g., "item_metadata.is_practice" -> "is_practice")
             context["practice_property"] = _extract_property_name(
                 constraint.practice_item_property
             )
 
-        # Blocking
+        # blocking
         if constraint.block_by_property:
             context["has_blocking"] = True
             context["block_property"] = _extract_property_name(
@@ -131,25 +131,25 @@ def _prepare_template_context(
             )
             context["randomize_within_blocks"] = constraint.randomize_within_blocks
 
-        # Precedence
+        # precedence
         if constraint.precedence_pairs:
             context["has_precedence"] = True
-            # Convert UUID pairs to string pairs for JSON
+            # convert UUID pairs to string pairs for JSON
             pairs = [[str(a), str(b)] for a, b in constraint.precedence_pairs]
             context["precedence_pairs_json"] = json.dumps(pairs)
 
-        # No-adjacency
+        # no-adjacency
         if constraint.no_adjacent_property:
             context["has_no_adjacent"] = True
-            # Extract property name since metadata is already extracted
+            # extract property name since metadata is already extracted
             context["no_adjacent_property"] = _extract_property_name(
                 constraint.no_adjacent_property
             )
 
-        # Distance constraints
+        # distance constraints
         if constraint.min_distance or constraint.max_distance:
             context["has_distance"] = True
-            # Generate distance constraints for all item pairs
+            # generate distance constraints for all item pairs
             distance_constraints = _generate_distance_constraints(
                 item_ids, constraint, metadata
             )
@@ -158,14 +158,14 @@ def _prepare_template_context(
     return context
 
 
-def _serialize_metadata(metadata: dict[UUID, dict[str, Any]]) -> str:
+def _serialize_metadata(metadata: dict[UUID, dict[str, JsonValue]]) -> str:
     """Serialize metadata dictionary to JSON.
 
     Converts UUID keys to strings for JSON serialization.
 
     Parameters
     ----------
-    metadata : dict[UUID, dict[str, Any]]
+    metadata : dict[UUID, dict[str, JsonValue]]
         Item metadata with UUID keys.
 
     Returns
@@ -173,7 +173,7 @@ def _serialize_metadata(metadata: dict[UUID, dict[str, Any]]) -> str:
     str
         JSON string of metadata.
     """
-    # Convert UUID keys to strings
+    # convert UUID keys to strings
     serializable = {str(k): v for k, v in metadata.items()}
     return json.dumps(serializable, indent=2)
 
@@ -205,8 +205,8 @@ def _extract_property_name(property_path: str) -> str:
 def _generate_distance_constraints(
     item_ids: list[UUID],
     constraint: OrderingConstraint,
-    metadata: dict[UUID, dict[str, Any]],
-) -> list[dict[str, Any]]:
+    metadata: dict[UUID, dict[str, JsonValue]],
+) -> list[dict[str, str | int | None]]:
     """Generate distance constraints for all relevant item pairs.
 
     Distance constraints are applied to items that share the same value
@@ -218,26 +218,26 @@ def _generate_distance_constraints(
         Item IDs in the experiment.
     constraint : OrderingConstraint
         Ordering constraint with distance specifications.
-    metadata : dict[UUID, dict[str, Any]]
+    metadata : dict[UUID, dict[str, JsonValue]]
         Item metadata.
 
     Returns
     -------
-    list[dict[str, Any]]
+    list[dict[str, str | int | None]]
         List of distance constraint specifications.
     """
-    distance_constraints: list[dict[str, Any]] = []
+    distance_constraints: list[dict[str, str | int | None]] = []
 
-    # Group items by property value if no_adjacent_property is set
+    # group items by property value if no_adjacent_property is set
     if constraint.no_adjacent_property:
         property_path = constraint.no_adjacent_property
-        # Extract just the property name from the path
+        # extract just the property name from the path
         # (e.g., "condition" from "item_metadata.condition")
         # because metadata is already extracted from items
         property_name = _extract_property_name(property_path)
 
-        # Group items by property value
-        groups: dict[Any, list[UUID]] = {}
+        # group items by property value
+        groups: dict[JsonValue, list[UUID]] = {}
         for item_id in item_ids:
             item_meta = metadata.get(item_id, {})
             value = item_meta.get(property_name)
@@ -247,10 +247,10 @@ def _generate_distance_constraints(
                     groups[value] = []
                 groups[value].append(item_id)
 
-        # Create pairwise distance constraints within each group
+        # create pairwise distance constraints within each group
         for _value, item_group in groups.items():
             if len(item_group) > 1:
-                # Create constraints for all pairs in this group
+                # create constraints for all pairs in this group
                 for i, item1 in enumerate(item_group):
                     for item2 in item_group[i + 1 :]:
                         distance_constraints.append(
@@ -265,19 +265,19 @@ def _generate_distance_constraints(
     return distance_constraints
 
 
-def _get_nested_property(obj: dict[str, Any], path: str) -> Any:  # pyright: ignore[reportUnusedFunction]
+def _get_nested_property(obj: dict[str, JsonValue], path: str) -> JsonValue:  # pyright: ignore[reportUnusedFunction]
     """Get nested property from dictionary using dot notation.
 
     Parameters
     ----------
-    obj : dict[str, Any]
+    obj : dict[str, JsonValue]
         Object to query.
     path : str
         Property path (e.g., "item_metadata.condition").
 
     Returns
     -------
-    Any
+    JsonValue
         Property value or None if not found.
 
     Examples

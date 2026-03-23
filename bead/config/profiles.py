@@ -24,7 +24,7 @@ from bead.config.paths import PathsConfig
 from bead.config.resources import ResourceConfig
 from bead.config.template import TemplateConfig
 
-# Development profile: verbose logging, small batches, relative paths
+# development profile: verbose logging, small batches, relative paths
 DEV_CONFIG = BeadConfig(
     profile="dev",
     paths=PathsConfig(
@@ -35,21 +35,21 @@ DEV_CONFIG = BeadConfig(
         create_dirs=True,
     ),
     resources=ResourceConfig(
-        cache_external=False,  # Disable caching for development
+        cache_external=False,  # disable caching for development
     ),
     templates=TemplateConfig(
         filling_strategy="exhaustive",
-        batch_size=100,  # Small batch size for quick iteration
+        batch_size=100,  # small batch size for quick iteration
         stream_mode=False,
     ),
     items=ItemConfig(
         model=ModelConfig(
             provider="huggingface",
             model_name="gpt2",
-            batch_size=4,  # Small batch for development
+            batch_size=4,  # small batch for development
             device="cpu",
         ),
-        parallel_processing=False,  # Simpler debugging without parallelism
+        parallel_processing=False,  # simpler debugging without parallelism
     ),
     lists=ListConfig(
         num_lists=1,
@@ -57,14 +57,14 @@ DEV_CONFIG = BeadConfig(
     deployment=DeploymentConfig(),
     active_learning=ActiveLearningConfig(
         forced_choice_model=ForcedChoiceModelConfig(
-            num_epochs=1,  # Quick training for testing
+            num_epochs=1,  # quick training for testing
             batch_size=8,
             learning_rate=2e-5,
         ),
         trainer=TrainerConfig(epochs=1),
     ),
     logging=LoggingConfig(
-        level="DEBUG",  # Verbose logging for development
+        level="DEBUG",  # verbose logging for development
         console=True,
     ),
 )
@@ -87,7 +87,7 @@ Examples
 100
 """
 
-# Production profile: optimized settings, large batches, absolute paths
+# production profile: optimized settings, large batches, absolute paths
 PROD_CONFIG = BeadConfig(
     profile="prod",
     paths=PathsConfig(
@@ -98,22 +98,22 @@ PROD_CONFIG = BeadConfig(
         create_dirs=True,
     ),
     resources=ResourceConfig(
-        cache_external=True,  # Enable caching for performance
+        cache_external=True,  # enable caching for performance
     ),
     templates=TemplateConfig(
         filling_strategy="exhaustive",
-        batch_size=10000,  # Large batches for efficiency
-        stream_mode=True,  # Handle large templates efficiently
+        batch_size=10000,  # large batches for efficiency
+        stream_mode=True,  # handle large templates efficiently
     ),
     items=ItemConfig(
         model=ModelConfig(
             provider="huggingface",
             model_name="gpt2",
-            batch_size=32,  # Large batch for production
-            device="cuda",  # Use GPU if available
+            batch_size=32,  # large batch for production
+            device="cuda",  # use GPU if available
         ),
-        parallel_processing=True,  # Enable parallelism
-        num_workers=8,  # Multiple workers
+        parallel_processing=True,  # enable parallelism
+        num_workers=8,  # multiple workers
     ),
     lists=ListConfig(
         num_lists=1,
@@ -125,15 +125,15 @@ PROD_CONFIG = BeadConfig(
     ),
     active_learning=ActiveLearningConfig(
         forced_choice_model=ForcedChoiceModelConfig(
-            num_epochs=10,  # Full training
+            num_epochs=10,  # full training
             batch_size=32,
             learning_rate=2e-5,
         ),
         trainer=TrainerConfig(epochs=10, use_wandb=True),
     ),
     logging=LoggingConfig(
-        level="WARNING",  # Minimal logging for production
-        console=False,  # Log to file only
+        level="WARNING",  # minimal logging for production
+        console=False,  # log to file only
         file=Path("/var/log/bead/app.log"),
     ),
 )
@@ -160,7 +160,7 @@ Examples
 True
 """
 
-# Test profile: minimal logging, tiny batches, temp directories
+# test profile: minimal logging, tiny batches, temp directories
 TEST_CONFIG = BeadConfig(
     profile="test",
     paths=PathsConfig(
@@ -171,44 +171,44 @@ TEST_CONFIG = BeadConfig(
         create_dirs=True,
     ),
     resources=ResourceConfig(
-        cache_external=False,  # No caching for tests
+        cache_external=False,  # no caching for tests
     ),
     templates=TemplateConfig(
         filling_strategy="exhaustive",
-        batch_size=10,  # Tiny batches for fast tests
-        max_combinations=100,  # Limit for tests
-        random_seed=42,  # Reproducible tests
+        batch_size=10,  # tiny batches for fast tests
+        max_combinations=100,  # limit for tests
+        random_seed=42,  # reproducible tests
     ),
     items=ItemConfig(
         model=ModelConfig(
             provider="huggingface",
             model_name="gpt2",
-            batch_size=1,  # Minimal batch for tests
+            batch_size=1,  # minimal batch for tests
             device="cpu",  # CPU only for tests
         ),
-        parallel_processing=False,  # Simpler test execution
+        parallel_processing=False,  # simpler test execution
         num_workers=1,
     ),
     lists=ListConfig(
         num_lists=1,
-        random_seed=42,  # Reproducible tests
+        random_seed=42,  # reproducible tests
     ),
     deployment=DeploymentConfig(
-        apply_material_design=False,  # Minimal for tests
+        apply_material_design=False,  # minimal for tests
         include_demographics=False,
         include_attention_checks=False,
     ),
     active_learning=ActiveLearningConfig(
         forced_choice_model=ForcedChoiceModelConfig(
-            num_epochs=1,  # Minimal training
+            num_epochs=1,  # minimal training
             batch_size=2,
             learning_rate=2e-5,
         ),
         trainer=TrainerConfig(epochs=1, use_wandb=False),
     ),
     logging=LoggingConfig(
-        level="CRITICAL",  # Minimal logging for tests
-        console=False,  # Quiet tests
+        level="CRITICAL",  # minimal logging for tests
+        console=False,  # quiet tests
     ),
 )
 """Test configuration profile.
@@ -234,9 +234,9 @@ Examples
 42
 """
 
-# Profile registry
+# profile registry
 PROFILES: dict[str, BeadConfig] = {
-    "default": BeadConfig(),  # Default from models
+    "default": BeadConfig(),  # default from models
     "dev": DEV_CONFIG,
     "prod": PROD_CONFIG,
     "test": TEST_CONFIG,

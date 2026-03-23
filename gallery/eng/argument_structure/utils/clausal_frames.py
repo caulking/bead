@@ -25,15 +25,15 @@ class ClausalTemplate:
     Attributes
     ----------
     frame_type : str
-        Type of clausal complement (e.g., "finite_that", "infinitival_to")
+        Type of clausal complement (e.g., "finite_that", "infinitival_to").
     template_string : str
-        Template with slot placeholders (e.g., "{subj} {verb} that {comp_clause}")
+        Template with slot placeholders (e.g., "{subj} {verb} that {comp_clause}").
     slots : dict[str, str]
-        Mapping from slot name to slot type/constraint
+        Mapping from slot name to slot type/constraint.
     complementizer : str | None
-        Optional complementizer (e.g., "that", "whether", "for")
+        Optional complementizer (e.g., "that", "whether", "for").
     mood : str | None
-        Clause mood (e.g., "indicative", "subjunctive", "conditional")
+        Clause mood (e.g., "indicative", "subjunctive", "conditional").
 
     Examples
     --------
@@ -54,9 +54,9 @@ class ClausalTemplate:
     mood: str | None = None
 
 
-# MegaAttitude Frame Inventory (from LaTeX specification)
+# megaattitude frame inventory (from latex specification)
 MEGAATTITUDE_FRAMES = {
-    # 1. Finite complements with that
+    # 1. finite complements with that
     "that_indicative_past": ClausalTemplate(
         frame_type="finite_that_indicative_past",
         template_string="{subj} {verb} that {comp_subj} {comp_verb} {comp_obj}",
@@ -96,7 +96,7 @@ MEGAATTITUDE_FRAMES = {
         complementizer="that",
         mood="subjunctive",
     ),
-    # 2. Finite complements with whether
+    # 2. finite complements with whether
     "whether_indicative_past": ClausalTemplate(
         frame_type="finite_whether_indicative_past",
         template_string="{subj} {verb} whether {comp_subj} {comp_verb} {comp_obj}",
@@ -123,7 +123,7 @@ MEGAATTITUDE_FRAMES = {
         complementizer="whether",
         mood="subjunctive",
     ),
-    # 3. Non-finite complements: gerund
+    # 3. non-finite complements: gerund
     "gerund": ClausalTemplate(
         frame_type="nonfinite_gerund",
         template_string="{subj} {verb} {comp_verb_gerund} {comp_obj}",
@@ -136,7 +136,7 @@ MEGAATTITUDE_FRAMES = {
         complementizer=None,
         mood=None,
     ),
-    # 4. Non-finite complements: to-infinitive
+    # 4. non-finite complements: to-infinitive
     "to_infinitive": ClausalTemplate(
         frame_type="nonfinite_to_infinitive",
         template_string="{subj} {verb} to {comp_verb} {comp_obj}",
@@ -149,7 +149,7 @@ MEGAATTITUDE_FRAMES = {
         complementizer="to",
         mood=None,
     ),
-    # 5. Non-finite complements: to have (perfect infinitive)
+    # 5. non-finite complements: to have (perfect infinitive)
     "to_have_infinitive": ClausalTemplate(
         frame_type="nonfinite_to_have",
         template_string="{subj} {verb} to have {comp_verb_participle} {comp_obj}",
@@ -162,7 +162,7 @@ MEGAATTITUDE_FRAMES = {
         complementizer="to",
         mood=None,
     ),
-    # 6. Bare infinitive (e.g., "see someone do something")
+    # 6. bare infinitive (e.g., "see someone do something")
     "bare_infinitive": ClausalTemplate(
         frame_type="nonfinite_bare_infinitive",
         template_string="{subj} {verb} {comp_subj} {comp_verb} {comp_obj}",
@@ -176,7 +176,7 @@ MEGAATTITUDE_FRAMES = {
         complementizer=None,
         mood=None,
     ),
-    # 7. For-to infinitive
+    # 7. for-to infinitive
     "for_to_infinitive": ClausalTemplate(
         frame_type="nonfinite_for_to",
         template_string="{subj} {verb} for {comp_subj} to {comp_verb} {comp_obj}",
@@ -190,7 +190,7 @@ MEGAATTITUDE_FRAMES = {
         complementizer="for",
         mood=None,
     ),
-    # 8. Wh-complements: finite
+    # 8. wh-complements: finite
     "wh_finite": ClausalTemplate(
         frame_type="wh_finite",
         template_string="{subj} {verb} which {wh_noun} {comp_verb} {comp_obj}",
@@ -204,7 +204,7 @@ MEGAATTITUDE_FRAMES = {
         complementizer="which",
         mood="indicative",
     ),
-    # 9. Wh-complements: infinitival
+    # 9. wh-complements: infinitival
     "wh_infinitive": ClausalTemplate(
         frame_type="wh_infinitive",
         template_string="{subj} {verb} which {wh_noun} to {comp_verb}",
@@ -231,7 +231,7 @@ MEGAATTITUDE_FRAMES = {
         complementizer="whether",
         mood="indicative",
     ),
-    # 11. Dative with finite complement
+    # 11. dative with finite complement
     "dative_that": ClausalTemplate(
         frame_type="dative_that",
         template_string="{subj} {verb} to {recipient} that {comp_subj} {comp_verb} {comp_obj}",
@@ -246,7 +246,7 @@ MEGAATTITUDE_FRAMES = {
         complementizer="that",
         mood="indicative",
     ),
-    # 12. Null complement
+    # 12. null complement
     "null_complement": ClausalTemplate(
         frame_type="null_complement",
         template_string="{subj} {verb}",
@@ -254,7 +254,7 @@ MEGAATTITUDE_FRAMES = {
         complementizer=None,
         mood=None,
     ),
-    # 13. Pro-clausal "so"
+    # 13. pro-clausal "so"
     "so_proclause": ClausalTemplate(
         frame_type="proclause_so",
         template_string="{subj} {verb} so",
@@ -272,15 +272,15 @@ def map_verbnet_to_clausal_templates(
 
     Parameters
     ----------
-    frame_primary : str
-        Primary VerbNet frame description (e.g., "NP V that S", "NP V NP to VP")
-    syntax_elements : list[tuple[str, str | None]] | None
-        Optional detailed syntax from VerbNet frame
+    frame_primary
+        Primary VerbNet frame description (e.g., "NP V that S", "NP V NP to VP").
+    syntax_elements
+        Optional detailed syntax from VerbNet frame.
 
     Returns
     -------
     list[ClausalTemplate]
-        Matching clausal templates (may return multiple variants)
+        Matching clausal templates (may return multiple variants).
 
     Examples
     --------
@@ -294,7 +294,7 @@ def map_verbnet_to_clausal_templates(
 
     frame_lower = frame_primary.lower()
 
-    # Finite complements with "that"
+    # finite complements with "that"
     if "that s" in frame_lower or "that-s" in frame_lower:
         templates.extend(
             [
@@ -304,7 +304,7 @@ def map_verbnet_to_clausal_templates(
             ]
         )
 
-    # Finite complements with "whether"
+    # finite complements with "whether"
     if "whether" in frame_lower:
         if "to" in frame_lower:
             # "whether to VP" - different pattern
@@ -330,26 +330,26 @@ def map_verbnet_to_clausal_templates(
                 ]
             )
 
-    # Infinitival "to VP"
+    # infinitival "to VP"
     if ("to vp" in frame_lower or "to inf" in frame_lower) and "for" not in frame_lower:
         templates.append(MEGAATTITUDE_FRAMES["to_infinitive"])
 
-    # For-to infinitive
+    # for-to infinitive
     if "for np to" in frame_lower or "for-np-to-inf" in frame_lower:
         templates.append(MEGAATTITUDE_FRAMES["for_to_infinitive"])
 
-    # Gerund
+    # gerund
     if "v-ing" in frame_lower or "ving" in frame_lower or "ing" in frame_lower:
         templates.append(MEGAATTITUDE_FRAMES["gerund"])
 
-    # Wh-complements
+    # wh-complements
     if any(wh in frame_lower for wh in ["wh-", "which", "what", "who", "how"]):
         if "to" in frame_lower:
             templates.append(MEGAATTITUDE_FRAMES["wh_infinitive"])
         else:
             templates.append(MEGAATTITUDE_FRAMES["wh_finite"])
 
-    # Small clauses / bare infinitives (e.g., "NP V NP VP")
+    # small clauses / bare infinitives (e.g., "NP V NP VP")
     if "np v np vp" in frame_lower.replace(
         " ", ""
     ) or "np v np inf" in frame_lower.replace(" ", ""):
@@ -359,7 +359,7 @@ def map_verbnet_to_clausal_templates(
     if "about" in frame_lower and ("whether" in frame_lower or "wh" in frame_lower):
         templates.append(MEGAATTITUDE_FRAMES["about_whether"])
 
-    # Dative + clausal
+    # dative + clausal
     if (
         "to np" in frame_lower or "pp.recipient" in frame_lower
     ) and "that" in frame_lower:
@@ -374,7 +374,7 @@ def get_all_clausal_frame_types() -> dict[str, ClausalTemplate]:
     Returns
     -------
     dict[str, ClausalTemplate]
-        Dictionary mapping frame type names to templates
+        Dictionary mapping frame type names to templates.
 
     Examples
     --------
@@ -390,13 +390,13 @@ def is_clausal_frame(frame_primary: str) -> bool:
 
     Parameters
     ----------
-    frame_primary : str
-        VerbNet frame description
+    frame_primary
+        VerbNet frame description.
 
     Returns
     -------
     bool
-        True if frame contains clausal patterns
+        True if frame contains clausal patterns.
 
     Examples
     --------

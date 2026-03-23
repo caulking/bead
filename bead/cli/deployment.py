@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, cast
+from typing import cast
 from uuid import UUID
 
 import click
@@ -17,6 +17,7 @@ from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from bead.cli.utils import print_error, print_info, print_success
+from bead.data.base import JsonValue
 from bead.deployment.distribution import (
     DistributionStrategyType,
     ListDistributionStrategy,
@@ -40,7 +41,7 @@ def deployment() -> None:
 
     \b
     Examples:
-        $ bead deployment generate lists/ items.jsonl experiment/
+        $ bead deployment generate lists.jsonl items.jsonl experiment/
         $ bead deployment export-jatos experiment/ study.jzip \\
             --title "My Study"
         $ bead deployment upload-jatos study.jzip \\
@@ -51,9 +52,11 @@ def deployment() -> None:
 
 @click.command()
 @click.argument(
-    "lists_dir", type=click.Path(exists=True, file_okay=False, path_type=Path)
+    "lists_file", type=click.Path(exists=True, dir_okay=False, path_type=Path)
 )
-@click.argument("items_file", type=click.Path(exists=True, path_type=Path))
+@click.argument(
+    "items_file", type=click.Path(exists=True, dir_okay=False, path_type=Path)
+)
 @click.argument("output_dir", type=click.Path(path_type=Path))
 @click.option(
     "--experiment-type",
@@ -119,10 +122,15 @@ def deployment() -> None:
     default=0,
     help="List index to use in debug mode (default: 0)",
 )
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    help="Show what would be done without generating files",
+)
 @click.pass_context
 def generate(
     ctx: click.Context,
-    lists_dir: Path,
+    lists_file: Path,
     items_file: Path,
     output_dir: Path,
     experiment_type: str,
@@ -134,6 +142,7 @@ def generate(
     max_participants: int | None,
     debug_mode: bool,
     debug_list_index: int,
+    dry_run: bool,
 ) -> None:
     r"""Generate jsPsych experiment from lists and items.
 
@@ -141,10 +150,10 @@ def generate(
     ----------
     ctx : click.Context
         Click context object.
-    lists_dir : Path
-        Directory containing experiment list files.
+    lists_file : Path
+        JSONL file containing experiment lists (one list per line).
     items_file : Path
-        Path to items file.
+        JSONL file containing items (one item per line).
     output_dir : Path
         Output directory for generated experiment.
     experiment_type : str
@@ -165,30 +174,38 @@ def generate(
         Enable debug mode.
     debug_list_index : int
         List index for debug mode.
+    dry_run : bool
+        Show what would be done without generating files.
 
     Examples
     --------
     # Basic balanced distribution
-    $ bead deployment generate lists/ items.jsonl experiment/ \\
+    $ bead deployment generate lists.jsonl items.jsonl experiment/ \\
         --experiment-type forced_choice \\
         --title "Acceptability Study" \\
         --distribution-strategy balanced
 
     # Quota-based with config
-    $ bead deployment generate lists/ items.jsonl experiment/ \\
+    $ bead deployment generate lists.jsonl items.jsonl experiment/ \\
         --experiment-type forced_choice \\
         --distribution-strategy quota_based \\
         --distribution-config '{"participants_per_list": 25, "allow_overflow": false}'
 
     # Stratified by factors
-    $ bead deployment generate lists/ items.jsonl experiment/ \\
+    $ bead deployment generate lists.jsonl items.jsonl experiment/ \\
         --experiment-type forced_choice \\
         --distribution-strategy stratified \\
         --distribution-config '{"factors": ["condition", "verb_type"]}'
+
+    # Dry run to preview
+    $ bead deployment generate lists.jsonl items.jsonl experiment/ \\
+        --experiment-type forced_choice \\
+        --distribution-strategy balanced \\
+        --dry-run
     """
     try:
         # Parse distribution config if provided
-        strategy_config_dict: dict[str, Any] = {}
+        strategy_config_dict: dict[str, JsonValue] = {}
         if distribution_config:
             try:
                 strategy_config_dict = json.loads(distribution_config)
@@ -212,21 +229,21 @@ def generate(
         except ValueError as e:
             print_error(f"Invalid distribution strategy configuration: {e}")
             ctx.exit(1)
-        # Load experiment lists
-        print_info(f"Loading experiment lists from {lists_dir}")
-        list_files = list(lists_dir.glob("*.jsonl"))
-        if not list_files:
-            print_error(f"No list files found in {lists_dir}")
-            ctx.exit(1)
-
+        # Load experiment lists from JSONL file (one list per line)
+        print_info(f"Loading experiment lists from {lists_file}")
         experiment_lists: list[ExperimentList] = []
-        for list_file in list_files:
-            with open(list_file, encoding="utf-8") as f:
-                first_line = f.readline().strip()
-                if first_line:
-                    list_data = json.loads(first_line)
-                    exp_list = ExperimentList(**list_data)
-                    experiment_lists.append(exp_list)
+        with open(lists_file, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                list_data = json.loads(line)
+                exp_list = ExperimentList(**list_data)
+                experiment_lists.append(exp_list)
+
+        if not experiment_lists:
+            print_error(f"No lists found in {lists_file}")
+            ctx.exit(1)
 
         print_info(f"Loaded {len(experiment_lists)} experiment lists")
 
@@ -275,25 +292,52 @@ def generate(
             distribution_strategy=dist_strategy,
         )
 
-        # Generate experiment
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            console=console,
-        ) as progress:
-            progress.add_task("Generating jsPsych experiment...", total=None)
-
-            generator = JsPsychExperimentGenerator(
-                config=config,
-                output_dir=output_dir,
+        # Generate experiment (or show dry-run preview)
+        if dry_run:
+            print_info("[DRY RUN] Would generate jsPsych experiment with:")
+            console.print(f"  [dim]Output directory:[/dim] {output_dir}")
+            console.print(f"  [dim]Experiment type:[/dim] {experiment_type}")
+            console.print(f"  [dim]Title:[/dim] {title}")
+            console.print(
+                f"  [dim]Distribution strategy:[/dim] {distribution_strategy}"
             )
-            output_path = generator.generate(
-                lists=experiment_lists,
-                items=items_dict,
-                templates=templates_dict,
-            )
+            console.print(f"  [dim]Number of lists:[/dim] {len(experiment_lists)}")
+            console.print(f"  [dim]Number of items:[/dim] {len(items_dict)}")
+            console.print(f"  [dim]Number of templates:[/dim] {len(templates_dict)}")
+            if max_participants:
+                console.print(f"  [dim]Max participants:[/dim] {max_participants}")
+            if debug_mode:
+                console.print(
+                    f"  [dim]Debug mode:[/dim] Enabled (list index: {debug_list_index})"
+                )
+            print_info("[DRY RUN] Files that would be created:")
+            console.print(f"  [dim]{output_dir}/index.html[/dim]")
+            console.print(f"  [dim]{output_dir}/js/experiment.js[/dim]")
+            console.print(f"  [dim]{output_dir}/js/list_distributor.js[/dim]")
+            console.print(f"  [dim]{output_dir}/css/experiment.css[/dim]")
+            console.print(f"  [dim]{output_dir}/data/config.json[/dim]")
+            console.print(f"  [dim]{output_dir}/data/lists.jsonl[/dim]")
+            console.print(f"  [dim]{output_dir}/data/items.jsonl[/dim]")
+            console.print(f"  [dim]{output_dir}/data/distribution.json[/dim]")
+        else:
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                console=console,
+            ) as progress:
+                progress.add_task("Generating jsPsych experiment...", total=None)
 
-        print_success(f"Generated jsPsych experiment: {output_path}")
+                generator = JsPsychExperimentGenerator(
+                    config=config,
+                    output_dir=output_dir,
+                )
+                output_path = generator.generate(
+                    lists=experiment_lists,
+                    items=items_dict,
+                    templates=templates_dict,
+                )
+
+            print_success(f"Generated jsPsych experiment: {output_path}")
 
     except ValidationError as e:
         print_error(f"Validation error: {e}")
@@ -452,7 +496,7 @@ def upload_jatos(
     "--strict",
     is_flag=True,
     default=False,
-    help="Enable all validation checks (comprehensive validation)",
+    help="Enable all validation checks (strict mode)",
 )
 @click.pass_context
 def validate(
@@ -548,10 +592,10 @@ def validate(
 
         # Validate distribution.json
         dist_file = experiment_dir / "data" / "distribution.json"
-        dist_data: dict[str, Any] | None = None
+        dist_data: dict[str, JsonValue] | None = None
         if dist_file.exists():
             with open(dist_file, encoding="utf-8") as f:
-                dist_data_obj: object = json.load(f)
+                dist_data_obj: JsonValue = json.load(f)
                 if isinstance(dist_data_obj, dict):
                     dist_data = dist_data_obj  # type: ignore[assignment]
 
@@ -609,7 +653,7 @@ def validate(
 
 
 def _validate_distribution_config(
-    dist_data: dict[str, Any],
+    dist_data: dict[str, JsonValue],
     errors: list[str],
     warnings: list[str],
 ) -> None:
@@ -617,7 +661,7 @@ def _validate_distribution_config(
 
     Parameters
     ----------
-    dist_data : dict[str, Any]
+    dist_data : dict[str, JsonValue]
         Distribution configuration data.
     errors : list[str]
         List to append errors to.
@@ -646,7 +690,10 @@ def _validate_distribution_config(
         return
 
     # Validate strategy-specific configuration
-    strategy_config = dist_data.get("strategy_config")
+    strategy_config_raw = dist_data.get("strategy_config")
+    strategy_config: dict[str, JsonValue] | None = (
+        strategy_config_raw if isinstance(strategy_config_raw, dict) else None
+    )
 
     if strategy_type == "quota_based":
         if not strategy_config:
@@ -709,13 +756,13 @@ def _validate_trial_configs(
 
     for config_file in trial_configs:
         try:
-            config_data: object = json.loads(config_file.read_text(encoding="utf-8"))
+            config_data: JsonValue = json.loads(config_file.read_text(encoding="utf-8"))
 
             if not isinstance(config_data, dict):
                 errors.append(f"Trial config {config_file.name} must be a JSON object")
                 continue
 
-            config_dict: dict[str, Any] = config_data  # type: ignore[assignment]
+            config_dict: dict[str, JsonValue] = config_data  # type: ignore[assignment]
 
             # Validate config type
             config_type = config_dict.get("type")
@@ -744,8 +791,8 @@ def _validate_trial_configs(
 
 
 def _validate_data_structure(
-    items_data: list[dict[str, Any]],
-    lists_data: list[dict[str, Any]],
+    items_data: list[dict[str, JsonValue]],
+    lists_data: list[dict[str, JsonValue]],
     errors: list[str],
     warnings: list[str],
 ) -> None:
@@ -753,9 +800,9 @@ def _validate_data_structure(
 
     Parameters
     ----------
-    items_data : list[dict[str, Any]]
+    items_data : list[dict[str, JsonValue]]
         Items data from items.jsonl.
-    lists_data : list[dict[str, Any]]
+    lists_data : list[dict[str, JsonValue]]
         Lists data from lists.jsonl.
     errors : list[str]
         List to append errors to.

@@ -145,7 +145,7 @@ class BeadConfig(BaseModel):
         """
         errors: list[str] = []
 
-        # Check paths config
+        # check paths config
         if not self.paths.data_dir.exists() and self.paths.data_dir.is_absolute():
             errors.append(f"data_dir does not exist: {self.paths.data_dir}")
         if not self.paths.output_dir.exists() and self.paths.output_dir.is_absolute():
@@ -155,7 +155,7 @@ class BeadConfig(BaseModel):
         if self.paths.temp_dir is not None and not self.paths.temp_dir.exists():
             errors.append(f"temp_dir does not exist: {self.paths.temp_dir}")
 
-        # Check resource paths
+        # check resource paths
         if (
             self.resources.lexicon_path is not None
             and not self.resources.lexicon_path.exists()
@@ -176,7 +176,7 @@ class BeadConfig(BaseModel):
                 f"constraints_path does not exist: {self.resources.constraints_path}"
             )
 
-        # Check training logging dir
+        # check training logging dir
         if (
             not self.active_learning.trainer.logging_dir.exists()
             and self.active_learning.trainer.logging_dir.is_absolute()
@@ -184,7 +184,7 @@ class BeadConfig(BaseModel):
             log_dir = self.active_learning.trainer.logging_dir
             errors.append(f"logging_dir does not exist: {log_dir}")
 
-        # Check logging file
+        # check logging file
         if self.logging.file is not None and not self.logging.file.parent.exists():
             parent_dir = self.logging.file.parent
             errors.append(f"logging file parent directory does not exist: {parent_dir}")

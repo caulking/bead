@@ -51,14 +51,14 @@ def write_jsonlines[T: BaseModel](
 
     Parameters
     ----------
-    objects : Sequence[T]
-        Sequence of Pydantic model instances to serialize
-    path : Path | str
-        Path to the output file
-    validate : bool, optional
-        Whether to validate objects before writing (default: True)
-    append : bool, optional
-        Whether to append to existing file or overwrite (default: False)
+    objects
+        Sequence of Pydantic model instances to serialize.
+    path
+        Path to the output file.
+    validate
+        Whether to validate objects before writing (default: True).
+    append
+        Whether to append to existing file or overwrite (default: False).
 
     Raises
     ------
@@ -80,7 +80,7 @@ def write_jsonlines[T: BaseModel](
     try:
         with path.open(mode, encoding="utf-8") as f:
             for obj in objects:
-                # model_dump_json() handles validation if needed
+                # model_dump_json() handles validation
                 json_str = obj.model_dump_json()
                 f.write(json_str + "\n")
     except (OSError, ValidationError) as e:
@@ -100,14 +100,14 @@ def read_jsonlines[T: BaseModel](
 
     Parameters
     ----------
-    path : Path | str
-        Path to the input file
-    model_class : type[T]
-        Pydantic model class to deserialize into
-    validate : bool, optional
-        Whether to validate objects during parsing (default: True)
-    skip_errors : bool, optional
-        Whether to skip invalid lines or raise error (default: False)
+    path
+        Path to the input file.
+    model_class
+        Pydantic model class to deserialize into.
+    validate
+        Whether to validate objects during parsing (default: True).
+    skip_errors
+        Whether to skip invalid lines or raise error (default: False).
 
     Returns
     -------
@@ -135,7 +135,7 @@ def read_jsonlines[T: BaseModel](
         with path.open("r", encoding="utf-8") as f:
             for line_num, line in enumerate(f, start=1):
                 line = line.strip()
-                if not line:  # Skip empty lines
+                if not line:  # skip empty lines
                     continue
 
                 try:
@@ -166,17 +166,17 @@ def stream_jsonlines[T: BaseModel](
 
     Parameters
     ----------
-    path : Path | str
-        Path to the input file
-    model_class : type[T]
-        Pydantic model class to deserialize into
-    validate : bool, optional
-        Whether to validate objects during parsing (default: True)
+    path
+        Path to the input file.
+    model_class
+        Pydantic model class to deserialize into.
+    validate
+        Whether to validate objects during parsing (default: True).
 
     Yields
     ------
     T
-        Pydantic model instances one at a time
+        Pydantic model instances one at a time.
 
     Raises
     ------
@@ -198,7 +198,7 @@ def stream_jsonlines[T: BaseModel](
         with path.open("r", encoding="utf-8") as f:
             for line_num, line in enumerate(f, start=1):
                 line = line.strip()
-                if not line:  # Skip empty lines
+                if not line:  # skip empty lines
                     continue
 
                 try:
@@ -225,12 +225,12 @@ def append_jsonlines[T: BaseModel](
 
     Parameters
     ----------
-    objects : Sequence[T]
-        Sequence of Pydantic model instances to serialize
-    path : Path | str
-        Path to the output file
-    validate : bool, optional
-        Whether to validate objects before writing (default: True)
+    objects
+        Sequence of Pydantic model instances to serialize.
+    path
+        Path to the output file.
+    validate
+        Whether to validate objects before writing (default: True).
 
     Raises
     ------

@@ -64,7 +64,7 @@ def test_apply_ordinal_scale_adds_noise() -> None:
 
     # Apply noise to integer value
     result = model.apply(5, context, rng)
-    assert isinstance(result, (int, float))
+    assert isinstance(result, int | float)
     # Should be different from original due to noise
     # With temp=2.0, stddev=1.0, so fairly wide distribution
     assert result != 5

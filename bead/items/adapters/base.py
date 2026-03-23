@@ -26,6 +26,15 @@ class ModelAdapter(ABC):
     This is SEPARATE from template filling model adapters
     (bead.templates.models.adapter), which are used in Stage 2.
 
+    Parameters
+    ----------
+    model_name : str
+        Model identifier (e.g., "gpt2", "roberta-large-mnli").
+    cache : ModelOutputCache
+        Cache instance for storing model outputs.
+    model_version : str
+        Version of the model for cache tracking.
+
     Attributes
     ----------
     model_name : str
@@ -39,17 +48,6 @@ class ModelAdapter(ABC):
     def __init__(
         self, model_name: str, cache: ModelOutputCache, model_version: str = "unknown"
     ) -> None:
-        """Initialize model adapter.
-
-        Parameters
-        ----------
-        model_name : str
-            Model identifier.
-        cache : ModelOutputCache
-            Cache instance for storing model outputs.
-        model_version : str
-            Version of the model for cache tracking.
-        """
         self.model_name = model_name
         self.model_version = model_version
         self.cache = cache

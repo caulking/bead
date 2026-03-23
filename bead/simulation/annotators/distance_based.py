@@ -30,6 +30,11 @@ class DistanceBasedAnnotator(SimulatedAnnotator):
     For ordinal scales, maps distance to scale values.
     For binary, thresholds distance.
 
+    Parameters
+    ----------
+    config
+        Configuration for annotator.
+
     Examples
     --------
     >>> from bead.config.simulation import SimulatedAnnotatorConfig, NoiseModelConfig
@@ -43,18 +48,10 @@ class DistanceBasedAnnotator(SimulatedAnnotator):
     """
 
     def __init__(self, config: SimulatedAnnotatorConfig) -> None:
-        """Initialize distance-based annotator.
-
-        Parameters
-        ----------
-        config : SimulatedAnnotatorConfig
-            Configuration for annotator.
-        """
         super().__init__(config)
 
-        # Initialize strategies for different task types
-        # Use same strategies as LM-based, but will extract embeddings
-        # instead of LM scores
+        # initialize strategies for different task types;
+        # use same strategies as LM-based, but extract embeddings instead of LM scores
         self.strategies = {
             "forced_choice": ForcedChoiceStrategy(),
             "binary": BinaryStrategy(),
@@ -66,7 +63,7 @@ class DistanceBasedAnnotator(SimulatedAnnotator):
             "cloze": ClozeStrategy(),
         }
 
-        # Initialize noise model if configured
+        # initialize noise model if configured
         if config.noise_model.noise_type == "temperature":
             from bead.simulation.noise_models.temperature import (  # noqa: PLC0415
                 TemperatureNoiseModel,
@@ -78,7 +75,7 @@ class DistanceBasedAnnotator(SimulatedAnnotator):
         elif config.noise_model.noise_type == "none":
             self.noise_model = None
         else:
-            # Default: no noise
+            # default: no noise
             self.noise_model = None
 
     def annotate(
@@ -105,19 +102,17 @@ class DistanceBasedAnnotator(SimulatedAnnotator):
         - We convert to "score" by: score = similarity * 10
         - This allows reuse of existing strategies
         """
-        # Get strategy for task type
+        # get strategy for task type
         strategy = self.get_strategy(item_template.task_type)
 
-        # Validate item
+        # validate item
         strategy.validate_item(item, item_template)
 
-        # For distance-based, we need to convert embeddings to scores
-        # This is a simplified approach - in practice, you might want
-        # task-specific distance computations
-        # For now, we'll rely on the strategies to extract embeddings
-        # and treat them as scores (strategies will use model_output_key)
+        # for distance-based, we need to convert embeddings to scores;
+        # this is a simplified approach that relies on strategies to extract
+        # embeddings and treat them as scores (strategies will use model_output_key)
 
-        # Generate base response
+        # generate base response
         response = strategy.simulate_response(
             item=item,
             item_template=item_template,
@@ -125,7 +120,7 @@ class DistanceBasedAnnotator(SimulatedAnnotator):
             rng=self.rng,
         )
 
-        # Apply noise model if configured
+        # apply noise model if configured
         if self.noise_model is not None:
             response = self.noise_model.apply(
                 value=response,

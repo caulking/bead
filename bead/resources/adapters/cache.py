@@ -31,14 +31,6 @@ class AdapterCache:
     """
 
     def __init__(self) -> None:
-        """Initialize empty cache.
-
-        Examples
-        --------
-        >>> cache = AdapterCache()
-        >>> len(cache._cache)
-        0
-        """
         self._cache: dict[str, list[LexicalItem]] = {}
 
     def get(self, key: str) -> list[LexicalItem] | None:
@@ -128,9 +120,9 @@ class AdapterCache:
         >>> key1 != key3
         True
         """
-        # Create deterministic dict for hashing
+        # create deterministic dict for hashing
         params = {"adapter": adapter_name, "query": query, **kwargs}
-        # Sort keys for deterministic serialization
+        # sort keys for deterministic serialization
         serialized = json.dumps(params, sort_keys=True)
-        # Return SHA256 hash
+        # return SHA256 hash
         return hashlib.sha256(serialized.encode()).hexdigest()

@@ -177,7 +177,7 @@ class FrameToTemplateMapper(ABC):
         >>> mapper.create_template_name("think", "29.9", "that-clause")
         'think_29_9_that_clause'
         """
-        # Sanitize each identifier
+        # sanitize each identifier
         sanitized: list[str] = []
         for identifier in identifiers:
             safe: str = (
@@ -221,10 +221,10 @@ class FrameToTemplateMapper(ABC):
         """
         metadata: dict[str, Any] = {}
 
-        # Add frame data
+        # add frame data
         metadata.update(frame_data)
 
-        # Add additional metadata
+        # add additional metadata
         metadata.update(additional_metadata)
 
         return metadata
@@ -308,7 +308,7 @@ class MultiFrameMapper(FrameToTemplateMapper):
         list[Template]
             Templates for all variants.
         """
-        # Extract frame_data from kwargs
+        # extract frame_data from kwargs
         frame_data = kwargs.get("frame_data")
         if frame_data is None:
             raise ValueError("frame_data must be provided in kwargs")
@@ -317,7 +317,7 @@ class MultiFrameMapper(FrameToTemplateMapper):
 
         templates: list[Template] = []
         for variant in variants:
-            # Create a modified kwargs with variant info
+            # create a modified kwargs with variant info
             variant_kwargs = kwargs.copy()
             variant_kwargs["variant_data"] = variant
 

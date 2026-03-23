@@ -45,17 +45,6 @@ class TemplateFillingModelAdapter(ABC):
         device: str = "cpu",
         cache_dir: Path | None = None,
     ) -> None:
-        """Initialize model adapter.
-
-        Parameters
-        ----------
-        model_name : str
-            Model identifier
-        device : str
-            Computation device
-        cache_dir : Path | None
-            Directory for model cache
-        """
         self.model_name = model_name
         self.device = device
         self.cache_dir = cache_dir

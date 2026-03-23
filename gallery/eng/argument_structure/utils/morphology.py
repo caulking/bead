@@ -16,14 +16,20 @@ from bead.resources.lexical_item import LexicalItem
 class MorphologyExtractor:
     """Extract verb forms using UniMorphAdapter.
 
-    This wrapper provides project-specific convenience methods while
+    A wrapper that provides project-specific convenience methods while
     using the standard bead adapter infrastructure for morphological
     paradigm extraction.
 
     Parameters
     ----------
-    cache : AdapterCache | None
-        Optional cache for adapter results.
+    cache
+        Optional cache for adapter results. If not provided, no caching
+        is used.
+
+    Attributes
+    ----------
+    adapter : UniMorphAdapter
+        The underlying adapter for UniMorph resource access.
 
     Examples
     --------
@@ -34,13 +40,6 @@ class MorphologyExtractor:
     """
 
     def __init__(self, cache: AdapterCache | None = None) -> None:
-        """Initialize extractor with optional cache.
-
-        Parameters
-        ----------
-        cache : AdapterCache | None
-            Optional cache for adapter results.
-        """
         self.adapter = UniMorphAdapter(cache=cache)
 
     def get_verb_forms(self, lemma: str) -> dict[str, LexicalItem | None]:
@@ -55,7 +54,7 @@ class MorphologyExtractor:
 
         Parameters
         ----------
-        lemma : str
+        lemma
             Verb lemma (e.g., "walk", "run").
 
         Returns
@@ -71,10 +70,10 @@ class MorphologyExtractor:
         >>> forms["3sg_present"].form
         'walks'
         """
-        # Fetch all forms for this lemma
+        # fetch all forms for this lemma
         items = self.adapter.fetch_items(query=lemma, language_code="en")
 
-        # Map to required forms
+        # map to required forms
         forms: dict[str, LexicalItem | None] = {
             "present_base": None,
             "3sg_present": None,
@@ -84,8 +83,8 @@ class MorphologyExtractor:
         }
 
         for item in items:
-            # Check features dict for matching forms
-            # UniMorphAdapter parses features into dimensions
+            # check features dict for matching forms
+            # unimorph adapter parses features into dimensions
             if item.features.get("pos") != "V":
                 continue
 
@@ -94,9 +93,9 @@ class MorphologyExtractor:
             number = item.features.get("number")
             verb_form = item.features.get("verb_form")
 
-            # Present base: V (no tense/person/number/verb_form)
-            # Used for "I walk", "you walk", "they walk"
-            # UniMorph returns base form with empty features
+            # present base: V (no tense/person/number/verb_form)
+            # used for "I walk", "you walk", "they walk"
+            # unimorph returns base form with empty features
             if not tense and not person and not number and not verb_form:
                 forms["present_base"] = item
 
@@ -104,15 +103,15 @@ class MorphologyExtractor:
             elif tense == "PRS" and person == "3" and number == "SG":
                 forms["3sg_present"] = item
 
-            # Past: V;PST
+            # past: V;PST
             elif tense == "PST" and not verb_form:
                 forms["past"] = item
 
-            # Present participle: V;V.PTCP;PRS
+            # present participle: V;V.PTCP;PRS
             elif verb_form == "V.PTCP" and tense == "PRS":
                 forms["present_participle"] = item
 
-            # Past participle: V;V.PTCP;PST
+            # past participle: V;V.PTCP;PST
             elif verb_form == "V.PTCP" and tense == "PST":
                 forms["past_participle"] = item
 
@@ -121,13 +120,13 @@ class MorphologyExtractor:
     def handle_particle_verb(self, lemma: str) -> dict[str, LexicalItem | None]:
         """Handle multi-word predicates like 'turn off' or 'cross-examine'.
 
-        Strategy: Extract forms for the main verb component and construct
+        Extracts forms for the main verb component and constructs
         particle verb forms by combining the inflected main verb with
         the particle.
 
         Parameters
         ----------
-        lemma : str
+        lemma
             Multi-word verb (e.g., "turn off", "cross-examine").
 
         Returns
@@ -142,28 +141,28 @@ class MorphologyExtractor:
         >>> forms["3sg_present"].lemma
         'turn off'
         """
-        # Split on space or hyphen
+        # split on space or hyphen
         parts = lemma.replace("-", " ").split()
 
         if len(parts) < 2:
-            # Not actually multi-word
+            # not actually multi-word
             return self.get_verb_forms(lemma)
 
-        # Get forms for the main verb (first element for most cases)
+        # get forms for the main verb (first element for most cases)
         main_verb = parts[0]
         base_forms = self.get_verb_forms(main_verb)
 
-        # Construct particle verb forms
+        # construct particle verb forms
         particle_forms: dict[str, LexicalItem | None] = {}
         for key, item in base_forms.items():
             if item is None:
                 particle_forms[key] = None
             else:
-                # Create new item with particle verb lemma
-                # Keep the inflected form from base verb
+                # create new item with particle verb lemma
+                # keep the inflected form from base verb
                 particle_forms[key] = LexicalItem(
-                    lemma=lemma,  # Full particle verb
-                    form=item.form,  # Inflected form from base
+                    lemma=lemma,  # full particle verb
+                    form=item.form,  # inflected form from base
                     language_code=item.language_code,
                     features={
                         **item.features,
@@ -184,7 +183,7 @@ class MorphologyExtractor:
 
         Parameters
         ----------
-        present_participle : LexicalItem
+        present_participle
             Present participle form (e.g., "walking").
 
         Returns
@@ -203,7 +202,7 @@ class MorphologyExtractor:
         base_lemma = present_participle.lemma
         participle_form = present_participle.form or base_lemma
 
-        # Create progressive forms with auxiliaries
+        # create progressive forms with auxiliaries
         present_prog = LexicalItem(
             lemma=base_lemma,
             form=f"is {participle_form}",
@@ -251,7 +250,7 @@ class MorphologyExtractor:
 
         Parameters
         ----------
-        lemma : str
+        lemma
             Verb lemma.
 
         Returns
@@ -266,13 +265,13 @@ class MorphologyExtractor:
         >>> len(all_forms) >= 4
         True
         """
-        # Handle particle verbs
+        # handle particle verbs
         if " " in lemma or "-" in lemma:
             forms = self.handle_particle_verb(lemma)
         else:
             forms = self.get_verb_forms(lemma)
 
-        # Collect non-None forms (only simple forms and participles)
+        # collect non-None forms (only simple forms and participles)
         result = [item for item in forms.values() if item is not None]
 
         return result

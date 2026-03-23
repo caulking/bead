@@ -1,5 +1,7 @@
 """Integration tests for active learning loop with TwoAFCModel."""
 
+import pytest
+
 from bead.active_learning.loop import ActiveLearningLoop
 from bead.active_learning.models.forced_choice import ForcedChoiceModel
 from bead.active_learning.selection import UncertaintySampler
@@ -8,6 +10,9 @@ from bead.config.active_learning import (
     ForcedChoiceModelConfig,
     UncertaintySamplerConfig,
 )
+
+# mark all tests in this module as slow model training tests
+pytestmark = pytest.mark.slow_model_training
 
 
 def test_active_learning_loop_with_default_model(test_items, forced_choice_template):
@@ -89,7 +94,7 @@ def test_active_learning_selects_items_from_pool(test_items, forced_choice_templ
     )
 
     model_config = ForcedChoiceModelConfig(num_epochs=1, batch_size=4, device="cpu")
-    results = loop.run(
+    loop.run(
         initial_items=initial_items,
         initial_model=ForcedChoiceModel(config=model_config),
         item_template=forced_choice_template,

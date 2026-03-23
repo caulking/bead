@@ -2,8 +2,21 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
+import pytest
+
 from bead.resources.adapters.cache import AdapterCache
 from bead.resources.adapters.glazing import GlazingAdapter
+
+# Check if glazing data is available
+GLAZING_DATA_DIR = Path.home() / ".local" / "share" / "glazing" / "converted"
+GLAZING_DATA_AVAILABLE = (GLAZING_DATA_DIR / "verbnet.jsonl").exists()
+
+requires_glazing_data = pytest.mark.skipif(
+    not GLAZING_DATA_AVAILABLE,
+    reason="Glazing data not available (run 'glazing download' first)",
+)
 
 
 def test_glazing_adapter_initialization() -> None:
@@ -19,11 +32,13 @@ def test_glazing_adapter_with_cache(adapter_cache: AdapterCache) -> None:
     assert adapter.cache is adapter_cache
 
 
+@requires_glazing_data
 def test_glazing_adapter_is_available(glazing_adapter: GlazingAdapter) -> None:
     """Test that glazing adapter is available."""
     assert glazing_adapter.is_available()
 
 
+@requires_glazing_data
 def test_glazing_adapter_fetch_items(glazing_adapter: GlazingAdapter) -> None:
     """Test fetching items from glazing."""
     items = glazing_adapter.fetch_items(query="break", language_code="en")
@@ -34,6 +49,7 @@ def test_glazing_adapter_fetch_items(glazing_adapter: GlazingAdapter) -> None:
     assert all("verbnet_class" in item.features for item in items)
 
 
+@requires_glazing_data
 def test_glazing_adapter_fetch_all_verbnet() -> None:
     """Test that glazing adapter can fetch all VerbNet verbs."""
     adapter = GlazingAdapter(resource="verbnet")
@@ -44,6 +60,7 @@ def test_glazing_adapter_fetch_all_verbnet() -> None:
     assert all("verbnet_class" in item.features for item in items)
 
 
+@requires_glazing_data
 def test_glazing_adapter_caching(
     glazing_adapter: GlazingAdapter, adapter_cache: AdapterCache
 ) -> None:
@@ -69,6 +86,7 @@ def test_glazing_adapter_different_resources() -> None:
     assert framenet_adapter.resource == "framenet"
 
 
+@requires_glazing_data
 def test_glazing_adapter_verbnet_attributes(glazing_adapter: GlazingAdapter) -> None:
     """Test that VerbNet items have expected attributes."""
     items = glazing_adapter.fetch_items(query="break", language_code="en")
@@ -82,6 +100,7 @@ def test_glazing_adapter_verbnet_attributes(glazing_adapter: GlazingAdapter) -> 
     assert item.features.get("pos") == "VERB"
 
 
+@requires_glazing_data
 def test_glazing_adapter_propbank() -> None:
     """Test PropBank adapter."""
     adapter = GlazingAdapter(resource="propbank")
@@ -98,6 +117,7 @@ def test_glazing_adapter_propbank() -> None:
         assert "roleset_name" in item.features
 
 
+@requires_glazing_data
 def test_glazing_adapter_framenet() -> None:
     """Test FrameNet adapter."""
     adapter = GlazingAdapter(resource="framenet")
@@ -118,6 +138,7 @@ def test_glazing_adapter_framenet() -> None:
     assert "lexical_unit_id" in item.features
 
 
+@requires_glazing_data
 def test_glazing_adapter_include_frames_verbnet(
     glazing_adapter: GlazingAdapter,
 ) -> None:
@@ -141,6 +162,7 @@ def test_glazing_adapter_include_frames_verbnet(
     assert "examples" in frame
 
 
+@requires_glazing_data
 def test_glazing_adapter_include_frames_propbank() -> None:
     """Test PropBank adapter with include_frames parameter."""
     adapter = GlazingAdapter(resource="propbank")
@@ -157,6 +179,7 @@ def test_glazing_adapter_include_frames_propbank() -> None:
                 assert "description" in role
 
 
+@requires_glazing_data
 def test_glazing_adapter_include_frames_framenet() -> None:
     """Test FrameNet adapter with include_frames parameter."""
     adapter = GlazingAdapter(resource="framenet")
@@ -172,6 +195,7 @@ def test_glazing_adapter_include_frames_framenet() -> None:
     assert isinstance(item.features["frame_elements"], list)
 
 
+@requires_glazing_data
 def test_glazing_adapter_fetch_all_propbank() -> None:
     """Test that glazing adapter can fetch all PropBank predicates."""
     adapter = GlazingAdapter(resource="propbank")
@@ -181,6 +205,7 @@ def test_glazing_adapter_fetch_all_propbank() -> None:
     assert all("propbank_roleset_id" in item.features for item in items)
 
 
+@requires_glazing_data
 def test_glazing_adapter_fetch_all_framenet() -> None:
     """Test that glazing adapter can fetch all FrameNet lexical units."""
     adapter = GlazingAdapter(resource="framenet")

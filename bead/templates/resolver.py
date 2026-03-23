@@ -86,7 +86,7 @@ class ConstraintResolver:
         True
         """
         for constraint in constraints:
-            # Build evaluation context
+            # build evaluation context
             eval_context: dict[str, Any] = {
                 "self": item,
                 **constraint.context,
@@ -94,7 +94,7 @@ class ConstraintResolver:
             if context:
                 eval_context.update(context)
 
-            # Evaluate constraint
+            # evaluate constraint
             result = self.dsl_evaluator.evaluate(constraint.expression, eval_context)
             if not result:
                 return False
@@ -152,7 +152,7 @@ class ConstraintResolver:
         True
         """
         for constraint in constraints:
-            # Build evaluation context with slot fillers
+            # build evaluation context with slot fillers
             eval_context: dict[str, Any] = {
                 **filled_slots,
                 **constraint.context,
@@ -160,7 +160,7 @@ class ConstraintResolver:
             if context:
                 eval_context.update(context)
 
-            # Evaluate constraint
+            # evaluate constraint
             result = self.dsl_evaluator.evaluate(constraint.expression, eval_context)
             if not result:
                 return False

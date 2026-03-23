@@ -12,13 +12,13 @@ from typing import TYPE_CHECKING, Any
 import numpy as np
 
 from bead.active_learning.strategies import create_strategy
-from bead.config.active_learning import UncertaintySamplerConfig
 from bead.items.item import Item
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
     from bead.active_learning.models.base import ActiveLearningModel
+    from bead.config.active_learning import UncertaintySamplerConfig
 
 
 class ItemSelector:
@@ -196,8 +196,8 @@ class UncertaintySampler(ItemSelector):
         # Select top k items
         selected_indices = self.strategy.select_top_k(scores, k=budget)
 
-        # Return selected items
-        return [items[i] for i in selected_indices]
+        # Return selected items (convert numpy array to list of Python ints)
+        return [items[i] for i in selected_indices.tolist()]
 
     def _batch_predict(
         self,
@@ -350,5 +350,5 @@ class RandomSelector(ItemSelector):
         # Select random indices without replacement
         selected_indices = self.rng.choice(len(items), size=budget, replace=False)
 
-        # Return selected items
-        return [items[i] for i in selected_indices]
+        # Return selected items (convert numpy array to list of Python ints)
+        return [items[i] for i in selected_indices.tolist()]

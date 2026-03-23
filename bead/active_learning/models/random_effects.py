@@ -217,7 +217,7 @@ class RandomEffectsManager:
         return bias
 
     def get_intercepts_with_shrinkage(
-        self, participant_id: str, n_classes: int
+        self, participant_id: str, n_classes: int, param_name: str = "bias"
     ) -> torch.Tensor:
         """Get random intercepts with Empirical Bayes shrinkage.
 
@@ -238,6 +238,8 @@ class RandomEffectsManager:
             Participant identifier.
         n_classes : int
             Number of classes.
+        param_name : str, default="bias"
+            Name of the distribution parameter.
 
         Returns
         -------
@@ -260,10 +262,13 @@ class RandomEffectsManager:
             )
 
         # Get MLE estimate (or prior if unknown)
-        u_mle = self.get_intercepts(participant_id, n_classes, create_if_missing=False)
+        u_mle = self.get_intercepts(
+            participant_id, n_classes, param_name, create_if_missing=False
+        )
 
         # Unknown participant: return prior mean (no shrinkage needed)
-        if participant_id not in self.intercepts:
+        param_dict = self.intercepts.get(param_name, {})
+        if participant_id not in param_dict:
             return u_mle
 
         # Compute shrinkage factor λ_i
@@ -408,6 +413,12 @@ class RandomEffectsManager:
                     n_observations_per_group=self.participant_sample_counts.copy(),
                 )
 
+            # Update variance_components and history
+            self.variance_components = variance_components
+            # Store the first param's variance in history for backwards compatibility
+            first_param = next(iter(variance_components.values()))
+            self.variance_history.append(first_param)
+
             return variance_components
 
         elif self.config.mode == "random_slopes":
@@ -426,15 +437,20 @@ class RandomEffectsManager:
                 variance = torch.var(all_params_tensor, unbiased=True).item()
 
             # Random slopes still returns single variance component (not per-parameter)
-            return {
-                "slopes": VarianceComponents(
-                    grouping_factor="participant",
-                    effect_type="slope",
-                    variance=variance,
-                    n_groups=len(self.slopes),
-                    n_observations_per_group=self.participant_sample_counts.copy(),
-                )
-            }
+            slope_var_comp = VarianceComponents(
+                grouping_factor="participant",
+                effect_type="slope",
+                variance=variance,
+                n_groups=len(self.slopes),
+                n_observations_per_group=self.participant_sample_counts.copy(),
+            )
+            result = {"slopes": slope_var_comp}
+
+            # Update variance_components and history
+            self.variance_components = result
+            self.variance_history.append(slope_var_comp)
+
+            return result
 
         return None
 
@@ -542,9 +558,13 @@ class RandomEffectsManager:
 
         # Save variance history (if any)
         if self.variance_history:
-            # Note: variance_history may contain VarianceComponents or dicts
-            # For now, don't persist it - can be recomputed
-            pass
+            # Serialize VarianceComponents to JSON
+            variance_history_data = [
+                vc.model_dump() if hasattr(vc, "model_dump") else vc
+                for vc in self.variance_history
+            ]
+            with open(path / "variance_history.json", "w") as f:
+                json.dump(variance_history_data, f, indent=2)
 
     def load(self, path: Path, fixed_head: nn.Module | None = None) -> None:
         """Load random effects from disk.
@@ -598,3 +618,22 @@ class RandomEffectsManager:
         if sample_counts_path.exists():
             with open(sample_counts_path) as f:
                 self.participant_sample_counts = json.load(f)
+
+        # Load variance history (if any)
+        variance_history_path = path / "variance_history.json"
+        if variance_history_path.exists():
+            with open(variance_history_path) as f:
+                variance_history_data = json.load(f)
+            # Deserialize VarianceComponents from JSON
+            from bead.active_learning.config import VarianceComponents  # noqa: PLC0415
+
+            self.variance_history = [
+                VarianceComponents(**vc_data) if isinstance(vc_data, dict) else vc_data
+                for vc_data in variance_history_data
+            ]
+            # Restore variance_components from history
+            if self.variance_history:
+                last_vc = self.variance_history[-1]
+                # Infer param name from effect type for backwards compatibility
+                param_key = "slopes" if last_vc.effect_type == "slope" else "bias"
+                self.variance_components = {param_key: last_vc}

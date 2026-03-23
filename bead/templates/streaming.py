@@ -34,9 +34,9 @@ class StreamingFiller:
     --------
     >>> filler = StreamingFiller(lexicon, max_combinations=1000)
     >>> for filled in filler.stream(template):
-    ...     process(filled)  # Process one at a time
+    ...     process(filled)  # process one at a time
     ...     if some_condition:
-    ...         break  # Can stop early
+    ...         break  # can stop early
     """
 
     def __init__(
@@ -82,37 +82,37 @@ class StreamingFiller:
         --------
         >>> for i, filled in enumerate(filler.stream(template)):
         ...     if i >= 100:
-        ...         break  # Take first 100
+        ...         break  # take first 100
         ...     print(filled.rendered_text)
         """
-        # Normalize language code to ISO 639-3 format if provided
+        # normalize language code to ISO 639-3 format if provided
         normalized_language_code = validate_iso639_code(language_code)
 
-        # Resolve slot constraints
+        # resolve slot constraints
         slot_items = self._resolve_slot_constraints(template, normalized_language_code)
 
-        # Check for empty slots
+        # check for empty slots
         empty_slots = [name for name, items in slot_items.items() if not items]
         if empty_slots:
             raise ValueError(f"No valid items for slots: {empty_slots}")
 
-        # Get ordered slot names and item lists
+        # get ordered slot names and item lists
         slot_names = list(slot_items.keys())
         item_lists = [slot_items[name] for name in slot_names]
 
-        # Stream combinations
+        # stream combinations
         count = 0
         for combo_tuple in cartesian_product(*item_lists):
             if self.max_combinations and count >= self.max_combinations:
                 break
 
-            # Create slot_fillers dict
+            # create slot_fillers dict
             slot_fillers = dict(zip(slot_names, combo_tuple, strict=True))
 
-            # Render template
+            # render template
             rendered = self._render_template(template, slot_fillers)
 
-            # Create FilledTemplate
+            # create FilledTemplate
             filled = FilledTemplate(
                 template_id=str(template.id),
                 template_name=template.name,
@@ -143,16 +143,16 @@ class StreamingFiller:
         dict[str, list[LexicalItem]]
             Mapping of slot names to valid items.
         """
-        # Normalize language code if provided
+        # normalize language code if provided
         normalized_lang = validate_iso639_code(language_code) if language_code else None
 
         slot_items: dict[str, list[LexicalItem]] = {}
         for slot_name, slot in template.slots.items():
             candidates: list[LexicalItem] = []
             for item in self.lexicon.items.values():
-                # Filter by language code if specified
+                # filter by language code if specified
                 if normalized_lang:
-                    # Normalize item language code for comparison
+                    # normalize item language code for comparison
                     item_lang = (
                         validate_iso639_code(item.language_code)
                         if item.language_code
@@ -161,7 +161,7 @@ class StreamingFiller:
                     if item_lang != normalized_lang:
                         continue
 
-                # Check if item satisfies slot constraints
+                # check if item satisfies slot constraints
                 if self.resolver.evaluate_slot_constraints(item, slot.constraints):
                     candidates.append(item)
 

@@ -85,21 +85,21 @@ class FreeTextStrategy(SimulationStrategy):
         str
             Generated text response.
         """
-        # Check if there's a ground truth response we can use
+        # check if there's a ground truth response we can use
         if hasattr(item, "item_metadata") and "response" in item.item_metadata:
             return str(item.item_metadata["response"])
 
-        # Check for text template
+        # check for text template
         if hasattr(item, "item_metadata") and "response_template" in item.item_metadata:
             return str(item.item_metadata["response_template"])
 
-        # Try to extract from rendered elements
+        # try to extract from rendered elements
         if hasattr(item, "rendered_elements") and item.rendered_elements:
-            # Get first text element as fallback
+            # get first text element as fallback
             for value in item.rendered_elements.values():
                 if len(value) > 0:
-                    # Return first non-empty string
+                    # return first non-empty string
                     return value
 
-        # Final fallback: generic response
+        # final fallback: generic response
         return "No response"

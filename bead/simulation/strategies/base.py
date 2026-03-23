@@ -99,16 +99,16 @@ class SimulationStrategy(ABC):
         list[float] | None
             Extracted values or None if missing.
         """
-        # Try model_outputs first
+        # try model_outputs first
         values: list[float] = []
         if hasattr(item, "model_outputs"):
             for output in item.model_outputs:
                 if output.operation == key:
                     values.append(float(output.output))
 
-        # Try item_metadata as fallback
+        # try item_metadata as fallback
         if not values and hasattr(item, "item_metadata"):
-            # Look for keys like "lm_score1", "lm_score2", etc.
+            # look for keys like "lm_score1", "lm_score2", etc.
             for i in range(1, (required_count or 10) + 1):
                 key_with_num = f"{key}{i}"
                 if key_with_num in item.item_metadata:

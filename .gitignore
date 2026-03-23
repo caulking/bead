@@ -14,4 +14,24 @@ gallery/**/items/*.jsonl
 gallery/**/lists/*.jsonl
 gallery/**/deployment/
 node_modules/
+bead/deployment/jspsych/dist/
 coverage/
+site/
+
+# Documentation test working directories (temporary copies of fixtures)
+tests/fixtures/api_work/
+tests/fixtures/cli_work/
+
+# Documentation test artifacts (created in project root if tests fail to cd)
+/constraints/
+/experiment/
+/items/
+/lexicons/
+/templates/
+/lists/
+/filled_templates/
+/responses/
+/exports/
+/trial_config_*.json
+/*.jzip
+.claude/

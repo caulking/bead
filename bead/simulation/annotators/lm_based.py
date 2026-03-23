@@ -29,6 +29,11 @@ class LMBasedAnnotator(SimulatedAnnotator):
 
     Supports all task types via pluggable strategies.
 
+    Parameters
+    ----------
+    config
+        Configuration for annotator.
+
     Examples
     --------
     >>> from bead.config.simulation import SimulatedAnnotatorConfig, NoiseModelConfig
@@ -42,16 +47,9 @@ class LMBasedAnnotator(SimulatedAnnotator):
     """
 
     def __init__(self, config: SimulatedAnnotatorConfig) -> None:
-        """Initialize LM-based annotator.
-
-        Parameters
-        ----------
-        config : SimulatedAnnotatorConfig
-            Configuration for annotator.
-        """
         super().__init__(config)
 
-        # Initialize strategies for different task types
+        # initialize strategies for different task types
         self.strategies = {
             "forced_choice": ForcedChoiceStrategy(),
             "binary": BinaryStrategy(),
@@ -63,7 +61,7 @@ class LMBasedAnnotator(SimulatedAnnotator):
             "cloze": ClozeStrategy(),
         }
 
-        # Initialize noise model
+        # initialize noise model
         if config.noise_model.noise_type == "temperature":
             self.noise_model = TemperatureNoiseModel(
                 temperature=config.noise_model.temperature
@@ -71,7 +69,7 @@ class LMBasedAnnotator(SimulatedAnnotator):
         elif config.noise_model.noise_type == "none":
             self.noise_model = None
         else:
-            # Default: no noise
+            # default: no noise
             self.noise_model = None
 
     def annotate(
@@ -91,13 +89,13 @@ class LMBasedAnnotator(SimulatedAnnotator):
         str | int | float | list[str]
             Annotation (format depends on task type).
         """
-        # Get strategy for task type
+        # get strategy for task type
         strategy = self.get_strategy(item_template.task_type)
 
-        # Validate item
+        # validate item
         strategy.validate_item(item, item_template)
 
-        # Generate base response
+        # generate base response
         response = strategy.simulate_response(
             item=item,
             item_template=item_template,
@@ -105,7 +103,7 @@ class LMBasedAnnotator(SimulatedAnnotator):
             rng=self.rng,
         )
 
-        # Apply noise model if configured
+        # apply noise model if configured
         if self.noise_model is not None:
             response = self.noise_model.apply(
                 value=response,

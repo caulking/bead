@@ -50,18 +50,7 @@ class HuggingFaceMLMAdapter(HuggingFaceAdapterMixin, TemplateFillingModelAdapter
         device: DeviceType = "cpu",
         cache_dir: Path | None = None,
     ) -> None:
-        """Initialize HuggingFace MLM adapter.
-
-        Parameters
-        ----------
-        model_name : str
-            Model identifier
-        device : DeviceType
-            Computation device
-        cache_dir : Path | None
-            Model cache directory
-        """
-        # Validate device before passing to parent
+        # validate device before passing to parent
         validated_device = self._validate_device(device)
         super().__init__(model_name, validated_device, cache_dir)
         self.model: PreTrainedModel | None = None
@@ -79,22 +68,22 @@ class HuggingFaceMLMAdapter(HuggingFaceAdapterMixin, TemplateFillingModelAdapter
             return
 
         try:
-            # Load tokenizer
+            # load tokenizer
             self.tokenizer = AutoTokenizer.from_pretrained(
                 self.model_name,
                 cache_dir=self.cache_dir,
             )
 
-            # Load model
+            # load model
             self.model = AutoModelForMaskedLM.from_pretrained(
                 self.model_name,
                 cache_dir=self.cache_dir,
             )
 
-            # Move to device
+            # move to device
             self.model.to(self.device)
 
-            # Set to evaluation mode
+            # set to evaluation mode
             self.model.eval()
 
             self._model_loaded = True
@@ -107,7 +96,7 @@ class HuggingFaceMLMAdapter(HuggingFaceAdapterMixin, TemplateFillingModelAdapter
         if not self._model_loaded:
             return
 
-        # Move model to CPU and delete
+        # move model to CPU and delete
         if self.model is not None:
             self.model.to("cpu")
             del self.model
@@ -118,7 +107,7 @@ class HuggingFaceMLMAdapter(HuggingFaceAdapterMixin, TemplateFillingModelAdapter
 
         self._model_loaded = False
 
-        # Clear CUDA cache if using GPU
+        # clear CUDA cache if using GPU
         if self.device == "cuda":
             torch.cuda.empty_cache()
 
@@ -154,16 +143,16 @@ class HuggingFaceMLMAdapter(HuggingFaceAdapterMixin, TemplateFillingModelAdapter
         if not self._model_loaded:
             raise RuntimeError("Model not loaded. Call load_model() first.")
 
-        # Tokenize input
+        # tokenize input
         inputs = self.tokenizer(text, return_tensors="pt")
         inputs = {k: v.to(self.device) for k, v in inputs.items()}
 
-        # Find mask token ID
+        # find mask token ID
         mask_token_id = self.tokenizer.mask_token_id
         if mask_token_id is None:
             raise ValueError(f"Model {self.model_name} does not have a mask token")
 
-        # Find mask position in tokenized input
+        # find mask position in tokenized input
         input_ids = inputs["input_ids"][0]
         mask_positions = (input_ids == mask_token_id).nonzero(as_tuple=True)[0]
 
@@ -176,24 +165,24 @@ class HuggingFaceMLMAdapter(HuggingFaceAdapterMixin, TemplateFillingModelAdapter
                 f"Found {len(mask_positions)} mask tokens in text."
             )
 
-        # Get actual token index
+        # get actual token index
         mask_idx = mask_positions[mask_position].item()
 
-        # Forward pass
+        # forward pass
         with torch.no_grad():
             outputs = self.model(**inputs)
             logits = outputs.logits
 
-        # Get predictions for mask position
+        # get predictions for mask position
         mask_logits = logits[0, mask_idx]
 
-        # Convert to log probabilities
+        # convert to log probabilities
         log_probs = torch.log_softmax(mask_logits, dim=0)
 
-        # Get top-k predictions
+        # get top-k predictions
         top_log_probs, top_indices = torch.topk(log_probs, k=min(top_k, len(log_probs)))
 
-        # Convert to tokens
+        # convert to tokens
         predictions: list[tuple[str, float]] = []
         for log_prob, idx in zip(top_log_probs.cpu(), top_indices.cpu(), strict=True):
             token = self.tokenizer.decode([idx], skip_special_tokens=True).strip()
@@ -237,7 +226,7 @@ class HuggingFaceMLMAdapter(HuggingFaceAdapterMixin, TemplateFillingModelAdapter
         if not texts:
             return []
 
-        # Tokenize all texts with padding
+        # tokenize all texts with padding
         inputs = self.tokenizer(
             texts,
             return_tensors="pt",
@@ -246,20 +235,20 @@ class HuggingFaceMLMAdapter(HuggingFaceAdapterMixin, TemplateFillingModelAdapter
         )
         inputs = {k: v.to(self.device) for k, v in inputs.items()}
 
-        # Find mask token ID
+        # find mask token ID
         mask_token_id = self.tokenizer.mask_token_id
         if mask_token_id is None:
             raise ValueError(f"Model {self.model_name} does not have a mask token")
 
-        # Forward pass for entire batch
+        # forward pass for entire batch
         with torch.no_grad():
             outputs = self.model(**inputs)
-            logits = outputs.logits  # Shape: (batch_size, seq_len, vocab_size)
+            logits = outputs.logits  # shape: (batch_size, seq_len, vocab_size)
 
-        # Process each text in batch
+        # process each text in batch
         results: list[list[tuple[str, float]]] = []
         for i, text in enumerate(texts):
-            # Find mask position in this text
+            # find mask position in this text
             input_ids = inputs["input_ids"][i]
             mask_positions = (input_ids == mask_token_id).nonzero(as_tuple=True)[0]
 
@@ -272,21 +261,21 @@ class HuggingFaceMLMAdapter(HuggingFaceAdapterMixin, TemplateFillingModelAdapter
                     f"Found {len(mask_positions)} mask tokens in text."
                 )
 
-            # Get actual token index
+            # get actual token index
             mask_idx = mask_positions[mask_position].item()
 
-            # Get predictions for this mask position
+            # get predictions for this mask position
             mask_logits = logits[i, mask_idx]
 
-            # Convert to log probabilities
+            # convert to log probabilities
             log_probs = torch.log_softmax(mask_logits, dim=0)
 
-            # Get top-k predictions
+            # get top-k predictions
             top_log_probs, top_indices = torch.topk(
                 log_probs, k=min(top_k, len(log_probs))
             )
 
-            # Convert to tokens
+            # convert to tokens
             predictions: list[tuple[str, float]] = []
             for log_prob, idx in zip(
                 top_log_probs.cpu(), top_indices.cpu(), strict=True

@@ -1,23 +1,7 @@
-"""Configuration system for bead package.
+"""Configuration system for the bead pipeline.
 
-This module provides configuration models, default settings, and profiles
-for all aspects of the bead pipeline.
-
-Examples
---------
->>> from bead.config import BeadConfig, get_default_config, get_profile
->>> # Use default configuration
->>> config = get_default_config()
->>> config.profile
-'default'
->>> # Use a profile
->>> dev_config = get_profile("dev")
->>> dev_config.logging.level
-'DEBUG'
->>> # Create custom configuration
->>> from bead.config import PathsConfig
->>> from pathlib import Path
->>> custom = BeadConfig(paths=PathsConfig(data_dir=Path("my_data")))
+Provides configuration models, default settings, and named profiles for
+development, testing, and production environments.
 """
 
 from __future__ import annotations
@@ -43,15 +27,16 @@ from bead.config.profiles import (
 )
 from bead.config.resources import ResourceConfig
 from bead.config.serialization import save_yaml, to_yaml
-from bead.config.template import TemplateConfig
+from bead.config.template import SlotStrategyConfig, TemplateConfig
 from bead.config.validation import validate_config
 
 __all__ = [
-    # Main config
+    # main config
     "BeadConfig",
-    # Config sections
+    # config sections
     "PathsConfig",
     "ResourceConfig",
+    "SlotStrategyConfig",
     "TemplateConfig",
     "ModelConfig",
     "ItemConfig",
@@ -59,25 +44,25 @@ __all__ = [
     "DeploymentConfig",
     "ActiveLearningConfig",
     "LoggingConfig",
-    # Defaults
+    # defaults
     "DEFAULT_CONFIG",
     "get_default_config",
-    # Profiles
+    # profiles
     "DEV_CONFIG",
     "PROD_CONFIG",
     "TEST_CONFIG",
     "PROFILES",
     "get_profile",
     "list_profiles",
-    # Loading
+    # loading
     "load_config",
     "load_yaml_file",
     "merge_configs",
-    # Environment
+    # environment
     "load_from_env",
-    # Validation
+    # validation
     "validate_config",
-    # Serialization
+    # serialization
     "to_yaml",
     "save_yaml",
 ]

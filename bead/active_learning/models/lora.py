@@ -14,10 +14,10 @@ from __future__ import annotations
 
 import copy
 import math
-from typing import Any
 
 import torch
 import torch.nn as nn
+from torch import Tensor
 
 __all__ = ["LoRALayer", "LoRALinear", "ParticipantLoRAAdapter"]
 
@@ -91,17 +91,17 @@ class LoRALayer(nn.Module):
         nn.init.kaiming_uniform_(self.lora_A, a=math.sqrt(5))
         nn.init.zeros_(self.lora_B)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: Tensor) -> Tensor:
         """Apply LoRA: x @ (A @ B) * scaling.
 
         Parameters
         ----------
-        x : torch.Tensor
+        x : Tensor
             Input tensor, shape (batch, seq_len, in_features).
 
         Returns
         -------
-        torch.Tensor
+        Tensor
             LoRA output, shape (batch, seq_len, out_features).
         """
         # x @ A: (batch, seq_len, in_features) @ (in_features, rank)
@@ -170,17 +170,17 @@ class LoRALinear(nn.Module):
             dropout=dropout,
         )
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: Tensor) -> Tensor:
         """Forward pass: base output + LoRA adaptation.
 
         Parameters
         ----------
-        x : torch.Tensor
+        x : Tensor
             Input tensor, shape (batch, seq_len, in_features).
 
         Returns
         -------
-        torch.Tensor
+        Tensor
             Output with LoRA adaptation, shape (batch, seq_len, out_features).
         """
         return self.base_layer(x) + self.lora(x)
@@ -286,22 +286,26 @@ class ParticipantLoRAAdapter(nn.Module):
                     setattr(parent, attr_name, lora_layer)
                     self.lora_layers[name] = lora_layer
 
-    def forward(self, *args: Any, **kwargs: Any) -> Any:
+    def forward(
+        self, input_ids: Tensor, attention_mask: Tensor | None = None
+    ) -> Tensor:
         """Forward pass through decoder with LoRA.
 
         Parameters
         ----------
-        *args : Any
-            Positional arguments for decoder.
-        **kwargs : Any
-            Keyword arguments for decoder.
+        input_ids : Tensor
+            Input token IDs, shape (batch_size, seq_len).
+        attention_mask : Tensor | None
+            Attention mask, shape (batch_size, seq_len). If None, no masking.
 
         Returns
         -------
-        Any
-            Decoder output.
+        Tensor
+            Decoder output tensor.
         """
-        return self.decoder(*args, **kwargs)
+        if attention_mask is not None:
+            return self.decoder(input_ids, attention_mask=attention_mask)
+        return self.decoder(input_ids)
 
     def get_lora_parameters(self) -> list[nn.Parameter]:
         """Get all LoRA parameters for optimization.
@@ -311,41 +315,10 @@ class ParticipantLoRAAdapter(nn.Module):
         list[nn.Parameter]
             List of all trainable LoRA parameters (A and B matrices).
         """
-        params = []
+        params: list[nn.Parameter] = []
         for lora_linear in self.lora_layers.values():
             params.extend(lora_linear.lora.parameters())
         return params
-
-    def state_dict(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
-        """Get state dict (delegates to decoder).
-
-        Returns
-        -------
-        dict[str, Any]
-            State dictionary.
-        """
-        return self.decoder.state_dict(*args, **kwargs)
-
-    def load_state_dict(
-        self, state_dict: dict[str, Any], *args: Any, **kwargs: Any
-    ) -> Any:
-        """Load state dict (delegates to decoder).
-
-        Parameters
-        ----------
-        state_dict : dict[str, Any]
-            State dictionary to load.
-        *args : Any
-            Additional arguments.
-        **kwargs : Any
-            Additional keyword arguments.
-
-        Returns
-        -------
-        Any
-            Load result.
-        """
-        return self.decoder.load_state_dict(state_dict, *args, **kwargs)
 
 
 def create_participant_lora_adapter(

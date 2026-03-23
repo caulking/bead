@@ -372,4 +372,4 @@ def test_binary_response_type() -> None:
     rng = np.random.RandomState(42)
     response = strategy.simulate_response(item, template, "lm_score", rng)
 
-    assert isinstance(response, (bool, np.bool_))
+    assert isinstance(response, bool | np.bool_)

@@ -26,6 +26,12 @@ class MagnitudeStrategy(SimulationStrategy):
         - Better scores (less negative) -> larger magnitudes
         - Worse scores (more negative) -> smaller magnitudes
 
+    Parameters
+    ----------
+    scale_factor
+        Scaling factor for converting scores to magnitudes.
+        Higher values produce more variation. Default: 10.0.
+
     Examples
     --------
     >>> strategy = MagnitudeStrategy()
@@ -34,14 +40,6 @@ class MagnitudeStrategy(SimulationStrategy):
     """
 
     def __init__(self, scale_factor: float = 10.0) -> None:
-        """Initialize magnitude strategy.
-
-        Parameters
-        ----------
-        scale_factor : float
-            Scaling factor for converting scores to magnitudes.
-            Higher values produce more variation. Default: 10.0.
-        """
         self.scale_factor = scale_factor
 
     @property
@@ -98,18 +96,18 @@ class MagnitudeStrategy(SimulationStrategy):
         float
             Estimated magnitude (positive value).
         """
-        # Extract model output (expect single value)
+        # extract model output (expect single value)
         scores = self.extract_model_outputs(item, model_output_key, required_count=1)
 
         if scores is None:
-            # Fallback to random positive value (log-normal)
+            # fallback to random positive value (log-normal)
             return float(rng.lognormal(mean=0, sigma=1))
 
         score = scores[0]
 
-        # Convert score to magnitude
-        # For LM scores (negative), exp(-score/scale) gives positive magnitude
-        # For positive scores, use exp(score/scale)
+        # convert score to magnitude:
+        # for LM scores (negative), exp(-score/scale) gives positive magnitude
+        # for positive scores, use exp(score/scale)
         if score < 0:
             magnitude = np.exp(-score / self.scale_factor)
         else:

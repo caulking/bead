@@ -1,0 +1,25 @@
+#!/bin/bash
+# Setup script for pytest-codeblocks bash tests
+# This is sourced by bash before running each code block
+
+# Determine project root (where this script lives)
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Add bead CLI to PATH using absolute path
+export PATH="${PROJECT_ROOT}/.venv/bin:${PATH}"
+
+# Create cli_work directory if it doesn't exist and copy fixtures
+FIXTURES_SRC="${PROJECT_ROOT}/tests/fixtures/api_docs"
+FIXTURES_WORK="${PROJECT_ROOT}/tests/fixtures/cli_work"
+
+if [ ! -d "${FIXTURES_WORK}" ]; then
+    echo "Setting up CLI test fixtures..." >&2
+    mkdir -p "${FIXTURES_WORK}"
+    cp -r "${FIXTURES_SRC}"/* "${FIXTURES_WORK}/"
+fi
+
+# Change to fixtures directory
+cd "${FIXTURES_WORK}" || {
+    echo "ERROR: Failed to cd to ${FIXTURES_WORK}" >&2
+    exit 1
+}

@@ -76,16 +76,19 @@ def sample_items_file(tmp_path: Path, sample_template: ItemTemplate) -> Path:
 
 
 @pytest.fixture
-def sample_lists_dir(tmp_path: Path, sample_items_file: Path) -> Path:
-    """Create a sample lists directory with list files."""
-    lists_dir = tmp_path / "lists"
-    lists_dir.mkdir()
+def sample_lists_file(tmp_path: Path, sample_items_file: Path) -> Path:
+    """Create a sample lists JSONL file (one list per line)."""
+    lists_file = tmp_path / "lists.jsonl"
 
     # Read items to get their IDs
-    items_data = [Item.model_validate_json(line) for line in sample_items_file.read_text().strip().split("\n")]
+    items_data = [
+        Item.model_validate_json(line)
+        for line in sample_items_file.read_text().strip().split("\n")
+    ]
     item_ids = [item.id for item in items_data]
 
-    # Create 3 lists
+    # Create 3 lists and write them all to one file
+    lines = []
     for list_num in range(3):
         exp_list = ExperimentList(
             name=f"list_{list_num}",
@@ -98,11 +101,10 @@ def sample_lists_dir(tmp_path: Path, sample_items_file: Path) -> Path:
         for item_id in item_ids[start_idx:end_idx]:
             exp_list.add_item(item_id)
 
-        # Save list
-        list_file = lists_dir / f"list_{list_num}.jsonl"
-        list_file.write_text(exp_list.model_dump_json() + "\n")
+        lines.append(exp_list.model_dump_json())
 
-    return lists_dir
+    lists_file.write_text("\n".join(lines) + "\n")
+    return lists_file
 
 
 # ==================== Generate Command Tests ====================
@@ -114,7 +116,7 @@ class TestGenerateCommand:
     def test_generate_with_balanced_strategy(
         self,
         runner: CliRunner,
-        sample_lists_dir: Path,
+        sample_lists_file: Path,
         sample_items_file: Path,
         tmp_path: Path,
     ) -> None:
@@ -124,12 +126,15 @@ class TestGenerateCommand:
         result = runner.invoke(
             generate,
             [
-                str(sample_lists_dir),
+                str(sample_lists_file),
                 str(sample_items_file),
                 str(output_dir),
-                "--experiment-type", "likert_rating",
-                "--title", "Test Experiment",
-                "--distribution-strategy", "balanced",
+                "--experiment-type",
+                "likert_rating",
+                "--title",
+                "Test Experiment",
+                "--distribution-strategy",
+                "balanced",
             ],
         )
 
@@ -149,7 +154,7 @@ class TestGenerateCommand:
     def test_generate_with_sequential_strategy(
         self,
         runner: CliRunner,
-        sample_lists_dir: Path,
+        sample_lists_file: Path,
         sample_items_file: Path,
         tmp_path: Path,
     ) -> None:
@@ -159,24 +164,28 @@ class TestGenerateCommand:
         result = runner.invoke(
             generate,
             [
-                str(sample_lists_dir),
+                str(sample_lists_file),
                 str(sample_items_file),
                 str(output_dir),
-                "--experiment-type", "forced_choice",
-                "--distribution-strategy", "sequential",
+                "--experiment-type",
+                "likert_rating",
+                "--distribution-strategy",
+                "sequential",
             ],
         )
 
         assert result.exit_code == 0
 
         # Verify distribution config
-        dist_config = json.loads((output_dir / "data" / "distribution.json").read_text())
+        dist_config = json.loads(
+            (output_dir / "data" / "distribution.json").read_text()
+        )
         assert dist_config["strategy_type"] == "sequential"
 
     def test_generate_with_quota_strategy(
         self,
         runner: CliRunner,
-        sample_lists_dir: Path,
+        sample_lists_file: Path,
         sample_items_file: Path,
         tmp_path: Path,
     ) -> None:
@@ -188,26 +197,31 @@ class TestGenerateCommand:
         result = runner.invoke(
             generate,
             [
-                str(sample_lists_dir),
+                str(sample_lists_file),
                 str(sample_items_file),
                 str(output_dir),
-                "--experiment-type", "likert_rating",
-                "--distribution-strategy", "quota_based",
-                "--distribution-config", config_json,
+                "--experiment-type",
+                "likert_rating",
+                "--distribution-strategy",
+                "quota_based",
+                "--distribution-config",
+                config_json,
             ],
         )
 
         assert result.exit_code == 0
 
         # Verify distribution config
-        dist_config = json.loads((output_dir / "data" / "distribution.json").read_text())
+        dist_config = json.loads(
+            (output_dir / "data" / "distribution.json").read_text()
+        )
         assert dist_config["strategy_type"] == "quota_based"
         assert dist_config["strategy_config"]["participants_per_list"] == 10
 
     def test_generate_with_debug_mode(
         self,
         runner: CliRunner,
-        sample_lists_dir: Path,
+        sample_lists_file: Path,
         sample_items_file: Path,
         tmp_path: Path,
     ) -> None:
@@ -217,27 +231,32 @@ class TestGenerateCommand:
         result = runner.invoke(
             generate,
             [
-                str(sample_lists_dir),
+                str(sample_lists_file),
                 str(sample_items_file),
                 str(output_dir),
-                "--experiment-type", "forced_choice",
-                "--distribution-strategy", "balanced",
+                "--experiment-type",
+                "likert_rating",
+                "--distribution-strategy",
+                "balanced",
                 "--debug-mode",
-                "--debug-list-index", "1",
+                "--debug-list-index",
+                "1",
             ],
         )
 
         assert result.exit_code == 0
 
         # Verify debug mode config
-        dist_config = json.loads((output_dir / "data" / "distribution.json").read_text())
+        dist_config = json.loads(
+            (output_dir / "data" / "distribution.json").read_text()
+        )
         assert dist_config["debug_mode"] is True
         assert dist_config["debug_list_index"] == 1
 
     def test_generate_missing_distribution_strategy(
         self,
         runner: CliRunner,
-        sample_lists_dir: Path,
+        sample_lists_file: Path,
         sample_items_file: Path,
         tmp_path: Path,
     ) -> None:
@@ -247,10 +266,11 @@ class TestGenerateCommand:
         result = runner.invoke(
             generate,
             [
-                str(sample_lists_dir),
+                str(sample_lists_file),
                 str(sample_items_file),
                 str(output_dir),
-                "--experiment-type", "likert_rating",
+                "--experiment-type",
+                "likert_rating",
                 # Missing --distribution-strategy (required)
             ],
         )
@@ -261,7 +281,7 @@ class TestGenerateCommand:
     def test_generate_invalid_distribution_config(
         self,
         runner: CliRunner,
-        sample_lists_dir: Path,
+        sample_lists_file: Path,
         sample_items_file: Path,
         tmp_path: Path,
     ) -> None:
@@ -271,12 +291,15 @@ class TestGenerateCommand:
         result = runner.invoke(
             generate,
             [
-                str(sample_lists_dir),
+                str(sample_lists_file),
                 str(sample_items_file),
                 str(output_dir),
-                "--experiment-type", "likert_rating",
-                "--distribution-strategy", "quota_based",
-                "--distribution-config", "not-valid-json",
+                "--experiment-type",
+                "likert_rating",
+                "--distribution-strategy",
+                "quota_based",
+                "--distribution-config",
+                "not-valid-json",
             ],
         )
 
@@ -294,7 +317,7 @@ class TestValidateCommand:
     def test_validate_valid_experiment(
         self,
         runner: CliRunner,
-        sample_lists_dir: Path,
+        sample_lists_file: Path,
         sample_items_file: Path,
         tmp_path: Path,
     ) -> None:
@@ -305,11 +328,13 @@ class TestValidateCommand:
         runner.invoke(
             generate,
             [
-                str(sample_lists_dir),
+                str(sample_lists_file),
                 str(sample_items_file),
                 str(output_dir),
-                "--experiment-type", "likert_rating",
-                "--distribution-strategy", "balanced",
+                "--experiment-type",
+                "likert_rating",
+                "--distribution-strategy",
+                "balanced",
             ],
         )
 
@@ -367,7 +392,7 @@ class TestExportJATOSCommand:
     def test_export_jatos_basic(
         self,
         runner: CliRunner,
-        sample_lists_dir: Path,
+        sample_lists_file: Path,
         sample_items_file: Path,
         tmp_path: Path,
     ) -> None:
@@ -379,11 +404,13 @@ class TestExportJATOSCommand:
         runner.invoke(
             generate,
             [
-                str(sample_lists_dir),
+                str(sample_lists_file),
                 str(sample_items_file),
                 str(output_dir),
-                "--experiment-type", "likert_rating",
-                "--distribution-strategy", "balanced",
+                "--experiment-type",
+                "likert_rating",
+                "--distribution-strategy",
+                "balanced",
             ],
         )
 
@@ -393,8 +420,10 @@ class TestExportJATOSCommand:
             [
                 str(output_dir),
                 str(jzip_path),
-                "--title", "Test Study",
-                "--description", "Test Description",
+                "--title",
+                "Test Study",
+                "--description",
+                "Test Description",
             ],
         )
 
@@ -409,16 +438,19 @@ class TestExportJATOSCommand:
 class TestDistributionStrategies:
     """Test all 8 distribution strategies."""
 
-    @pytest.mark.parametrize("strategy", [
-        "random",
-        "sequential",
-        "balanced",
-        "latin_square",
-    ])
+    @pytest.mark.parametrize(
+        "strategy",
+        [
+            "random",
+            "sequential",
+            "balanced",
+            "latin_square",
+        ],
+    )
     def test_simple_strategies(
         self,
         runner: CliRunner,
-        sample_lists_dir: Path,
+        sample_lists_file: Path,
         sample_items_file: Path,
         tmp_path: Path,
         strategy: str,
@@ -429,24 +461,28 @@ class TestDistributionStrategies:
         result = runner.invoke(
             generate,
             [
-                str(sample_lists_dir),
+                str(sample_lists_file),
                 str(sample_items_file),
                 str(output_dir),
-                "--experiment-type", "forced_choice",
-                "--distribution-strategy", strategy,
+                "--experiment-type",
+                "likert_rating",
+                "--distribution-strategy",
+                strategy,
             ],
         )
 
         assert result.exit_code == 0, f"Strategy {strategy} failed: {result.output}"
 
         # Verify distribution config
-        dist_config = json.loads((output_dir / "data" / "distribution.json").read_text())
+        dist_config = json.loads(
+            (output_dir / "data" / "distribution.json").read_text()
+        )
         assert dist_config["strategy_type"] == strategy
 
     def test_stratified_strategy(
         self,
         runner: CliRunner,
-        sample_lists_dir: Path,
+        sample_lists_file: Path,
         sample_items_file: Path,
         tmp_path: Path,
     ) -> None:
@@ -458,43 +494,53 @@ class TestDistributionStrategies:
         result = runner.invoke(
             generate,
             [
-                str(sample_lists_dir),
+                str(sample_lists_file),
                 str(sample_items_file),
                 str(output_dir),
-                "--experiment-type", "likert_rating",
-                "--distribution-strategy", "stratified",
-                "--distribution-config", config_json,
+                "--experiment-type",
+                "likert_rating",
+                "--distribution-strategy",
+                "stratified",
+                "--distribution-config",
+                config_json,
             ],
         )
 
         assert result.exit_code == 0
 
         # Verify distribution config
-        dist_config = json.loads((output_dir / "data" / "distribution.json").read_text())
+        dist_config = json.loads(
+            (output_dir / "data" / "distribution.json").read_text()
+        )
         assert dist_config["strategy_type"] == "stratified"
         assert dist_config["strategy_config"]["factors"] == ["condition"]
 
     def test_weighted_random_strategy(
         self,
         runner: CliRunner,
-        sample_lists_dir: Path,
+        sample_lists_file: Path,
         sample_items_file: Path,
         tmp_path: Path,
     ) -> None:
         """Test weighted_random distribution strategy."""
         output_dir = tmp_path / "experiment"
 
-        config_json = json.dumps({"weight_expression": "1.0", "normalize_weights": True})
+        config_json = json.dumps(
+            {"weight_expression": "1.0", "normalize_weights": True}
+        )
 
         result = runner.invoke(
             generate,
             [
-                str(sample_lists_dir),
+                str(sample_lists_file),
                 str(sample_items_file),
                 str(output_dir),
-                "--experiment-type", "likert_rating",
-                "--distribution-strategy", "weighted_random",
-                "--distribution-config", config_json,
+                "--experiment-type",
+                "likert_rating",
+                "--distribution-strategy",
+                "weighted_random",
+                "--distribution-config",
+                config_json,
             ],
         )
 
@@ -503,28 +549,33 @@ class TestDistributionStrategies:
     def test_metadata_based_strategy(
         self,
         runner: CliRunner,
-        sample_lists_dir: Path,
+        sample_lists_file: Path,
         sample_items_file: Path,
         tmp_path: Path,
     ) -> None:
         """Test metadata_based distribution strategy."""
         output_dir = tmp_path / "experiment"
 
-        config_json = json.dumps({
-            "filter_expression": "true",
-            "rank_expression": "list_metadata.list_number || 0",
-            "rank_ascending": True
-        })
+        config_json = json.dumps(
+            {
+                "filter_expression": "true",
+                "rank_expression": "list_metadata.list_number || 0",
+                "rank_ascending": True,
+            }
+        )
 
         result = runner.invoke(
             generate,
             [
-                str(sample_lists_dir),
+                str(sample_lists_file),
                 str(sample_items_file),
                 str(output_dir),
-                "--experiment-type", "likert_rating",
-                "--distribution-strategy", "metadata_based",
-                "--distribution-config", config_json,
+                "--experiment-type",
+                "likert_rating",
+                "--distribution-strategy",
+                "metadata_based",
+                "--distribution-config",
+                config_json,
             ],
         )
 
@@ -549,7 +600,10 @@ class TestHelpCommands:
         result = runner.invoke(deployment, ["generate", "--help"])
 
         assert result.exit_code == 0
-        assert "Generate jsPsych experiment" in result.output or "generate" in result.output.lower()
+        assert (
+            "Generate jsPsych experiment" in result.output
+            or "generate" in result.output.lower()
+        )
 
     def test_export_jatos_help(self, runner: CliRunner) -> None:
         """Test export-jatos command help."""
@@ -565,9 +619,7 @@ class TestHelpCommands:
 class TestTrialsCommands:
     """Test deployment trials configuration commands."""
 
-    def test_configure_rating_basic(
-        self, runner: CliRunner, tmp_path: Path
-    ) -> None:
+    def test_configure_rating_basic(self, runner: CliRunner, tmp_path: Path) -> None:
         """Test configure-rating with basic options."""
         output_file = tmp_path / "rating_config.json"
 
@@ -575,10 +627,14 @@ class TestTrialsCommands:
             configure_rating,
             [
                 str(output_file),
-                "--min-value", "1",
-                "--max-value", "7",
-                "--min-label", "Very unnatural",
-                "--max-label", "Very natural",
+                "--min-value",
+                "1",
+                "--max-value",
+                "7",
+                "--min-label",
+                "Very unnatural",
+                "--max-label",
+                "Very natural",
             ],
         )
 
@@ -606,8 +662,10 @@ class TestTrialsCommands:
             configure_rating,
             [
                 str(output_file),
-                "--min-value", "1",
-                "--max-value", "5",
+                "--min-value",
+                "1",
+                "--max-value",
+                "5",
                 "--show-numeric-labels",
             ],
         )
@@ -628,8 +686,10 @@ class TestTrialsCommands:
             configure_rating,
             [
                 str(output_file),
-                "--min-value", "7",
-                "--max-value", "1",
+                "--min-value",
+                "7",
+                "--max-value",
+                "1",
             ],
         )
 
@@ -645,9 +705,12 @@ class TestTrialsCommands:
             configure_rating,
             [
                 str(output_file),
-                "--min-value", "1",
-                "--max-value", "7",
-                "--step", "2",  # 6 is not divisible by 2... wait, it is. Let me use 4
+                "--min-value",
+                "1",
+                "--max-value",
+                "7",
+                "--step",
+                "2",  # 6 is not divisible by 2... wait, it is. Let me use 4
             ],
         )
 
@@ -657,17 +720,18 @@ class TestTrialsCommands:
             configure_rating,
             [
                 str(output_file),
-                "--min-value", "1",
-                "--max-value", "7",
-                "--step", "4",  # (7-1) = 6, not divisible by 4
+                "--min-value",
+                "1",
+                "--max-value",
+                "7",
+                "--step",
+                "4",  # (7-1) = 6, not divisible by 4
             ],
         )
 
         assert result.exit_code != 0
 
-    def test_configure_choice_basic(
-        self, runner: CliRunner, tmp_path: Path
-    ) -> None:
+    def test_configure_choice_basic(self, runner: CliRunner, tmp_path: Path) -> None:
         """Test configure-choice with basic options."""
         output_file = tmp_path / "choice_config.json"
 
@@ -675,7 +739,8 @@ class TestTrialsCommands:
             configure_choice,
             [
                 str(output_file),
-                "--button-html", '<button class="custom-btn">%choice%</button>',
+                "--button-html",
+                '<button class="custom-btn">%choice%</button>',
                 "--randomize-position",
             ],
         )
@@ -699,16 +764,15 @@ class TestTrialsCommands:
             configure_choice,
             [
                 str(output_file),
-                "--button-html", '<button class="custom-btn">No placeholder</button>',
+                "--button-html",
+                '<button class="custom-btn">No placeholder</button>',
             ],
         )
 
         assert result.exit_code != 0
         assert "%choice%" in result.output
 
-    def test_configure_timing_basic(
-        self, runner: CliRunner, tmp_path: Path
-    ) -> None:
+    def test_configure_timing_basic(self, runner: CliRunner, tmp_path: Path) -> None:
         """Test configure-timing with basic options."""
         output_file = tmp_path / "timing_config.json"
 
@@ -716,9 +780,12 @@ class TestTrialsCommands:
             configure_timing,
             [
                 str(output_file),
-                "--duration-ms", "500",
-                "--isi-ms", "100",
-                "--mask-char", "#",
+                "--duration-ms",
+                "500",
+                "--isi-ms",
+                "100",
+                "--mask-char",
+                "#",
             ],
         )
 
@@ -742,7 +809,8 @@ class TestTrialsCommands:
             configure_timing,
             [
                 str(output_file),
-                "--isi-ms", "50",
+                "--isi-ms",
+                "50",
                 "--cumulative",
             ],
         )
@@ -763,15 +831,14 @@ class TestTrialsCommands:
             configure_timing,
             [
                 str(output_file),
-                "--duration-ms", "-100",  # Negative duration
+                "--duration-ms",
+                "-100",  # Negative duration
             ],
         )
 
         assert result.exit_code != 0
 
-    def test_show_config_single_file(
-        self, runner: CliRunner, tmp_path: Path
-    ) -> None:
+    def test_show_config_single_file(self, runner: CliRunner, tmp_path: Path) -> None:
         """Test show-config with single configuration file."""
         # Create a config file first
         config_file = tmp_path / "test_config.json"
@@ -811,9 +878,7 @@ class TestTrialsCommands:
         assert "rating.json" in result.output
         assert "choice.json" in result.output
 
-    def test_show_config_invalid_json(
-        self, runner: CliRunner, tmp_path: Path
-    ) -> None:
+    def test_show_config_invalid_json(self, runner: CliRunner, tmp_path: Path) -> None:
         """Test show-config with invalid JSON file."""
         config_file = tmp_path / "invalid.json"
         config_file.write_text("not valid json")
@@ -843,9 +908,7 @@ class TestTrialsCommands:
 class TestUICommands:
     """Test deployment UI customization commands."""
 
-    def test_generate_css_basic(
-        self, runner: CliRunner, tmp_path: Path
-    ) -> None:
+    def test_generate_css_basic(self, runner: CliRunner, tmp_path: Path) -> None:
         """Test generate-css with basic options."""
         output_file = tmp_path / "custom.css"
 
@@ -853,9 +916,12 @@ class TestUICommands:
             generate_css,
             [
                 str(output_file),
-                "--theme", "dark",
-                "--primary-color", "#1976D2",
-                "--secondary-color", "#FF5722",
+                "--theme",
+                "dark",
+                "--primary-color",
+                "#1976D2",
+                "--secondary-color",
+                "#FF5722",
             ],
         )
 
@@ -867,9 +933,7 @@ class TestUICommands:
         assert "#FF5722" in css_content
         assert "dark" in css_content.lower()
 
-    def test_generate_css_light_theme(
-        self, runner: CliRunner, tmp_path: Path
-    ) -> None:
+    def test_generate_css_light_theme(self, runner: CliRunner, tmp_path: Path) -> None:
         """Test generate-css with light theme."""
         output_file = tmp_path / "light.css"
 
@@ -877,7 +941,8 @@ class TestUICommands:
             generate_css,
             [
                 str(output_file),
-                "--theme", "light",
+                "--theme",
+                "light",
             ],
         )
 
@@ -895,16 +960,15 @@ class TestUICommands:
             generate_css,
             [
                 str(output_file),
-                "--primary-color", "not-a-hex-color",
+                "--primary-color",
+                "not-a-hex-color",
             ],
         )
 
         assert result.exit_code != 0
         assert "Invalid" in result.output
 
-    def test_customize_basic(
-        self, runner: CliRunner, tmp_path: Path
-    ) -> None:
+    def test_customize_basic(self, runner: CliRunner, tmp_path: Path) -> None:
         """Test customize command with basic options."""
         # Create mock experiment directory
         exp_dir = tmp_path / "experiment"
@@ -917,8 +981,10 @@ class TestUICommands:
             customize,
             [
                 str(exp_dir),
-                "--theme", "dark",
-                "--primary-color", "#1976D2",
+                "--theme",
+                "dark",
+                "--primary-color",
+                "#1976D2",
             ],
         )
 
@@ -927,11 +993,9 @@ class TestUICommands:
 
         # Check that index.html was updated
         html_content = index_html.read_text()
-        assert 'css/experiment.css' in html_content
+        assert "css/experiment.css" in html_content
 
-    def test_customize_with_custom_css(
-        self, runner: CliRunner, tmp_path: Path
-    ) -> None:
+    def test_customize_with_custom_css(self, runner: CliRunner, tmp_path: Path) -> None:
         """Test customize command with custom CSS file."""
         # Create mock experiment directory
         exp_dir = tmp_path / "experiment"
@@ -947,8 +1011,10 @@ class TestUICommands:
             customize,
             [
                 str(exp_dir),
-                "--css-file", str(custom_css),
-                "--output-name", "styles.css",
+                "--css-file",
+                str(custom_css),
+                "--output-name",
+                "styles.css",
             ],
         )
 
@@ -960,9 +1026,7 @@ class TestUICommands:
         assert ".my-class" in css_content
         assert "Custom CSS" in css_content
 
-    def test_customize_invalid_color(
-        self, runner: CliRunner, tmp_path: Path
-    ) -> None:
+    def test_customize_invalid_color(self, runner: CliRunner, tmp_path: Path) -> None:
         """Test customize command with invalid color."""
         exp_dir = tmp_path / "experiment"
         exp_dir.mkdir()
@@ -971,7 +1035,8 @@ class TestUICommands:
             customize,
             [
                 str(exp_dir),
-                "--primary-color", "invalid-color",
+                "--primary-color",
+                "invalid-color",
             ],
         )
 
@@ -997,7 +1062,7 @@ class TestEnhancedValidateCommand:
     def test_validate_check_distribution(
         self,
         runner: CliRunner,
-        sample_lists_dir: Path,
+        sample_lists_file: Path,
         sample_items_file: Path,
         tmp_path: Path,
     ) -> None:
@@ -1008,11 +1073,13 @@ class TestEnhancedValidateCommand:
         runner.invoke(
             generate,
             [
-                str(sample_lists_dir),
+                str(sample_lists_file),
                 str(sample_items_file),
                 str(output_dir),
-                "--experiment-type", "likert_rating",
-                "--distribution-strategy", "balanced",
+                "--experiment-type",
+                "likert_rating",
+                "--distribution-strategy",
+                "balanced",
             ],
         )
 
@@ -1027,7 +1094,7 @@ class TestEnhancedValidateCommand:
     def test_validate_check_data_structure(
         self,
         runner: CliRunner,
-        sample_lists_dir: Path,
+        sample_lists_file: Path,
         sample_items_file: Path,
         tmp_path: Path,
     ) -> None:
@@ -1038,11 +1105,13 @@ class TestEnhancedValidateCommand:
         runner.invoke(
             generate,
             [
-                str(sample_lists_dir),
+                str(sample_lists_file),
                 str(sample_items_file),
                 str(output_dir),
-                "--experiment-type", "likert_rating",
-                "--distribution-strategy", "balanced",
+                "--experiment-type",
+                "likert_rating",
+                "--distribution-strategy",
+                "balanced",
             ],
         )
 
@@ -1057,7 +1126,7 @@ class TestEnhancedValidateCommand:
     def test_validate_strict_mode(
         self,
         runner: CliRunner,
-        sample_lists_dir: Path,
+        sample_lists_file: Path,
         sample_items_file: Path,
         tmp_path: Path,
     ) -> None:
@@ -1068,11 +1137,13 @@ class TestEnhancedValidateCommand:
         runner.invoke(
             generate,
             [
-                str(sample_lists_dir),
+                str(sample_lists_file),
                 str(sample_items_file),
                 str(output_dir),
-                "--experiment-type", "likert_rating",
-                "--distribution-strategy", "balanced",
+                "--experiment-type",
+                "likert_rating",
+                "--distribution-strategy",
+                "balanced",
             ],
         )
 
@@ -1087,7 +1158,7 @@ class TestEnhancedValidateCommand:
     def test_validate_check_trials_with_config(
         self,
         runner: CliRunner,
-        sample_lists_dir: Path,
+        sample_lists_file: Path,
         sample_items_file: Path,
         tmp_path: Path,
     ) -> None:
@@ -1098,11 +1169,13 @@ class TestEnhancedValidateCommand:
         runner.invoke(
             generate,
             [
-                str(sample_lists_dir),
+                str(sample_lists_file),
                 str(sample_items_file),
                 str(output_dir),
-                "--experiment-type", "likert_rating",
-                "--distribution-strategy", "balanced",
+                "--experiment-type",
+                "likert_rating",
+                "--distribution-strategy",
+                "balanced",
             ],
         )
 
@@ -1110,11 +1183,15 @@ class TestEnhancedValidateCommand:
         config_dir = output_dir / "config"
         config_dir.mkdir(exist_ok=True)
         trial_config = config_dir / "rating.json"
-        trial_config.write_text(json.dumps({
-            "type": "rating_scale",
-            "min_value": 1,
-            "max_value": 7,
-        }))
+        trial_config.write_text(
+            json.dumps(
+                {
+                    "type": "rating_scale",
+                    "min_value": 1,
+                    "max_value": 7,
+                }
+            )
+        )
 
         # Validate with trials check
         result = runner.invoke(
@@ -1142,9 +1219,13 @@ class TestEnhancedValidateCommand:
         (data_dir / "lists.jsonl").write_text("")
 
         # Create invalid distribution config
-        (data_dir / "distribution.json").write_text(json.dumps({
-            "strategy_type": "invalid_strategy",  # Invalid strategy
-        }))
+        (data_dir / "distribution.json").write_text(
+            json.dumps(
+                {
+                    "strategy_type": "invalid_strategy",  # Invalid strategy
+                }
+            )
+        )
 
         result = runner.invoke(
             validate,
@@ -1168,9 +1249,13 @@ class TestEnhancedValidateCommand:
         # Create required files
         (exp_dir / "index.html").write_text("<html></html>")
         (data_dir / "config.json").write_text("{}")
-        (data_dir / "distribution.json").write_text(json.dumps({
-            "strategy_type": "balanced",
-        }))
+        (data_dir / "distribution.json").write_text(
+            json.dumps(
+                {
+                    "strategy_type": "balanced",
+                }
+            )
+        )
 
         # Create items file with one item
         (data_dir / "items.jsonl").write_text(
@@ -1179,7 +1264,8 @@ class TestEnhancedValidateCommand:
 
         # Create lists file referencing non-existent item
         (data_dir / "lists.jsonl").write_text(
-            '{"id": "11111111-1111-1111-1111-111111111111", "item_refs": ["nonexistent-uuid"]}\n'
+            '{"id": "11111111-1111-1111-1111-111111111111", '
+            '"item_refs": ["nonexistent-uuid"]}\n'
         )
 
         result = runner.invoke(

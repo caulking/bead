@@ -21,7 +21,7 @@ class NoiseModel(ABC):
     def apply(
         self,
         value: str | int | float | list[str],
-        context: dict[str, object],
+        context: dict[str, str | int | float | bool | list[str]],
         rng: np.random.RandomState,
     ) -> str | int | float | list[str]:
         """Apply noise to value.
@@ -30,7 +30,7 @@ class NoiseModel(ABC):
         ----------
         value : str | int | float | list[str]
             Original value (probability, score, choice, etc.).
-        context : dict[str, object]
+        context : dict[str, str | int | float | bool | list[str]]
             Additional context (item, template, strategy, etc.).
         rng : np.random.RandomState
             Random number generator.

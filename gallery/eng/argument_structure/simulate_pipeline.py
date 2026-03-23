@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Simulate the complete active learning pipeline with synthetic judgments.
 
-This script demonstrates the sash.simulation framework on the argument structure
+This script demonstrates the bead.simulation framework on the argument structure
 project. It:
 1. Loads 2AFC pairs from items/2afc_pairs.jsonl
-2. Simulates human judgments using the sash.simulation framework
+2. Simulates human judgments using the bead.simulation framework
 3. Trains model on simulated data
 4. Uses active learning to select next batch
 5. Repeats until convergence
@@ -22,10 +22,20 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+from sklearn.metrics import accuracy_score
 
 from bead.active_learning.loop import ActiveLearningLoop
 from bead.active_learning.models.forced_choice import ForcedChoiceModel
 from bead.active_learning.selection import UncertaintySampler
+from bead.cli.display import (
+    console,
+    create_summary_table,
+    print_error,
+    print_header,
+    print_info,
+    print_success,
+    print_warning,
+)
 from bead.config.active_learning import (
     ActiveLearningLoopConfig,
     ForcedChoiceModelConfig,
@@ -34,7 +44,6 @@ from bead.config.active_learning import (
 from bead.config.simulation import NoiseModelConfig, SimulatedAnnotatorConfig
 from bead.evaluation.convergence import ConvergenceDetector
 from bead.evaluation.interannotator import InterAnnotatorMetrics
-from bead.evaluation.model_metrics import ModelMetrics
 from bead.items.item import Item
 from bead.items.item_template import ItemTemplate, PresentationSpec, TaskSpec
 from bead.simulation.annotators.base import SimulatedAnnotator
@@ -125,61 +134,66 @@ def run_simulation(
     dict[str, Any]
         Simulation results including convergence metrics
     """
-    print("=" * 80)
-    print("SIMULATION: Argument Structure Active Learning Pipeline")
-    print("=" * 80)
-    print("Configuration:")
-    print(f"  Initial size: {initial_size}")
-    print(f"  Budget/iteration: {budget_per_iteration}")
-    print(f"  Max iterations: {max_iterations}")
-    print(f"  Temperature: {temperature}")
-    print(f"  Random state: {random_state}")
-    print()
+    print_header("Argument Structure Active Learning Pipeline Simulation")
 
-    # Setup output directory
+    config_table = create_summary_table(
+        {
+            "Initial size": str(initial_size),
+            "Budget/iteration": str(budget_per_iteration),
+            "Max iterations": str(max_iterations),
+            "Temperature": str(temperature),
+            "Random state": str(random_state),
+        },
+        title="Configuration",
+    )
+    console.print(config_table)
+    console.print()
+
+    # setup output directory
     if output_dir is None:
         output_dir = Path("simulation_output")
     output_dir.mkdir(exist_ok=True)
 
-    # Set random seed
+    # set random seed
     if random_state is not None:
         random.seed(random_state)
         np.random.seed(random_state)
 
     # [1/7] Load data
-    print("[1/7] Loading data...")
+    print_header("[1/7] Loading Data")
     pairs_path = Path("items/2afc_pairs.jsonl")
 
     if not pairs_path.exists():
-        raise FileNotFoundError(
-            f"2AFC pairs not found: {pairs_path}\nRun: make 2afc-pairs"
-        )
+        print_error(f"2AFC pairs not found: {pairs_path}")
+        print_info("Run: make 2afc-pairs")
+        raise FileNotFoundError(f"2AFC pairs not found: {pairs_path}")
 
-    # Load and sample data
+    # load and sample data
     if max_items is None:
         max_items = initial_size + budget_per_iteration * max_iterations
 
     all_pairs = load_2afc_pairs(pairs_path, limit=max_items)
 
     if len(all_pairs) < initial_size:
+        print_error(f"Not enough items: need {initial_size}, found {len(all_pairs)}")
         raise ValueError(
             f"Not enough items: need {initial_size}, found {len(all_pairs)}"
         )
 
-    # Shuffle and split
+    # shuffle and split
     random.shuffle(all_pairs)
     initial_items = all_pairs[:initial_size]
     unlabeled_pool = all_pairs[initial_size:]
 
-    print(f"  Loaded {len(all_pairs)} 2AFC pairs")
-    print(f"  Initial set: {len(initial_items)}")
-    print(f"  Unlabeled pool: {len(unlabeled_pool)}")
-    print()
+    print_success(f"Loaded {len(all_pairs)} 2AFC pairs")
+    console.print(f"  - Initial set: {len(initial_items)}")
+    console.print(f"  - Unlabeled pool: {len(unlabeled_pool)}")
+    console.print()
 
     # [2/7] Setup simulated annotator
-    print("[2/7] Setting up simulated annotator...")
+    print_header("[2/7] Setting Up Simulated Annotator")
 
-    # Create annotator configuration using bead.simulation framework
+    # create annotator configuration using bead.simulation framework
     annotator_config = SimulatedAnnotatorConfig(
         strategy="lm_score",
         model_output_key="lm_score",
@@ -191,26 +205,27 @@ def run_simulation(
         fallback_to_random=True,
     )
 
-    # Create annotator from configuration
+    # create annotator from configuration
     annotator = SimulatedAnnotator.from_config(annotator_config)
 
-    print("  Strategy: lm_score")
-    print(f"  Temperature: {temperature}")
-    print(f"  Random state: {random_state}")
-    print()
+    print_success("Simulated annotator initialized")
+    console.print("  - Strategy: lm_score")
+    console.print(f"  - Temperature: {temperature}")
+    console.print(f"  - Random state: {random_state}")
+    console.print()
 
     # [3/7] Generate initial annotations
-    print("[3/7] Generating initial annotations...")
+    print_header("[3/7] Generating Initial Annotations")
 
-    # Create ItemTemplate for the simulation
+    # create ItemTemplate for the simulation
     item_template = get_forced_choice_template()
 
-    # Generate initial annotations using the simulation framework
+    # generate initial annotations using the simulation framework
     human_ratings = annotator.annotate_batch(initial_items, item_template)
-    print(f"  Generated {len(human_ratings)} initial annotations")
+    print_success(f"Generated {len(human_ratings)} initial annotations")
 
-    # Compute simulated human agreement (sample twice with different seeds)
-    # Create two new annotators with different random states for agreement calculation
+    # compute simulated human agreement (sample twice with different seeds)
+    # create two new annotators with different random states for agreement calculation
     annotator_sample1 = SimulatedAnnotator.from_config(
         annotator_config.model_copy(update={"random_state": (random_state or 0) + 1000})
     )
@@ -227,24 +242,26 @@ def run_simulation(
     inter_annotator = InterAnnotatorMetrics()
     human_agreement = inter_annotator.cohens_kappa(labels1, labels2)
 
-    print(f"  Simulated human agreement (Cohen's κ): {human_agreement:.3f}")
-    print()
+    kappa_msg = f"  - Simulated human agreement (Cohen's kappa): {human_agreement:.3f}"
+    console.print(kappa_msg)
+    console.print()
 
     # [4/7] Setup convergence detection
-    print("[4/7] Setting up convergence detection...")
+    print_header("[4/7] Setting Up Convergence Detection")
     convergence_detector = ConvergenceDetector(
-        human_agreement_metric="accuracy",  # Using accuracy as proxy for kappa
+        human_agreement_metric="percentage_agreement",  # Using agreement as proxy
         convergence_threshold=convergence_threshold,
         min_iterations=2,
         alpha=0.05,
     )
-    print(f"  Convergence threshold: {convergence_threshold}")
-    print()
+    print_success("Convergence detector initialized")
+    console.print(f"  - Convergence threshold: {convergence_threshold}")
+    console.print()
 
     # [5/7] Setup active learning
-    print("[5/7] Setting up active learning...")
+    print_header("[5/7] Setting Up Active Learning")
 
-    # Create model with configuration
+    # create model with configuration
     model_config = ForcedChoiceModelConfig(
         model_name="bert-base-uncased",
         num_epochs=3,
@@ -253,27 +270,28 @@ def run_simulation(
     )
     model = ForcedChoiceModel(config=model_config)
 
-    # Create selector with configuration
+    # create selector with configuration
     selector_config = UncertaintySamplerConfig(method="entropy")
     item_selector = UncertaintySampler(config=selector_config)
 
-    # Create loop with configuration
+    # create loop with configuration
     loop_config = ActiveLearningLoopConfig(
         max_iterations=max_iterations,
         budget_per_iteration=budget_per_iteration,
     )
-    loop = ActiveLearningLoop(
+    ActiveLearningLoop(
         item_selector=item_selector,
         config=loop_config,
     )
 
-    print("  Strategy: Uncertainty sampling (entropy)")
-    print("  Model: ForcedChoiceModel (BERT-based)")
-    print()
+    print_success("Active learning components initialized")
+    console.print("  - Strategy: Uncertainty sampling (entropy)")
+    console.print("  - Model: ForcedChoiceModel (BERT-based)")
+    console.print()
 
     # [6/7] Run active learning loop
-    print("[6/7] Running active learning loop...")
-    print()
+    print_header("[6/7] Running Active Learning Loop")
+    console.print()
 
     iteration_results = []
     current_labeled = initial_items.copy()
@@ -281,19 +299,19 @@ def run_simulation(
     converged = False
 
     for iteration in range(max_iterations):
-        print(f"  Iteration {iteration + 1}/{max_iterations}")
-        print("  " + "-" * 70)
+        console.print(f"  Iteration {iteration + 1}/{max_iterations}")
+        console.print("  " + "-" * 70)
 
-        # Extract labels
+        # extract labels
         labels = [human_ratings[str(item.id)] for item in current_labeled]
 
-        # Train model
-        print(f"    Training on {len(current_labeled)} items...")
+        # train model
+        console.print(f"    Training on {len(current_labeled)} items...")
         train_metrics = model.train(current_labeled, labels)
-        print(f"    Train accuracy: {train_metrics['train_accuracy']:.3f}")
+        console.print(f"    Train accuracy: {train_metrics['train_accuracy']:.3f}")
 
-        # Evaluate on held-out data
-        # Sample from unlabeled pool for testing
+        # evaluate on held-out data
+        # sample from unlabeled pool for testing
         test_size = min(50, len(current_unlabeled))
         if test_size > 0:
             test_items = random.sample(current_unlabeled, test_size)
@@ -303,15 +321,14 @@ def run_simulation(
             predictions = model.predict(test_items)
             pred_labels = [p.predicted_class for p in predictions]
 
-            metrics_calc = ModelMetrics()
-            test_accuracy = metrics_calc.accuracy(test_labels, pred_labels)
-            print(f"    Test accuracy: {test_accuracy:.3f}")
+            test_accuracy = accuracy_score(test_labels, pred_labels)
+            console.print(f"    Test accuracy: {test_accuracy:.3f}")
         else:
-            # No unlabeled items left, use training accuracy
+            # no unlabeled items left, use training accuracy
             test_accuracy = train_metrics["train_accuracy"]
-            print(f"    Test accuracy: {test_accuracy:.3f} (using train)")
+            console.print(f"    Test accuracy: {test_accuracy:.3f} (using train)")
 
-        # Store results
+        # store results
         iteration_results.append(
             {
                 "iteration": iteration + 1,
@@ -322,38 +339,40 @@ def run_simulation(
             }
         )
 
-        # Check convergence
+        # check convergence
         converged = convergence_detector.check_convergence(
             model_accuracy=test_accuracy,
             iteration=iteration + 1,
+            human_agreement=human_agreement,
         )
 
         gap = abs(test_accuracy - human_agreement)
-        print(f"    Agreement gap: {gap:.3f}")
+        console.print(f"    Agreement gap: {gap:.3f}")
 
         if converged:
-            print("    ✓ Converged!")
+            print_success("Converged!")
             break
 
-        # Select next batch
+        # select next batch
         if not current_unlabeled:
-            print("    No more unlabeled items")
+            print_info("No more unlabeled items")
             break
 
         n_select = min(budget_per_iteration, len(current_unlabeled))
-        print(f"    Selecting {n_select} items for annotation...")
+        console.print(f"    Selecting {n_select} items for annotation...")
 
         selected_items = item_selector.select(
+            items=current_unlabeled,
             model=model,
-            unlabeled_items=current_unlabeled,
-            n_select=n_select,
+            predict_fn=lambda m, i: m.predict_proba([i])[0],  # Return 1D array
+            budget=n_select,
         )
 
-        # Simulate annotations for selected items using the simulation framework
+        # simulate annotations for selected items using the simulation framework
         new_annotations = annotator.annotate_batch(selected_items, item_template)
         human_ratings.update(new_annotations)
 
-        # Update sets
+        # update sets
         current_labeled.extend(selected_items)
         current_unlabeled = [
             item
@@ -361,29 +380,32 @@ def run_simulation(
             if str(item.id) not in {str(s.id) for s in selected_items}
         ]
 
-        print()
+        console.print()
 
     # [7/7] Summary
-    print("[7/7] Simulation complete!")
-    print()
-    print("=" * 80)
-    print("SUMMARY")
-    print("=" * 80)
-    print(f"Iterations completed: {len(iteration_results)}")
-    print(f"Total annotations: {len(human_ratings)}")
-    print(f"Final test accuracy: {iteration_results[-1]['test_accuracy']:.3f}")
-    print(f"Simulated human agreement: {human_agreement:.3f}")
-    print(
-        f"Final gap: {abs(iteration_results[-1]['test_accuracy'] - human_agreement):.3f}"
+    print_header("[7/7] Simulation Complete")
+
+    final_accuracy = iteration_results[-1]["test_accuracy"]
+    final_gap = abs(final_accuracy - human_agreement)
+    summary_table = create_summary_table(
+        {
+            "Iterations completed": str(len(iteration_results)),
+            "Total annotations": str(len(human_ratings)),
+            "Final test accuracy": f"{final_accuracy:.3f}",
+            "Simulated human agreement": f"{human_agreement:.3f}",
+            "Final gap": f"{final_gap:.3f}",
+            "Status": "CONVERGED" if converged else "MAX ITERATIONS REACHED",
+        },
+        title="Summary",
     )
+    console.print(summary_table)
 
     if converged:
-        print("Status: ✓ CONVERGED")
+        print_success("Pipeline converged successfully")
     else:
-        print("Status: ⚠ MAX ITERATIONS REACHED")
-    print()
+        print_warning("Max iterations reached without convergence")
 
-    # Save results
+    # save results
     results = {
         "config": {
             "initial_size": initial_size,
@@ -403,13 +425,13 @@ def run_simulation(
     with open(results_path, "w") as f:
         json.dump(results, f, indent=2)
 
-    print(f"Results saved to: {results_path}")
-    print()
+    print_success(f"Results saved to: {results_path}")
+    console.print()
 
     return results
 
 
-def main():
+def main() -> None:
     """CLI entry point."""
     parser = argparse.ArgumentParser(
         description="Simulate active learning pipeline with synthetic judgments"

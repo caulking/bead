@@ -8,23 +8,22 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
 from uuid import UUID
 
 from jinja2 import Environment, FileSystemLoader
 
+from bead.data.base import JsonValue
 from bead.data.serialization import SerializationError, write_jsonlines
 from bead.deployment.jspsych.config import (
     ChoiceConfig,
     ExperimentConfig,
+    InstructionsConfig,
     RatingScaleConfig,
 )
-from bead.deployment.jspsych.randomizer import generate_randomizer_function
 from bead.deployment.jspsych.trials import create_trial
 from bead.items.item import Item
 from bead.items.item_template import ItemTemplate
 from bead.lists import ExperimentList
-from bead.lists.constraints import OrderingConstraint
 
 
 class JsPsychExperimentGenerator:
@@ -88,7 +87,7 @@ class JsPsychExperimentGenerator:
         self.rating_config = rating_config or RatingScaleConfig()
         self.choice_config = choice_config or ChoiceConfig()
 
-        # Setup Jinja2 environment
+        # setup Jinja2 environment
         template_dir = Path(__file__).parent / "templates"
         self.jinja_env = Environment(loader=FileSystemLoader(str(template_dir)))
 
@@ -125,7 +124,8 @@ class JsPsychExperimentGenerator:
             - index.html
             - js/experiment.js, js/list_distributor.js
             - css/experiment.css
-            - data/config.json, data/lists.jsonl, data/items.jsonl, data/distribution.json
+            - data/config.json, data/lists.jsonl, data/items.jsonl,
+              data/distribution.json
 
         Raises
         ------
@@ -138,8 +138,12 @@ class JsPsychExperimentGenerator:
         Examples
         --------
         >>> from pathlib import Path
-        >>> from bead.deployment.distribution import ListDistributionStrategy, DistributionStrategyType
-        >>> strategy = ListDistributionStrategy(strategy_type=DistributionStrategyType.BALANCED)
+        >>> from bead.deployment.distribution import (
+        ...     ListDistributionStrategy, DistributionStrategyType
+        ... )
+        >>> strategy = ListDistributionStrategy(
+        ...     strategy_type=DistributionStrategyType.BALANCED
+        ... )
         >>> config = ExperimentConfig(
         ...     experiment_type="forced_choice",
         ...     title="Test",
@@ -147,22 +151,24 @@ class JsPsychExperimentGenerator:
         ...     instructions="Test",
         ...     distribution_strategy=strategy
         ... )
-        >>> generator = JsPsychExperimentGenerator(config=config, output_dir=Path("/tmp/exp"))
+        >>> generator = JsPsychExperimentGenerator(
+        ...     config=config, output_dir=Path("/tmp/exp")
+        ... )
         >>> # output_dir = generator.generate(lists, items, templates)
         """
-        # Validate inputs (no fallbacks)
+        # validate inputs (no fallbacks)
         if not lists:
             raise ValueError(
-                "generate() requires at least one ExperimentList. Got empty list. "
-                "Create lists using ListPartitioner before calling generate(). "
-                "Example: partitioner.partition_with_batch_constraints(items, metadata, ...)"
+                "generate() requires at least one ExperimentList. Got empty list."
+                " Create lists using ListPartitioner before calling generate()."
+                " Example: partitioner.partition_with_batch_constraints(...)"
             )
 
         if not items:
             raise ValueError(
-                "generate() requires items dictionary. Got empty dict. "
-                "Ensure items are constructed before calling generate(). "
-                "Items must be created using item construction utilities from bead.items."
+                "generate() requires items dictionary. Got empty dict."
+                " Ensure items are constructed before calling generate()."
+                " Items must be created using bead.items utilities."
             )
 
         if not templates:
@@ -172,26 +178,39 @@ class JsPsychExperimentGenerator:
                 "provide an empty template: {item.item_template_id: ItemTemplate(...)}."
             )
 
-        # Validate all item references can be resolved
+        # validate all item references can be resolved
         self._validate_item_references(lists, items)
 
-        # Validate all template references can be resolved
+        # validate all template references can be resolved
         self._validate_template_references(items, templates)
 
-        # Create directory structure
+        # create directory structure
         self._create_directory_structure()
 
-        # Write batch data files (lists, items, distribution config)
+        # write batch data files (lists, items, distribution config, trials)
         self._write_lists_jsonl(lists)
         self._write_items_jsonl(items)
         self._write_distribution_config()
+        self._write_trials_json(lists, items, templates)
 
-        # Generate HTML/CSS/JS files
-        self._generate_html()
+        # detect span usage for HTML template
+        span_enabled = self._detect_span_usage(items, templates)
+        span_wikidata = self._detect_wikidata_usage(templates)
+
+        # generate HTML/CSS/JS files
+        self._generate_html(span_enabled, span_wikidata)
         self._generate_css()
         self._generate_experiment_script()
         self._generate_config_file()
         self._copy_list_distributor_script()
+
+        # copy slopit bundle if enabled
+        if self.config.slopit.enabled:
+            self._copy_slopit_bundle()
+
+        # copy span plugin scripts if needed
+        if span_enabled:
+            self._copy_span_plugin_scripts(span_wikidata)
 
         return self.output_dir
 
@@ -218,11 +237,12 @@ class JsPsychExperimentGenerator:
             for item_id in exp_list.item_refs:
                 if item_id not in items:
                     available_sample = list(items.keys())[:5]
+                    ellipsis = "..." if len(items) > 5 else ""
                     raise ValueError(
                         f"Item {item_id} referenced in list '{exp_list.name}' "
-                        f"(list_number={exp_list.list_number}) not found in items dictionary. "
-                        f"Available item UUIDs (first 5): {available_sample}{'...' if len(items) > 5 else ''}. "
-                        f"Ensure all items referenced in lists are included in the items dict passed to generate()."
+                        f"(list_number={exp_list.list_number}) not found in items. "
+                        f"Available UUIDs (first 5): {available_sample}{ellipsis}. "
+                        f"Include all referenced items in items dict."
                     )
 
     def _validate_template_references(
@@ -247,11 +267,12 @@ class JsPsychExperimentGenerator:
         for item_id, item in items.items():
             if item.item_template_id not in templates:
                 available_sample = list(templates.keys())[:5]
+                ellipsis = "..." if len(templates) > 5 else ""
                 raise ValueError(
-                    f"Template {item.item_template_id} referenced by item {item_id} "
-                    f"not found in templates dictionary. "
-                    f"Available template UUIDs (first 5): {available_sample}{'...' if len(templates) > 5 else ''}. "
-                    f"Ensure all templates referenced by items are included in the templates dict passed to generate()."
+                    f"Template {item.item_template_id} for item {item_id} "
+                    f"not found in templates. "
+                    f"Available UUIDs (first 5): {available_sample}{ellipsis}. "
+                    f"Include all referenced templates in templates dict."
                 )
 
     def _write_lists_jsonl(self, lists: list[ExperimentList]) -> None:
@@ -292,7 +313,7 @@ class JsPsychExperimentGenerator:
         """
         output_path = self.output_dir / "data" / "items.jsonl"
         try:
-            # Convert dict values to list for serialization
+            # convert dict values to list for serialization
             items_list = list(items.values())
             write_jsonlines(items_list, output_path)
         except SerializationError as e:
@@ -300,6 +321,58 @@ class JsPsychExperimentGenerator:
                 f"Failed to write items.jsonl to {output_path}: {e}. "
                 f"Check write permissions and disk space. "
                 f"Attempted to serialize {len(items)} items."
+            ) from e
+
+    def _write_trials_json(
+        self,
+        lists: list[ExperimentList],
+        items: dict[UUID, Item],
+        templates: dict[UUID, ItemTemplate],
+    ) -> None:
+        """Write pre-generated trials to data/trials.json.
+
+        Creates trials for each list and stores them in a JSON file
+        keyed by list ID for efficient loading in the experiment.
+
+        Parameters
+        ----------
+        lists : list[ExperimentList]
+            Experiment lists.
+        items : dict[UUID, Item]
+            Items dictionary.
+        templates : dict[UUID, ItemTemplate]
+            Templates dictionary.
+
+        Raises
+        ------
+        SerializationError
+            If writing JSON fails.
+        """
+        output_path = self.output_dir / "data" / "trials.json"
+        trials_by_list: dict[str, list[dict[str, JsonValue]]] = {}
+
+        for exp_list in lists:
+            list_trials: list[dict[str, JsonValue]] = []
+            for trial_num, item_id in enumerate(exp_list.item_refs):
+                item = items[item_id]
+                template = templates[item.item_template_id]
+                trial = create_trial(
+                    item=item,
+                    template=template,
+                    experiment_config=self.config,
+                    trial_number=trial_num,
+                    rating_config=self.rating_config,
+                    choice_config=self.choice_config,
+                )
+                list_trials.append(trial)
+            trials_by_list[str(exp_list.id)] = list_trials
+
+        try:
+            with open(output_path, "w", encoding="utf-8") as f:
+                json.dump(trials_by_list, f, indent=2)
+        except Exception as e:
+            raise SerializationError(
+                f"Failed to write trials.json to {output_path}: {e}"
             ) from e
 
     def _write_distribution_config(self) -> None:
@@ -312,7 +385,7 @@ class JsPsychExperimentGenerator:
         """
         output_path = self.output_dir / "data" / "distribution.json"
         try:
-            # Use model_dump_json() to handle UUID serialization
+            # use model_dump_json() to handle UUID serialization
             json_str = self.config.distribution_strategy.model_dump_json(indent=2)
             output_path.write_text(json_str)
         except (OSError, TypeError) as e:
@@ -323,27 +396,27 @@ class JsPsychExperimentGenerator:
             ) from e
 
     def _copy_list_distributor_script(self) -> None:
-        """Copy list_distributor.js template to js/ directory.
+        """Copy list_distributor.js from compiled dist/ to js/ directory.
 
         Raises
         ------
         FileNotFoundError
-            If list_distributor.js template is not found.
+            If list_distributor.js is not found in dist/.
         OSError
             If copying fails.
         """
-        template_path = Path(__file__).parent / "templates" / "list_distributor.js"
+        dist_path = Path(__file__).parent / "dist" / "lib" / "list-distributor.js"
         output_path = self.output_dir / "js" / "list_distributor.js"
 
-        if not template_path.exists():
+        if not dist_path.exists():
             raise FileNotFoundError(
-                f"list_distributor.js template not found at {template_path}. "
-                f"This file is required for batch mode. "
-                f"Ensure bead is installed correctly."
+                f"list-distributor.js not found at {dist_path}. "
+                f"Ensure TypeScript is compiled. "
+                f"Run 'npm run build' in the jspsych directory."
             )
 
         try:
-            output_path.write_text(template_path.read_text())
+            output_path.write_text(dist_path.read_text())
         except OSError as e:
             raise OSError(
                 f"Failed to copy list_distributor.js to {output_path}: {e}. "
@@ -362,9 +435,15 @@ class JsPsychExperimentGenerator:
         self.output_dir.mkdir(parents=True, exist_ok=True)
         (self.output_dir / "css").mkdir(exist_ok=True)
         (self.output_dir / "js").mkdir(exist_ok=True)
+        (self.output_dir / "js" / "plugins").mkdir(parents=True, exist_ok=True)
+        (self.output_dir / "js" / "lib").mkdir(parents=True, exist_ok=True)
         (self.output_dir / "data").mkdir(exist_ok=True)
 
-    def _generate_html(self) -> None:
+    def _generate_html(
+        self,
+        span_enabled: bool = False,
+        span_wikidata: bool = False,
+    ) -> None:
         """Generate index.html file."""
         template = self.jinja_env.get_template("index.html")
 
@@ -372,6 +451,9 @@ class JsPsychExperimentGenerator:
             title=self.config.title,
             ui_theme=self.config.ui_theme,
             use_jatos=self.config.use_jatos,
+            slopit_enabled=self.config.slopit.enabled,
+            span_enabled=span_enabled,
+            span_wikidata=span_wikidata,
         )
 
         output_file = self.output_dir / "index.html"
@@ -382,14 +464,14 @@ class JsPsychExperimentGenerator:
         template_file = Path(__file__).parent / "templates" / "experiment.css"
         output_file = self.output_dir / "css" / "experiment.css"
 
-        # Copy CSS template directly (no rendering needed)
+        # copy CSS template directly (no rendering needed)
         output_file.write_text(template_file.read_text())
 
     def _generate_experiment_script(self) -> None:
         """Generate experiment.js file."""
         template = self.jinja_env.get_template("experiment.js.template")
 
-        # Auto-generate Prolific redirect URL if completion code is provided
+        # auto-generate Prolific redirect URL if completion code is provided
         on_finish_url = self.config.on_finish_url
         if self.config.prolific_completion_code:
             on_finish_url = (
@@ -397,13 +479,95 @@ class JsPsychExperimentGenerator:
                 f"cc={self.config.prolific_completion_code}"
             )
 
+        # prepare slopit config for template
+        slopit_config = None
+        if self.config.slopit.enabled:
+            slopit_config = {
+                "keystroke": self.config.slopit.keystroke.model_dump(),
+                "focus": self.config.slopit.focus.model_dump(),
+                "paste": self.config.slopit.paste.model_dump(),
+                "target_selectors": self.config.slopit.target_selectors,
+            }
+
+        # prepare demographics config for template
+        demographics_enabled = False
+        demographics_title = "Participant Information"
+        demographics_fields: list[dict[str, JsonValue]] = []
+        demographics_submit_text = "Continue"
+
+        if self.config.demographics is not None and self.config.demographics.enabled:
+            demographics_enabled = True
+            demographics_title = self.config.demographics.title
+            demographics_submit_text = self.config.demographics.submit_button_text
+            for field in self.config.demographics.fields:
+                field_data: dict[str, JsonValue] = {
+                    "name": field.name,
+                    "label": field.label,
+                    "field_type": field.field_type,
+                    "required": field.required,
+                }
+                if field.placeholder:
+                    field_data["placeholder"] = field.placeholder
+                if field.options:
+                    field_data["options"] = field.options
+                if field.range is not None:
+                    field_data["range_min"] = field.range.min
+                    field_data["range_max"] = field.range.max
+                demographics_fields.append(field_data)
+
+        # prepare instructions config for template
+        instructions_is_multi_page = isinstance(
+            self.config.instructions, InstructionsConfig
+        )
+        instructions_pages: list[dict[str, str | None]] = []
+        instructions_show_page_numbers = True
+        instructions_allow_backwards = True
+        instructions_button_next = "Next"
+        instructions_button_finish = "Begin Experiment"
+        simple_instructions: str | None = None
+
+        if instructions_is_multi_page:
+            assert isinstance(self.config.instructions, InstructionsConfig)
+            instructions_show_page_numbers = self.config.instructions.show_page_numbers
+            instructions_allow_backwards = self.config.instructions.allow_backwards
+            instructions_button_next = self.config.instructions.button_label_next
+            instructions_button_finish = self.config.instructions.button_label_finish
+            for page in self.config.instructions.pages:
+                instructions_pages.append(
+                    {
+                        "title": page.title,
+                        "content": page.content,
+                    }
+                )
+        else:
+            # simple string instructions
+            simple_instructions = (
+                self.config.instructions
+                if isinstance(self.config.instructions, str)
+                else None
+            )
+
         js_content = template.render(
             title=self.config.title,
             description=self.config.description,
-            instructions=self.config.instructions,
+            instructions=simple_instructions,
             show_progress_bar=self.config.show_progress_bar,
             use_jatos=self.config.use_jatos,
             on_finish_url=on_finish_url,
+            slopit_enabled=self.config.slopit.enabled,
+            slopit_config=slopit_config,
+            # demographics variables
+            demographics_enabled=demographics_enabled,
+            demographics_title=demographics_title,
+            demographics_fields=demographics_fields,
+            demographics_submit_text=demographics_submit_text,
+            # instructions variables
+            instructions_is_multi_page=instructions_is_multi_page,
+            instructions_pages=instructions_pages,
+            instructions_show_page_numbers=instructions_show_page_numbers,
+            instructions_allow_backwards=instructions_allow_backwards,
+            instructions_button_next=instructions_button_next,
+            instructions_button_finish=instructions_button_finish,
         )
 
         output_file = self.output_dir / "js" / "experiment.js"
@@ -414,3 +578,126 @@ class JsPsychExperimentGenerator:
         output_file = self.output_dir / "data" / "config.json"
         json_str = self.config.model_dump_json(indent=2)
         output_file.write_text(json_str)
+
+    def _copy_slopit_bundle(self) -> None:
+        """Copy slopit bundle to js/ directory.
+
+        Copies the pre-built slopit bundle from the bead deployment dist
+        directory to the experiment output directory.
+
+        Raises
+        ------
+        FileNotFoundError
+            If slopit bundle is not found.
+        OSError
+            If copying fails.
+        """
+        # look for slopit bundle in dist directory
+        dist_dir = Path(__file__).parent / "dist"
+        bundle_path = dist_dir / "slopit-bundle.js"
+
+        if not bundle_path.exists():
+            raise FileNotFoundError(
+                f"Slopit bundle not found at {bundle_path}. "
+                f"Ensure the slopit packages are built. "
+                f"Run 'npm run build' in the jspsych directory, or install "
+                f"bead with: pip install bead[behavioral-analysis]"
+            )
+
+        output_path = self.output_dir / "js" / "slopit-bundle.js"
+        try:
+            output_path.write_text(bundle_path.read_text())
+        except OSError as e:
+            raise OSError(
+                f"Failed to copy slopit bundle to {output_path}: {e}. "
+                f"Check write permissions."
+            ) from e
+
+    def _detect_span_usage(
+        self,
+        items: dict[UUID, Item],
+        templates: dict[UUID, ItemTemplate],
+    ) -> bool:
+        """Detect whether any items or templates use span features.
+
+        Parameters
+        ----------
+        items : dict[UUID, Item]
+            Items dictionary.
+        templates : dict[UUID, ItemTemplate]
+            Templates dictionary.
+
+        Returns
+        -------
+        bool
+            True if spans are used.
+        """
+        # check experiment type
+        if self.config.experiment_type == "span_labeling":
+            return True
+
+        # check items for span data
+        for item in items.values():
+            if item.spans or item.tokenized_elements:
+                return True
+
+        # check templates for span_spec
+        for template in templates.values():
+            if template.task_spec.span_spec is not None:
+                return True
+
+        return False
+
+    def _detect_wikidata_usage(
+        self,
+        templates: dict[UUID, ItemTemplate],
+    ) -> bool:
+        """Detect whether any templates use Wikidata label source.
+
+        Parameters
+        ----------
+        templates : dict[UUID, ItemTemplate]
+            Templates dictionary.
+
+        Returns
+        -------
+        bool
+            True if Wikidata is used.
+        """
+        for template in templates.values():
+            if template.task_spec.span_spec is not None:
+                spec = template.task_spec.span_spec
+                if spec.label_source == "wikidata":
+                    return True
+                if spec.relation_label_source == "wikidata":
+                    return True
+        return False
+
+    def _copy_span_plugin_scripts(self, include_wikidata: bool = False) -> None:
+        """Copy span plugin scripts from compiled dist/ to js/ directory.
+
+        Parameters
+        ----------
+        include_wikidata : bool
+            Whether to include the Wikidata search script.
+        """
+        dist_dir = Path(__file__).parent / "dist"
+
+        # create subdirectories
+        (self.output_dir / "js" / "plugins").mkdir(parents=True, exist_ok=True)
+        (self.output_dir / "js" / "lib").mkdir(parents=True, exist_ok=True)
+
+        scripts = [
+            ("plugins/span-label.js", "js/plugins/span-label.js"),
+            ("lib/span-renderer.js", "js/lib/span-renderer.js"),
+        ]
+
+        if include_wikidata:
+            scripts.append(("lib/wikidata-search.js", "js/lib/wikidata-search.js"))
+
+        for src_name, dest_name in scripts:
+            src_path = dist_dir / src_name
+            dest_path = self.output_dir / dest_name
+            if src_path.exists():
+                dest_path.write_text(src_path.read_text())
+            # silently skip if not built yet (TypeScript may not be compiled)

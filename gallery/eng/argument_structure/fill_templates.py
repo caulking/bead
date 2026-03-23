@@ -10,14 +10,27 @@ All parameters are configurable via config.yaml, with optional CLI overrides.
 
 import argparse
 import logging
+import sys
 from pathlib import Path
 
 import yaml
+from utils.renderers import OtherNounRenderer
 
+from bead.cli.display import (
+    confirm,
+    console,
+    create_progress,
+    create_summary_table,
+    display_dry_run_summary,
+    print_error,
+    print_header,
+    print_info,
+    print_success,
+    print_warning,
+)
 from bead.data.serialization import write_jsonlines
-from bead.resources.lexical_item import LexicalItem
 from bead.resources.lexicon import Lexicon
-from bead.resources.template import Slot
+from bead.resources.template import Template
 from bead.resources.template_collection import TemplateCollection
 from bead.templates.adapters.cache import ModelOutputCache
 from bead.templates.adapters.huggingface import HuggingFaceMLMAdapter
@@ -26,120 +39,6 @@ from bead.templates.resolver import ConstraintResolver
 from bead.templates.strategies import MixedFillingStrategy
 
 logger = logging.getLogger(__name__)
-
-
-def count_noun_occurrences(
-    slot_fillers: dict[str, LexicalItem],
-    template_slots: dict[str, Slot]
-) -> dict[str, int]:
-    """Count how many times each noun lemma appears."""
-    noun_counts: dict[str, int] = {}
-
-    for slot_name in template_slots:
-        if slot_name.startswith('noun_') and slot_name in slot_fillers:
-            noun_lemma = slot_fillers[slot_name].lemma
-            noun_counts[noun_lemma] = noun_counts.get(noun_lemma, 0) + 1
-
-    return noun_counts
-
-
-def ordinal_word(n: int) -> str:
-    """Convert number to ordinal word."""
-    ordinals = {
-        1: "first", 2: "second", 3: "third", 4: "fourth", 5: "fifth",
-        6: "sixth", 7: "seventh", 8: "eighth", 9: "ninth", 10: "tenth"
-    }
-    return ordinals.get(n, f"{n}th")
-
-
-def render_template(
-    template_string: str,
-    slot_fillers: dict[str, LexicalItem],
-    template_slots: dict[str, Slot]
-) -> str:
-    """Render template with proper form selection and 'other' handling.
-
-    Rules:
-    - Uses item.form if available, otherwise item.lemma
-    - If noun appears 2x: use "another"/"the other"
-    - If noun appears 3+x: use ordinals "a second", "a third", etc.
-    """
-    # Count total occurrences of each noun
-    noun_total_counts = count_noun_occurrences(slot_fillers, template_slots)
-
-    # Identify det+noun pairs in template order
-    # Extract order from template string by finding slot positions
-    det_noun_pairs = []
-    slot_positions = {}
-
-    # Find position of each slot in template string
-    for slot_name in template_slots.keys():
-        placeholder = f"{{{slot_name}}}"
-        pos = template_string.find(placeholder)
-        if pos >= 0:
-            slot_positions[slot_name] = pos
-
-    # Sort noun slots by their position in template
-    noun_slots_in_order = [
-        name for name in sorted(slot_positions.keys(), key=lambda x: slot_positions[x])
-        if name.startswith('noun_')
-    ]
-
-    # Build det+noun pairs in template order
-    for noun_slot in noun_slots_in_order:
-        suffix = noun_slot[5:]  # "subj", "dobj", "pobj", etc.
-        det_slot = f'det_{suffix}'
-        if det_slot in slot_fillers and noun_slot in slot_fillers:
-            det_noun_pairs.append((det_slot, noun_slot))
-
-    # Track current occurrence of each noun
-    noun_usage: dict[str, int] = {}
-
-    # Build result
-    result = template_string
-
-    for det_slot, noun_slot in det_noun_pairs:
-        det_item = slot_fillers[det_slot]
-        noun_item = slot_fillers[noun_slot]
-
-        det_surface = det_item.form if det_item.form else det_item.lemma
-        noun_surface = noun_item.form if noun_item.form else noun_item.lemma
-        noun_lemma = noun_item.lemma
-
-        occurrence = noun_usage.get(noun_lemma, 0)
-        total_occurrences = noun_total_counts[noun_lemma]
-
-        # Determine rendering
-        if occurrence == 0:
-            # First occurrence: use original determiner
-            rendered = f"{det_surface} {noun_surface}"
-        elif total_occurrences == 2:
-            # Exactly 2 occurrences: use "another" or "the other"
-            if det_surface.lower() == "a":
-                rendered = f"another {noun_surface}"
-            elif det_surface.lower() == "the":
-                rendered = f"the other {noun_surface}"
-            else:
-                rendered = f"another {noun_surface}"
-        else:
-            # 3+ occurrences: use ordinals
-            ordinal = ordinal_word(occurrence + 1)
-            rendered = f"a {ordinal} {noun_surface}"
-
-        # Replace det+noun pair
-        pattern = f"{{{det_slot}}} {{{noun_slot}}}"
-        result = result.replace(pattern, rendered, 1)
-
-        noun_usage[noun_lemma] = occurrence + 1
-
-    # Handle remaining slots (verbs, preps, etc.)
-    for slot_name, item in slot_fillers.items():
-        placeholder = f"{{{slot_name}}}"
-        if placeholder in result:
-            surface = item.form if item.form else item.lemma
-            result = result.replace(placeholder, surface)
-
-    return result
 
 
 def load_config(config_path: Path) -> dict:
@@ -160,7 +59,7 @@ def main() -> None:
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="Dry run mode: use 10 verbs with one simple and one progressive template (both with 3+ nouns)",
+        help="Dry run: use 10 verbs with 1 simple and 1 progressive template",
     )
     parser.add_argument(
         "--output",
@@ -168,105 +67,154 @@ def main() -> None:
         default=None,
         help="Override output path from config",
     )
+    parser.add_argument(
+        "-y",
+        "--yes",
+        action="store_true",
+        help="Skip confirmation prompts (for non-interactive use)",
+    )
     args = parser.parse_args()
 
-    # Load configuration
-    config = load_config(args.config)
+    # load configuration
+    try:
+        config = load_config(args.config)
+    except Exception as e:
+        print_error(f"Failed to load config: {e}")
+        sys.exit(1)
 
-    # Setup logging
+    # setup logging
     logging.basicConfig(
         level=getattr(logging, config["logging"]["level"]),
         format=config["logging"]["format"],
     )
 
-    logger.info("Loading templates and lexicons...")
+    print_header("Template Filling")
 
-    # Resolve paths
+    # resolve paths
     templates_path = Path(config["resources"]["templates"][0]["path"])
     output_path = args.output or Path(config["template"]["output_path"])
 
-    # Load templates
-    template_collection = TemplateCollection.from_jsonl(
-        templates_path, "generic_frames"
-    )
-    logger.info(
-        f"Loaded {len(template_collection.templates)} templates from {templates_path}"
-    )
+    console.print(f"Config: [cyan]{args.config}[/cyan]")
+    console.print(f"Templates: [cyan]{templates_path}[/cyan]")
+    console.print(f"Output: [cyan]{output_path}[/cyan]\n")
 
-    # Apply dry-run mode: select specific templates
+    # Check for existing output
+    if output_path.exists() and not args.dry_run and not args.yes:
+        if not confirm(f"Overwrite {output_path}?", default=False):
+            print_info("Operation cancelled.")
+            return
+
+    # load templates
+    print_header("Loading Templates")
+    try:
+        template_collection = TemplateCollection.from_jsonl(
+            templates_path, "generic_frames"
+        )
+        num_templates = len(template_collection.templates)
+        print_success(f"Loaded {num_templates} templates from {templates_path}")
+    except Exception as e:
+        print_error(f"Failed to load templates: {e}")
+        sys.exit(1)
+
+    # apply dry-run mode: select specific templates
     templates = list(template_collection.templates.values())
     if args.dry_run:
-        logger.info("DRY RUN MODE: Selecting 1 simple + 1 progressive template with 3 noun slots")
+        print_warning("DRY RUN: Selecting 1 simple + 1 progressive template")
 
-        # Find templates with 3 noun slots
-        def count_noun_slots(template):
-            return sum(1 for slot_name in template.slots if slot_name.startswith('noun_'))
+        # find templates with 3 noun slots
+        def count_noun_slots(t: Template) -> int:
+            return sum(1 for s in t.slots if s.startswith("noun_"))
 
         templates_with_3_nouns = [t for t in templates if count_noun_slots(t) == 3]
 
-        # Separate simple and progressive
-        simple_templates = [t for t in templates_with_3_nouns if 'progressive' not in t.name]
-        progressive_templates = [t for t in templates_with_3_nouns if 'progressive' in t.name]
+        # separate simple and progressive
+        simple_templates = [
+            t for t in templates_with_3_nouns if "progressive" not in t.name
+        ]
+        progressive_templates = [
+            t for t in templates_with_3_nouns if "progressive" in t.name
+        ]
 
-        # Select one of each
+        # select one of each
         selected = []
         if simple_templates:
             selected.append(simple_templates[0])
-            logger.info(f"  Simple template: {simple_templates[0].name}")
+            print_info(f"Simple template: {simple_templates[0].name}")
         if progressive_templates:
             selected.append(progressive_templates[0])
-            logger.info(f"  Progressive template: {progressive_templates[0].name}")
+            print_info(f"Progressive template: {progressive_templates[0].name}")
 
         templates = selected if selected else templates[:2]
-        logger.info(f"Selected {len(templates)} templates for dry run")
+        print_success(f"Selected {len(templates)} templates for dry run")
 
-    # Load lexicons
+    # load lexicons
+    print_header("Loading Lexicons")
     lexicons: list[Lexicon] = []
-    for lex_config in config["resources"]["lexicons"]:
-        lex_path = Path(lex_config["path"])
-        lexicon = Lexicon.from_jsonl(lex_path, lex_config["name"])
+    try:
+        for lex_config in config["resources"]["lexicons"]:
+            lex_path = Path(lex_config["path"])
+            lexicon = Lexicon.from_jsonl(lex_path, lex_config["name"])
 
-        # In dry-run mode, limit verb lexicon to 10 verbs
-        if args.dry_run and lex_config["name"] == "verbnet_verbs":
-            # Get first 10 unique verb lemmas
-            verb_lemmas = []
-            limited_items = {}
-            for item_id, item in lexicon.items.items():
-                if item.lemma not in verb_lemmas:
-                    verb_lemmas.append(item.lemma)
-                    if len(verb_lemmas) >= 10:
-                        break
-                # Keep all forms of verbs we're including
-                if item.lemma in verb_lemmas[:10]:
-                    limited_items[item_id] = item
+            # in dry-run mode, limit verb lexicon to 10 verbs
+            if args.dry_run and lex_config["name"] == "verbnet_verbs":
+                # get first 10 unique verb lemmas
+                verb_lemmas = []
+                limited_items = {}
+                for item_id, item in lexicon.items.items():
+                    if item.lemma not in verb_lemmas:
+                        verb_lemmas.append(item.lemma)
+                        if len(verb_lemmas) >= 10:
+                            break
+                    # keep all forms of verbs we're including
+                    if item.lemma in verb_lemmas[:10]:
+                        limited_items[item_id] = item
 
-            lexicon.items = limited_items
-            logger.info(
-                f"DRY RUN: Limited verbnet_verbs to 10 lemmas ({len(lexicon.items)} forms)"
-            )
+                lexicon.items = limited_items
+                num_forms = len(lexicon.items)
+                print_warning(f"DRY RUN: Limited to 10 verb lemmas ({num_forms} forms)")
 
-        lexicons.append(lexicon)
-        logger.info(f"Loaded {len(lexicon.items)} items from {lex_config['name']}")
+            lexicons.append(lexicon)
+            num_items = len(lexicon.items)
+            print_success(f"Loaded {num_items} items from {lex_config['name']}")
+    except Exception as e:
+        print_error(f"Failed to load lexicons: {e}")
+        sys.exit(1)
 
-    # Initialize constraint resolver
+    # Show dry run summary before continuing
+    if args.dry_run:
+        display_dry_run_summary(
+            {
+                "Templates": len(templates),
+                "Lexicons": len(lexicons),
+                "Output": str(output_path),
+            }
+        )
+        console.print()
+
+    # initialize constraint resolver
     resolver = ConstraintResolver()
 
-    # Initialize model adapter for MLM
+    # initialize model adapter for MLM
+    print_header("Loading MLM Model")
     mlm_config = config["template"]["mlm"]
-    logger.info(f"Loading MLM model: {mlm_config['model_name']}...")
-    model_adapter = HuggingFaceMLMAdapter(
-        model_name=mlm_config["model_name"],
-        device=mlm_config.get("device", "cpu"),
-    )
-    model_adapter.load_model()
-    logger.info("MLM model loaded successfully")
+    print_info(f"Loading MLM model: {mlm_config['model_name']}...")
+    try:
+        model_adapter = HuggingFaceMLMAdapter(
+            model_name=mlm_config["model_name"],
+            device=mlm_config.get("device", "cpu"),
+        )
+        model_adapter.load_model()
+        print_success("MLM model loaded successfully")
+    except Exception as e:
+        print_error(f"Failed to load MLM model: {e}")
+        sys.exit(1)
 
-    # Initialize cache
+    # initialize cache
     cache_dir = Path(config["paths"]["cache_dir"])
     cache = ModelOutputCache(cache_dir=cache_dir)
 
-    # Build slot_strategies dict for MixedFillingStrategy
-    # Format: {slot_name: (strategy_name, config_dict)}
+    # build slot_strategies dict for MixedFillingStrategy
+    # format: {slot_name: (strategy_name, config_dict)}
     slot_strategies: dict[str, tuple[str, dict]] = {}
 
     for slot_name, slot_config in config["template"]["slot_strategies"].items():
@@ -281,7 +229,7 @@ def main() -> None:
                 "beam_size": mlm_config.get("beam_size", 5),
                 "top_k": mlm_config.get("top_k", 10),
             }
-            # Add per-slot max_fills and enforce_unique if specified
+            # add per-slot max_fills and enforce_unique if specified
             if "max_fills" in slot_config:
                 mlm_slot_config["max_fills"] = slot_config["max_fills"]
             if "enforce_unique" in slot_config:
@@ -289,59 +237,89 @@ def main() -> None:
 
             slot_strategies[slot_name] = ("mlm", mlm_slot_config)
         else:
-            # For other strategies (exhaustive, random, etc.)
+            # for other strategies (exhaustive, random, etc.)
             slot_strategies[slot_name] = (strategy_name, {})
 
-    # Create filler with MixedFillingStrategy
-    logger.info("Creating template filler with mixed strategy...")
+    # create renderer for English-specific noun handling
+    # uses OtherNounRenderer for "another"/"the other" patterns with repeated nouns
+    renderer = OtherNounRenderer()
+    print_info("Using OtherNounRenderer for English-specific noun handling")
+
+    # create filler with MixedFillingStrategy
+    print_header("Filling Templates")
     strategy = MixedFillingStrategy(
         slot_strategies=slot_strategies,
     )
 
-    # Fill templates
-    logger.info("Filling templates...")
+    # fill templates
     filled_templates = []
-    for i, template in enumerate(templates, 1):
-        logger.info(f"Filling template {i}/{len(templates)}: {template.name}")
-        try:
-            combos = list(
-                strategy.generate_from_template(
-                    template=template, lexicons=lexicons, language_code="en"
-                )
-            )
+    try:
+        with create_progress() as progress:
+            task = progress.add_task("Filling templates", total=len(templates))
 
-            # Convert combinations to FilledTemplate objects
-            for combo in combos:
-                # Render text with smart ordinal handling
-                rendered = render_template(
-                    template.template_string,
-                    combo,
-                    template.slots
-                )
+            for template in templates:
+                try:
+                    combos = list(
+                        strategy.generate_from_template(
+                            template=template, lexicons=lexicons, language_code="en"
+                        )
+                    )
 
-                filled = FilledTemplate(
-                    template_id=str(template.id),
-                    template_name=template.name,
-                    slot_fillers=combo,
-                    rendered_text=rendered,
-                    strategy_name="mixed",
-                    template_slots={
-                        name: slot.required for name, slot in template.slots.items()
-                    },
-                )
-                filled_templates.append(filled)
+                    # convert combinations to FilledTemplate objects
+                    for combo in combos:
+                        # render text with English-specific noun handling
+                        rendered = renderer.render(
+                            template.template_string, combo, template.slots
+                        )
 
-            logger.info(f"  Generated {len(combos)} filled templates")
-        except Exception as e:
-            logger.error(f"  Failed to fill template {template.name}: {e}")
-            continue
+                        slots_required = {
+                            name: slot.required for name, slot in template.slots.items()
+                        }
+                        filled = FilledTemplate(
+                            template_id=str(template.id),
+                            template_name=template.name,
+                            slot_fillers=combo,
+                            rendered_text=rendered,
+                            strategy_name="mixed",
+                            template_slots=slots_required,
+                        )
+                        filled_templates.append(filled)
 
-    logger.info(f"Total filled templates: {len(filled_templates)}")
+                    num_combos = len(combos)
+                    logger.info(f"Generated {num_combos} for {template.name}")
+                except Exception as e:
+                    print_warning(f"Failed to fill template {template.name}: {e}")
+                    continue
 
-    # Save filled templates
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    write_jsonlines(filled_templates, output_path)
-    logger.info(f"Saved filled templates to {output_path}")
+                progress.advance(task)
+
+        print_success(f"Total filled templates: {len(filled_templates)}")
+    except Exception as e:
+        print_error(f"Failed to fill templates: {e}")
+        sys.exit(1)
+
+    # save filled templates
+    print_header("Saving Results")
+    try:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        write_jsonlines(filled_templates, output_path)
+        print_success(f"Saved filled templates to {output_path}")
+    except Exception as e:
+        print_error(f"Failed to save output: {e}")
+        sys.exit(1)
+
+    # Summary
+    print_header("Summary")
+    table = create_summary_table(
+        {
+            "Templates processed": str(len(templates)),
+            "Filled templates": f"{len(filled_templates):,}",
+            "Output file": str(output_path),
+        }
+    )
+    console.print(table)
+
+    print_info("Next: Run create_2afc_pairs.py to generate forced-choice pairs")
 
 
 if __name__ == "__main__":

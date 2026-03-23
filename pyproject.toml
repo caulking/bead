@@ -4,9 +4,23 @@ build-backend = "hatchling.build"
 
 [project]
 name = "bead"
-version = "0.1.0"
+version = "0.2.0"
 description = "Lexicon and Template Collection Construction Pipeline for Acceptability and Inference Judgment Data"
 authors = [{name = "Aaron Steven White", email = "aaron.white@rochester.edu"}]
+readme = "README.md"
+license = {text = "MIT"}
+keywords = ["linguistics", "nlp", "experiments", "active-learning", "psycholinguistics"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Text Processing :: Linguistic",
+    "Typing :: Typed",
+]
 requires-python = ">=3.13"
 dependencies = [
     "pydantic>=2.0.0",
@@ -19,20 +33,39 @@ dependencies = [
     "glazing>=0.2.0",
     "unimorph>=0.0.4",
     "torch>=2.0.0",
-    "transformers>=4.30.0",
+    "transformers>=4.35.0",
     "sentence-transformers>=2.0.0",
     "scikit-learn>=1.3.0",
+    "statsmodels>=0.14.6",
+    "scipy>=1.11.0",
     "click>=8.0.0",
     "rich>=13.0.0",
     "lark>=1.0.0",
     "psutil>=5.9.0",
+    "typer>=0.9.0",
+    "prompt-toolkit>=3.0.0",
+    "krippendorff>=0.6.0",
+    "peft>=0.6.0",
+    "evaluate>=0.4.0",
+    "accelerate>=0.25.0",
+    "datasets>=2.14.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/FACTSlab/bead"
+Documentation = "https://bead.readthedocs.io"
+Repository = "https://github.com/FACTSlab/bead"
+Issues = "https://github.com/FACTSlab/bead/issues"
+Changelog = "https://github.com/FACTSlab/bead/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 dev = [
     "pytest>=7.4.0",
     "pytest-cov>=4.1.0",
     "pytest-mock>=3.11.0",
+    "pytest-examples>=0.0.10",
+    "pytest-codeblocks>=0.17.0",
+    "pytest-env>=1.0.0",
     "ruff>=0.1.0",
     "pyright>=1.1.0",
     "pandas-stubs>=2.0.0",
@@ -46,17 +79,36 @@ training = [
     "pytorch-lightning>=2.0.0",
     "tensorboard>=2.13.0",
 ]
+stats = [
+    "statsmodels>=0.14.0",
+]
+ui = [
+    "textual>=0.40.0",
+]
+behavioral-analysis = [
+    "slopit>=0.1.0",
+]
+tokenization = [
+    "spacy>=3.7",
+    "stanza>=1.8",
+]
 
 [project.scripts]
 bead = "bead.cli.main:cli"
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "docs/user-guide/cli"]
+norecursedirs = ["tests/fixtures"]
 addopts = ["-ra", "--strict-markers", "--cov=bead", "--cov-report=term-missing"]
+markers = [
+    "slow_model_training: marks tests that train ML models (deselect with '-m \"not slow_model_training\"')",
+]
+
 
 [tool.ruff]
 line-length = 88
 target-version = "py313"
+exclude = ["gallery"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "D", "UP", "ANN", "B", "A", "C4", "PLC"]
@@ -69,12 +121,21 @@ ignore = ["ANN401"]
 convention = "numpy"
 
 [tool.pyright]
+include = ["bead"]
 typeCheckingMode = "strict"
 pythonVersion = "3.13"
 reportMissingTypeStubs = false
 useLibraryCodeForTypes = true
+# Disable reportUnknown* checks - industry standard for ML libraries with incomplete type stubs
+# See: https://github.com/microsoft/pyright/discussions/6243
+reportUnknownMemberType = false
+reportUnknownVariableType = false
+reportUnknownArgumentType = false
+reportUnknownParameterType = false
+reportUnknownLambdaType = false
 exclude = [
     "tests/**",
+    "gallery/**",
     "bead/active_learning/**",
     "bead/resources/adapters/unimorph.py",
     "bead/resources/adapters/glazing.py",
@@ -86,7 +147,26 @@ exclude = [
     "bead/items/adapters/anthropic.py",
     "bead/items/adapters/google.py",
     "bead/items/adapters/togetherai.py",
-    "bead/dsl/parser.py",
-    "bead/deployment/jspsych/ui/components.py",
+    # jsPsych deployment uses complex JSON serialization with list invariance issues
+    "bead/deployment/jspsych/**",
     "bead/simulation/**",
+    # CLI modules use dynamic JSON config (JsonValue) extensively
+    "bead/cli/**",
+    # DSL uses lark which has no type stubs
+    "bead/dsl/**",
+    # Data collection modules use external APIs with incomplete stubs
+    "bead/data_collection/**",
+    # Resources modules use pandas/polars with incomplete type stubs
+    "bead/resources/lexicon.py",
+    "bead/resources/template_collection.py",
+    "bead/resources/loaders.py",
+    # Evaluation uses krippendorff which has no type stubs
+    "bead/evaluation/**",
+    # Behavioral uses slopit which has no type stubs
+    "bead/behavioral/**",
+    # Participants modules use polars with incomplete type stubs
+    "bead/participants/collection.py",
+    "bead/participants/merging.py",
+    # Items cache has numpy ndarray type issues
+    "bead/items/cache.py",
 ]

@@ -9,19 +9,22 @@ Supports GLMM with participant-level random effects (intercepts and slopes).
 from __future__ import annotations
 
 import json
-import warnings
-from collections import Counter
+import tempfile
 from pathlib import Path
 
 import numpy as np
 import torch
 import torch.nn as nn
 from torch.distributions import Normal
-from transformers import AutoModel, AutoTokenizer
+from transformers import AutoModel, AutoTokenizer, TrainingArguments
 
 from bead.active_learning.config import MixedEffectsConfig, VarianceComponents
 from bead.active_learning.models.base import ActiveLearningModel, ModelPrediction
 from bead.active_learning.models.random_effects import RandomEffectsManager
+from bead.active_learning.trainers.data_collator import MixedEffectsDataCollator
+from bead.active_learning.trainers.dataset_utils import items_to_dataset
+from bead.active_learning.trainers.metrics import compute_regression_metrics
+from bead.active_learning.trainers.model_wrapper import EncoderRegressionWrapper
 from bead.config.active_learning import MagnitudeModelConfig
 from bead.items.item import Item
 from bead.items.item_template import ItemTemplate, TaskType
@@ -254,103 +257,37 @@ class MagnitudeModel(ActiveLearningModel):
 
         return log_prob_unnorm - log_normalizer
 
-    def train(
+    def _prepare_training_data(
         self,
         items: list[Item],
         labels: list[str],
-        participant_ids: list[str] | None = None,
-        validation_items: list[Item] | None = None,
-        validation_labels: list[str] | None = None,
-    ) -> dict[str, float]:
-        """Train model on magnitude data with participant-level random effects.
+        participant_ids: list[str],
+        validation_items: list[Item] | None,
+        validation_labels: list[str] | None,
+    ) -> tuple[
+        list[Item], list[float], list[str], list[Item] | None, list[float] | None
+    ]:
+        """Prepare training data for magnitude model.
 
         Parameters
         ----------
         items : list[Item]
             Training items.
         labels : list[str]
-            Training labels (continuous values as strings, e.g., "250.5", "300.2").
-        participant_ids : list[str] | None
-            Participant identifier for each item.
-            - For fixed effects (mode='fixed'): Pass None.
-            - For mixed effects: Must provide list[str] with same length as items.
+            Training labels (continuous values as strings).
+        participant_ids : list[str]
+            Normalized participant IDs.
         validation_items : list[Item] | None
-            Optional validation items.
+            Validation items.
         validation_labels : list[str] | None
-            Optional validation labels.
+            Validation labels.
 
         Returns
         -------
-        dict[str, float]
-            Training metrics including:
-            - "train_mse": Final training MSE
-            - "train_loss": Final training negative log-likelihood
-            - "val_mse": Validation MSE (if validation data provided)
-            - "participant_variance": σ²_u (if estimate_variance_components=True)
-            - "n_participants": Number of unique participants
-
-        Raises
-        ------
-        ValueError
-            If participant_ids is None when mode is 'random_intercepts'
-            or 'random_slopes'.
-        ValueError
-            If items and labels have different lengths.
-        ValueError
-            If items and participant_ids have different lengths.
-        ValueError
-            If participant_ids contains empty strings.
-        ValueError
-            If labels contain invalid values (non-numeric).
-        ValueError
-            If bounded=True and labels outside [min_value, max_value].
-        ValueError
-            If validation data is incomplete.
+        tuple[list[Item], list[float], list[str], list[Item] | None, list[float] | None]
+            Prepared items, numeric labels (floats), participant_ids,
+            validation_items, numeric validation_labels.
         """
-        # Validate and normalize participant_ids
-        if participant_ids is None:
-            if self.config.mixed_effects.mode != "fixed":
-                raise ValueError(
-                    f"participant_ids is required when "
-                    f"mode='{self.config.mixed_effects.mode}'. "
-                    f"For fixed effects, set mode='fixed' in config. "
-                    f"For mixed effects, provide participant_ids as list[str]."
-                )
-            participant_ids = ["_fixed_"] * len(items)
-        elif self.config.mixed_effects.mode == "fixed":
-            warnings.warn(
-                "participant_ids provided but mode='fixed'. "
-                "Participant IDs will be ignored.",
-                UserWarning,
-                stacklevel=2,
-            )
-            participant_ids = ["_fixed_"] * len(items)
-
-        # Validate input lengths
-        if len(items) != len(labels):
-            raise ValueError(
-                f"Number of items ({len(items)}) must match "
-                f"number of labels ({len(labels)})"
-            )
-
-        if len(items) != len(participant_ids):
-            raise ValueError(
-                f"Length mismatch: {len(items)} items != {len(participant_ids)} "
-                f"participant_ids. participant_ids must have same length as items."
-            )
-
-        if any(not pid for pid in participant_ids):
-            raise ValueError(
-                "participant_ids cannot contain empty strings. "
-                "Ensure all participants have valid identifiers."
-            )
-
-        if (validation_items is None) != (validation_labels is None):
-            raise ValueError(
-                "Both validation_items and validation_labels must be "
-                "provided, or neither"
-            )
-
         # Parse labels to floats
         try:
             y_values = [float(label) for label in labels]
@@ -369,32 +306,286 @@ class MagnitudeModel(ActiveLearningModel):
                         f"[{self.config.min_value}, {self.config.max_value}]"
                     )
 
-        y = torch.tensor(y_values, dtype=torch.float, device=self.config.device)
-
         self._initialize_regression_head()
 
-        # Initialize random effects manager
+        # Convert validation labels if provided
+        val_y_numeric = None
+        if validation_items is not None and validation_labels is not None:
+            try:
+                val_y_numeric = [float(label) for label in validation_labels]
+            except ValueError as e:
+                raise ValueError(
+                    f"Validation labels must be numeric strings. Got error: {e}"
+                ) from e
+
+            # Validate bounds for validation labels
+            if self.config.bounded:
+                for i, val in enumerate(val_y_numeric):
+                    if not (self.config.min_value <= val <= self.config.max_value):
+                        raise ValueError(
+                            f"Validation label at index {i} ({val}) is outside bounds "
+                            f"[{self.config.min_value}, {self.config.max_value}]"
+                        )
+
+        return items, y_values, participant_ids, validation_items, val_y_numeric
+
+    def _initialize_random_effects(self, n_classes: int) -> None:
+        """Initialize random effects manager.
+
+        Parameters
+        ----------
+        n_classes : int
+            Number of classes (1 for regression).
+        """
         self.random_effects = RandomEffectsManager(
-            self.config.mixed_effects, n_classes=1  # Scalar bias for μ
+            self.config.mixed_effects,
+            n_classes=n_classes,  # Scalar bias for μ
         )
 
-        # Register participants for adaptive regularization
-        participant_counts = Counter(participant_ids)
-        for pid, count in participant_counts.items():
-            self.random_effects.register_participant(pid, count)
+    def _do_training(
+        self,
+        items: list[Item],
+        labels_numeric: list[float],
+        participant_ids: list[str],
+        validation_items: list[Item] | None,
+        validation_labels_numeric: list[float] | None,
+    ) -> dict[str, float]:
+        """Perform magnitude model training.
 
-        # Build optimizer parameters based on mode
+        Parameters
+        ----------
+        items : list[Item]
+            Training items.
+        labels_numeric : list[float]
+            Numeric labels (continuous values).
+        participant_ids : list[str]
+            Participant IDs.
+        validation_items : list[Item] | None
+            Validation items.
+        validation_labels_numeric : list[float] | None
+            Numeric validation labels.
+
+        Returns
+        -------
+        dict[str, float]
+            Training metrics.
+        """
+        # Convert validation_labels_numeric back to string labels for validation metrics
+        validation_labels = None
+        if validation_items is not None and validation_labels_numeric is not None:
+            validation_labels = [str(val) for val in validation_labels_numeric]
+
+        # Use HuggingFace Trainer for fixed and random_intercepts modes
+        # random_slopes requires custom loop due to per-participant heads
+        use_huggingface_trainer = self.config.mixed_effects.mode in (
+            "fixed",
+            "random_intercepts",
+        )
+
+        if use_huggingface_trainer:
+            metrics = self._train_with_huggingface_trainer(
+                items,
+                labels_numeric,
+                participant_ids,
+                validation_items,
+                validation_labels,
+            )
+        else:
+            # Use custom training loop for random_slopes
+            metrics = self._train_with_custom_loop(
+                items,
+                labels_numeric,
+                participant_ids,
+                validation_items,
+                validation_labels,
+            )
+
+        # Add validation MSE if validation data provided and not already computed
+        if (
+            validation_items is not None
+            and validation_labels is not None
+            and "val_mse" not in metrics
+        ):
+            # Validation with placeholder participant_ids for mixed effects
+            if self.config.mixed_effects.mode == "fixed":
+                val_participant_ids = ["_fixed_"] * len(validation_items)
+            else:
+                val_participant_ids = ["_validation_"] * len(validation_items)
+            val_predictions = self._do_predict(validation_items, val_participant_ids)
+            val_pred_values = [float(p.predicted_class) for p in val_predictions]
+            val_true_values = [float(label) for label in validation_labels]
+            val_mse = np.mean(
+                [
+                    (pred - true) ** 2
+                    for pred, true in zip(val_pred_values, val_true_values, strict=True)
+                ]
+            )
+            metrics["val_mse"] = val_mse
+
+        return metrics
+
+    def _train_with_huggingface_trainer(
+        self,
+        items: list[Item],
+        y_numeric: list[float],
+        participant_ids: list[str],
+        validation_items: list[Item] | None,
+        validation_labels: list[str] | None,
+    ) -> dict[str, float]:
+        """Train using HuggingFace Trainer with mixed effects support for regression.
+
+        Parameters
+        ----------
+        items : list[Item]
+            Training items.
+        y_numeric : list[float]
+            Numeric labels (continuous values).
+        participant_ids : list[str]
+            Participant IDs.
+        validation_items : list[Item] | None
+            Validation items.
+        validation_labels : list[str] | None
+            Validation labels.
+
+        Returns
+        -------
+        dict[str, float]
+            Training metrics.
+        """
+        # Convert items to HuggingFace Dataset
+        train_dataset = items_to_dataset(
+            items=items,
+            labels=y_numeric,
+            participant_ids=participant_ids,
+            tokenizer=self.tokenizer,
+            max_length=self.config.max_length,
+        )
+
+        eval_dataset = None
+        if validation_items is not None and validation_labels is not None:
+            val_y_numeric = [float(label) for label in validation_labels]
+            val_participant_ids = (
+                ["_validation_"] * len(validation_items)
+                if self.config.mixed_effects.mode != "fixed"
+                else ["_fixed_"] * len(validation_items)
+            )
+            eval_dataset = items_to_dataset(
+                items=validation_items,
+                labels=val_y_numeric,
+                participant_ids=val_participant_ids,
+                tokenizer=self.tokenizer,
+                max_length=self.config.max_length,
+            )
+
+        # Wrap the encoder and regression head for Trainer
+        wrapped_model = EncoderRegressionWrapper(
+            encoder=self.encoder, regression_head=self.regression_head
+        )
+
+        # Create data collator
+        data_collator = MixedEffectsDataCollator(tokenizer=self.tokenizer)
+
+        # Create training arguments with checkpointing
+        with tempfile.TemporaryDirectory() as tmpdir:
+            checkpoint_dir = Path(tmpdir) / "checkpoints"
+            checkpoint_dir.mkdir(parents=True, exist_ok=True)
+
+            training_args = TrainingArguments(
+                output_dir=str(checkpoint_dir),
+                num_train_epochs=self.config.num_epochs,
+                per_device_train_batch_size=self.config.batch_size,
+                per_device_eval_batch_size=self.config.batch_size,
+                learning_rate=self.config.learning_rate,
+                logging_steps=10,
+                eval_strategy="epoch" if eval_dataset is not None else "no",
+                save_strategy="epoch",
+                save_total_limit=1,
+                load_best_model_at_end=False,
+                report_to="none",
+                remove_unused_columns=False,
+                use_cpu=self.config.device == "cpu",
+            )
+
+            # Import here to avoid circular import
+            from bead.active_learning.trainers.mixed_effects import (  # noqa: PLC0415
+                MixedEffectsTrainer,
+            )
+
+            # Create trainer
+            trainer = MixedEffectsTrainer(
+                model=wrapped_model,
+                args=training_args,
+                train_dataset=train_dataset,
+                eval_dataset=eval_dataset,
+                data_collator=data_collator,
+                tokenizer=self.tokenizer,
+                random_effects_manager=self.random_effects,
+                compute_metrics=compute_regression_metrics,
+            )
+
+            # Train
+            train_result = trainer.train()
+
+            # Get training metrics
+            train_metrics = trainer.evaluate(eval_dataset=train_dataset)
+            metrics: dict[str, float] = {
+                "train_loss": float(train_result.training_loss),
+                "train_mse": train_metrics.get("eval_mse", 0.0),
+                "train_mae": train_metrics.get("eval_mae", 0.0),
+                "train_r2": train_metrics.get("eval_r2", 0.0),
+            }
+
+            # Get validation metrics if eval_dataset was provided
+            if eval_dataset is not None:
+                val_metrics = trainer.evaluate(eval_dataset=eval_dataset)
+                metrics.update(
+                    {
+                        "val_mse": val_metrics.get("eval_mse", 0.0),
+                        "val_mae": val_metrics.get("eval_mae", 0.0),
+                        "val_r2": val_metrics.get("eval_r2", 0.0),
+                    }
+                )
+
+        return metrics
+
+    def _train_with_custom_loop(
+        self,
+        items: list[Item],
+        y_numeric: list[float],
+        participant_ids: list[str],
+        validation_items: list[Item] | None,
+        validation_labels: list[str] | None,
+    ) -> dict[str, float]:
+        """Train using custom loop for random_slopes mode.
+
+        Parameters
+        ----------
+        items : list[Item]
+            Training items.
+        y_numeric : list[float]
+            Numeric labels (continuous values).
+        participant_ids : list[str]
+            Participant IDs.
+        validation_items : list[Item] | None
+            Validation items.
+        validation_labels : list[str] | None
+            Validation labels.
+
+        Returns
+        -------
+        dict[str, float]
+            Training metrics.
+        """
+        y = torch.tensor(y_numeric, dtype=torch.float, device=self.config.device)
+
+        # Build optimizer parameters
         params_to_optimize = list(self.encoder.parameters()) + list(
             self.regression_head.parameters()
         )
 
-        # Add random effects parameters
-        if self.config.mixed_effects.mode == "random_intercepts":
-            for param_dict in self.random_effects.intercepts.values():
-                params_to_optimize.extend(param_dict.values())
-        elif self.config.mixed_effects.mode == "random_slopes":
-            for head in self.random_effects.slopes.values():
-                params_to_optimize.extend(head.parameters())
+        # Add random effects parameters for random_slopes
+        for head in self.random_effects.slopes.values():
+            params_to_optimize.extend(head.parameters())
 
         optimizer = torch.optim.AdamW(params_to_optimize, lr=self.config.learning_rate)
 
@@ -418,33 +609,17 @@ class MagnitudeModel(ActiveLearningModel):
 
                 embeddings = self._prepare_inputs(batch_items)
 
-                # Forward pass depends on mixed effects mode
-                if self.config.mixed_effects.mode == "fixed":
-                    # Standard forward pass
-                    mu = self.regression_head(embeddings).squeeze(1)  # (batch,)
-
-                elif self.config.mixed_effects.mode == "random_intercepts":
-                    # Fixed head + per-participant scalar bias
-                    mu = self.regression_head(embeddings).squeeze(1)  # (batch,)
-                    for j, pid in enumerate(batch_participant_ids):
-                        # Scalar bias for location parameter
-                        bias = self.random_effects.get_intercepts(
-                            pid, n_classes=1, param_name="mu", create_if_missing=True
-                        )
-                        mu[j] = mu[j] + bias.item()
-
-                elif self.config.mixed_effects.mode == "random_slopes":
-                    # Per-participant head
-                    mu_list = []
-                    for j, pid in enumerate(batch_participant_ids):
-                        participant_head = self.random_effects.get_slopes(
-                            pid,
-                            fixed_head=self.regression_head,
-                            create_if_missing=True,
-                        )
-                        mu_j = participant_head(embeddings[j : j + 1]).squeeze()
-                        mu_list.append(mu_j)
-                    mu = torch.stack(mu_list)
+                # Per-participant head for random_slopes
+                mu_list = []
+                for j, pid in enumerate(batch_participant_ids):
+                    participant_head = self.random_effects.get_slopes(
+                        pid,
+                        fixed_head=self.regression_head,
+                        create_if_missing=True,
+                    )
+                    mu_j = participant_head(embeddings[j : j + 1]).squeeze()
+                    mu_list.append(mu_j)
+                mu = torch.stack(mu_list)
 
                 # Compute negative log-likelihood
                 if self.config.bounded:
@@ -469,113 +644,30 @@ class MagnitudeModel(ActiveLearningModel):
             epoch_loss = epoch_loss / n_batches
             epoch_mse = epoch_mse / n_batches
 
-        self._is_fitted = True
-
         metrics: dict[str, float] = {
             "train_loss": epoch_loss,
             "train_mse": epoch_mse,
         }
 
-        # Estimate variance components
-        if self.config.mixed_effects.estimate_variance_components:
-            var_comps = self.random_effects.estimate_variance_components()
-            if var_comps:
-                var_comp = var_comps.get("mu") or var_comps.get("slopes")
-                if var_comp:
-                    self.variance_history.append(var_comp)
-                    metrics["participant_variance"] = var_comp.variance
-                    metrics["n_participants"] = var_comp.n_groups
-
-        if validation_items is not None and validation_labels is not None:
-            if len(validation_items) != len(validation_labels):
-                raise ValueError(
-                    f"Number of validation items ({len(validation_items)}) "
-                    f"must match number of validation labels ({len(validation_labels)})"
-                )
-
-            # Validation
-            if self.config.mixed_effects.mode == "fixed":
-                val_predictions = self.predict(validation_items, participant_ids=None)
-            else:
-                val_participant_ids = ["_validation_"] * len(validation_items)
-                val_predictions = self.predict(
-                    validation_items, participant_ids=val_participant_ids
-                )
-
-            val_pred_values = [float(p.predicted_class) for p in val_predictions]
-            val_true_values = [float(label) for label in validation_labels]
-            val_mse = np.mean([
-                (pred - true) ** 2
-                for pred, true in zip(val_pred_values, val_true_values, strict=True)
-            ])
-            metrics["val_mse"] = val_mse
-
         return metrics
 
-    def predict(
-        self, items: list[Item], participant_ids: list[str] | None = None
+    def _do_predict(
+        self, items: list[Item], participant_ids: list[str]
     ) -> list[ModelPrediction]:
-        """Predict continuous values for items with participant-specific random effects.
+        """Perform magnitude model prediction.
 
         Parameters
         ----------
         items : list[Item]
             Items to predict.
-        participant_ids : list[str] | None
-            Participant identifier for each item.
-            - For fixed effects (mode='fixed'): Pass None.
-            - For mixed effects: Must provide list[str] with same length as items.
+        participant_ids : list[str]
+            Normalized participant IDs.
 
         Returns
         -------
         list[ModelPrediction]
             Predictions with predicted_class as string representation of value.
-
-        Raises
-        ------
-        ValueError
-            If model has not been trained yet.
-        ValueError
-            If participant_ids is None when mode requires mixed effects.
-        ValueError
-            If items and participant_ids have different lengths.
-        ValueError
-            If participant_ids contains empty strings.
         """
-        if not self._is_fitted:
-            raise ValueError("Model not trained. Call train() before predict().")
-
-        # Validate and normalize participant_ids
-        if participant_ids is None:
-            if self.config.mixed_effects.mode != "fixed":
-                raise ValueError(
-                    f"participant_ids is required when "
-                    f"mode='{self.config.mixed_effects.mode}'. "
-                    f"For fixed effects, set mode='fixed' in config. "
-                    f"For mixed effects, provide participant_ids as list[str]."
-                )
-            participant_ids = ["_fixed_"] * len(items)
-        elif self.config.mixed_effects.mode == "fixed":
-            warnings.warn(
-                "participant_ids provided but mode='fixed'. "
-                "Participant IDs will be ignored.",
-                UserWarning,
-                stacklevel=2,
-            )
-            participant_ids = ["_fixed_"] * len(items)
-
-        if len(items) != len(participant_ids):
-            raise ValueError(
-                f"Length mismatch: {len(items)} items != {len(participant_ids)} "
-                f"participant_ids"
-            )
-
-        if any(not pid for pid in participant_ids):
-            raise ValueError(
-                "participant_ids cannot contain empty strings. "
-                "Ensure all participants have valid identifiers."
-            )
-
         self.encoder.eval()
         self.regression_head.eval()
 
@@ -626,10 +718,10 @@ class MagnitudeModel(ActiveLearningModel):
 
         return predictions
 
-    def predict_proba(
-        self, items: list[Item], participant_ids: list[str] | None = None
+    def _do_predict_proba(
+        self, items: list[Item], participant_ids: list[str]
     ) -> np.ndarray:
-        """Predict probabilities (not applicable for magnitude regression).
+        """Perform magnitude model probability prediction.
 
         For magnitude regression, returns μ values directly.
 
@@ -637,36 +729,25 @@ class MagnitudeModel(ActiveLearningModel):
         ----------
         items : list[Item]
             Items to predict.
-        participant_ids : list[str] | None
-            Participant identifiers.
+        participant_ids : list[str]
+            Normalized participant IDs.
 
         Returns
         -------
         np.ndarray
             Array of shape (n_items, 1) with predicted μ values.
         """
-        predictions = self.predict(items, participant_ids)
+        predictions = self._do_predict(items, participant_ids)
         return np.array([[float(p.predicted_class)] for p in predictions])
 
-    def save(self, path: str) -> None:
-        """Save model to disk including random effects and variance history.
+    def _save_model_components(self, save_path: Path) -> None:
+        """Save model-specific components.
 
         Parameters
         ----------
-        path : str
-            Directory path to save the model.
-
-        Raises
-        ------
-        ValueError
-            If model has not been trained yet.
+        save_path : Path
+            Directory to save to.
         """
-        if not self._is_fitted:
-            raise ValueError("Model not trained. Call train() before save().")
-
-        save_path = Path(path)
-        save_path.mkdir(parents=True, exist_ok=True)
-
         self.encoder.save_pretrained(save_path / "encoder")
         self.tokenizer.save_pretrained(save_path / "encoder")
 
@@ -675,37 +756,40 @@ class MagnitudeModel(ActiveLearningModel):
             save_path / "regression_head.pt",
         )
 
-        # Save random effects
-        if self.random_effects is not None:
-            self.random_effects.save(save_path / "random_effects")
+    def _get_save_state(self) -> dict[str, object]:
+        """Get model-specific state to save.
 
-        # Save config
-        config_dict = self.config.model_dump()
+        Returns
+        -------
+        dict[str, object]
+            State dictionary.
+        """
+        return {}
 
-        with open(save_path / "config.json", "w") as f:
-            json.dump(config_dict, f, indent=2)
-
-    def load(self, path: str) -> None:
-        """Load model from disk including random effects and variance history.
+    def _restore_training_state(self, config_dict: dict[str, object]) -> None:
+        """Restore model-specific training state.
 
         Parameters
         ----------
-        path : str
-            Directory path to load the model from.
-
-        Raises
-        ------
-        FileNotFoundError
-            If model directory does not exist.
+        config_dict : dict[str, object]
+            Configuration dictionary with training state.
         """
-        load_path = Path(path)
-        if not load_path.exists():
-            raise FileNotFoundError(f"Model directory not found: {path}")
+        # MagnitudeModel doesn't have additional training state to restore
+        pass
 
+    def _load_model_components(self, load_path: Path) -> None:
+        """Load model-specific components.
+
+        Parameters
+        ----------
+        load_path : Path
+            Directory to load from.
+        """
+        # Load config.json to reconstruct config
         with open(load_path / "config.json") as f:
             config_dict = json.load(f)
 
-        # Reconstruct configuration
+        # Reconstruct MixedEffectsConfig if needed
         if "mixed_effects" in config_dict and isinstance(
             config_dict["mixed_effects"], dict
         ):
@@ -725,18 +809,27 @@ class MagnitudeModel(ActiveLearningModel):
             )
         )
 
-        # Initialize and load random effects
-        self.random_effects = RandomEffectsManager(
-            self.config.mixed_effects, n_classes=1
-        )
-        random_effects_path = load_path / "random_effects"
-        if random_effects_path.exists():
-            self.random_effects.load(
-                random_effects_path, fixed_head=self.regression_head
-            )
-            if self.random_effects.variance_history:
-                self.variance_history = self.random_effects.variance_history.copy()
-
         self.encoder.to(self.config.device)
         self.regression_head.to(self.config.device)
-        self._is_fitted = True
+
+    def _get_n_classes_for_random_effects(self) -> int:
+        """Get the number of classes for initializing RandomEffectsManager.
+
+        For magnitude models, this is 1 (scalar bias).
+
+        Returns
+        -------
+        int
+            Always 1 for regression.
+        """
+        return 1
+
+    def _get_random_effects_fixed_head(self) -> torch.nn.Module | None:
+        """Get the fixed head for random effects.
+
+        Returns
+        -------
+        torch.nn.Module | None
+            The regression head, or None if not applicable.
+        """
+        return self.regression_head

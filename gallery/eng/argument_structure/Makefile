@@ -13,8 +13,9 @@
 #
 # ============================================================================
 
-# Python interpreter
-PYTHON := ../../../.venv/bin/python
+# Python interpreter (use uv run with project root for dependency management)
+PROJECT_ROOT := $(shell cd ../../.. && pwd)
+PYTHON := uv run --project $(PROJECT_ROOT) python
 
 # Directories
 ITEMS_DIR := items
@@ -104,49 +105,49 @@ lexicons: ## Generate lexicons from VerbNet and bleached resources
 .PHONY: verbnet-templates
 verbnet-templates: ## Generate verb-specific VerbNet templates
 	@echo "$(BLUE)[2/7] Generating verb-specific templates...$(NC)"
-	$(PYTHON) generate_templates.py
+	$(PYTHON) generate_templates.py -y
 	@echo "$(GREEN)✓ Verb-specific templates generated$(NC)"
 
 .PHONY: templates
 templates: verbnet-templates ## Extract generic frame templates from verb-specific templates
 	@echo "$(BLUE)[3/7] Extracting generic templates...$(NC)"
-	$(PYTHON) extract_generic_templates.py
+	$(PYTHON) extract_generic_templates.py -y
 	@echo "$(GREEN)✓ Generic templates extracted$(NC)"
 
 .PHONY: fill-templates
 fill-templates: ## Fill templates using MLM strategy
 	@echo "$(BLUE)[4/7] Filling templates with MLM strategy...$(NC)"
-	$(PYTHON) fill_templates.py --dry-run
+	$(PYTHON) fill_templates.py --dry-run -y
 	@echo "$(GREEN)✓ Templates filled$(NC)"
 
 .PHONY: fill-templates-full
 fill-templates-full: ## Fill all templates (no limit)
 	@echo "$(BLUE)[4/7] Filling all templates (this may take a while)...$(NC)"
-	$(PYTHON) fill_templates.py
+	$(PYTHON) fill_templates.py -y
 	@echo "$(GREEN)✓ All templates filled$(NC)"
 
 .PHONY: cross-product
 cross-product: ## Generate cross-product items (verb × template)
 	@echo "$(BLUE)[5/7] Generating cross-product items (limit=$(DEFAULT_CROSS_PRODUCT_LIMIT))...$(NC)"
-	$(PYTHON) generate_cross_product.py --limit $(DEFAULT_CROSS_PRODUCT_LIMIT)
+	$(PYTHON) generate_cross_product.py --limit $(DEFAULT_CROSS_PRODUCT_LIMIT) -y
 	@echo "$(GREEN)✓ Cross-product items generated$(NC)"
 
 .PHONY: cross-product-full
 cross-product-full: ## Generate full cross-product (all 74,880 combinations)
 	@echo "$(BLUE)[5/7] Generating FULL cross-product items (this may take a while)...$(NC)"
-	$(PYTHON) generate_cross_product.py
+	$(PYTHON) generate_cross_product.py -y
 	@echo "$(GREEN)✓ Full cross-product items generated$(NC)"
 
 .PHONY: 2afc-pairs
 2afc-pairs: ## Generate 2AFC pairs from cross-product items
 	@echo "$(BLUE)[6/7] Generating 2AFC pairs (limit=$(DEFAULT_2AFC_LIMIT))...$(NC)"
-	$(PYTHON) create_2afc_pairs.py --limit $(DEFAULT_2AFC_LIMIT)
+	$(PYTHON) create_2afc_pairs.py --limit $(DEFAULT_2AFC_LIMIT) -y
 	@echo "$(GREEN)✓ 2AFC pairs generated$(NC)"
 
 .PHONY: 2afc-pairs-full
 2afc-pairs-full: ## Generate 2AFC pairs from all cross-product items
 	@echo "$(BLUE)[6/7] Generating 2AFC pairs (no limit)...$(NC)"
-	$(PYTHON) create_2afc_pairs.py
+	$(PYTHON) create_2afc_pairs.py -y
 	@echo "$(GREEN)✓ All 2AFC pairs generated$(NC)"
 
 .PHONY: lists

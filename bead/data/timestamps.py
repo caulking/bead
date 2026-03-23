@@ -26,7 +26,7 @@ def now_iso8601() -> datetime:
     >>> dt = now_iso8601()
     >>> dt.tzinfo is not None
     True
-    >>> dt.tzinfo == timezone.utc
+    >>> dt.tzinfo == UTC
     True
     """
     return datetime.now(UTC)
@@ -40,8 +40,8 @@ def parse_iso8601(timestamp: str) -> datetime:
 
     Parameters
     ----------
-    timestamp : str
-        ISO 8601 formatted timestamp string (e.g., "2025-10-17T14:23:45.123456+00:00")
+    timestamp
+        ISO 8601 formatted timestamp string (e.g., "2025-10-17T14:23:45.123456+00:00").
 
     Returns
     -------
@@ -68,8 +68,8 @@ def format_iso8601(dt: datetime) -> str:
 
     Parameters
     ----------
-    dt : datetime
-        Datetime to format
+    dt
+        Datetime to format.
 
     Returns
     -------
@@ -83,7 +83,7 @@ def format_iso8601(dt: datetime) -> str:
     >>> "+00:00" in formatted or "Z" in formatted
     True
     """
-    # If datetime is naive (no timezone), assume UTC
+    # if datetime is naive (no timezone), assume UTC
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=UTC)
     return dt.isoformat()

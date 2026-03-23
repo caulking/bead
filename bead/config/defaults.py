@@ -79,7 +79,7 @@ def get_default_for_model[T: BaseModel](model_type: type[T]) -> T:
 
     Returns
     -------
-    BaseModel
+    T
         Default instance of the specified model type.
 
     Examples
@@ -100,7 +100,7 @@ def get_default_for_model[T: BaseModel](model_type: type[T]) -> T:
     This function provides runtime validation to ensure the input is a valid
     Pydantic model class, even though the type system constrains it.
     """
-    # Runtime validation for cases where type checking is bypassed
+    # runtime validation for cases where type checking is bypassed
     try:
         if not isinstance(model_type, type):  # type: ignore[reportUnnecessaryIsInstance]
             msg = f"model_type must be a Pydantic BaseModel class, got {model_type}"
@@ -109,7 +109,7 @@ def get_default_for_model[T: BaseModel](model_type: type[T]) -> T:
             msg = f"model_type must be a Pydantic BaseModel class, got {model_type}"
             raise TypeError(msg)
     except TypeError as e:
-        # Re-raise TypeError with our custom message
+        # re-raise TypeError with our custom message
         if "must be a Pydantic BaseModel class" in str(e):
             raise
         msg = f"model_type must be a Pydantic BaseModel class, got {model_type}"

@@ -8,6 +8,9 @@
 
 // Global variables
 let distributor = null;
+{% if slopit_enabled %}
+let slopitExtension = null;
+{% endif %}
 
 /**
  * Main experiment entry point.
@@ -33,8 +36,23 @@ async function runExperiment() {
 
         console.log(`Assigned to list: ${assignedList.name} (index: ${listIndex})`);
 
+        {% if slopit_enabled %}
+        // Initialize slopit extension
+        slopitExtension = new SlopitExtension({
+            keystroke: {{ slopit_config.keystroke | tojson }},
+            focus: {{ slopit_config.focus | tojson }},
+            paste: {{ slopit_config.paste | tojson }},
+            targetSelectors: {{ slopit_config.target_selectors | tojson }}
+        });
+        {% endif %}
+
         // Initialize jsPsych
         const jsPsych = initJsPsych({
+            {% if slopit_enabled %}
+            extensions: [
+                { type: slopitExtension }
+            ],
+            {% endif %}
             {% if use_jatos %}
             on_trial_start: jatos.addAbortButton,
             {% endif %}
@@ -101,8 +119,75 @@ async function runExperiment() {
         // Build timeline
         const timeline = [];
 
+        // Demographics form (if enabled, appears before instructions)
+        {% if demographics_enabled %}
+        timeline.push({
+            type: jsPsychSurvey,
+            title: "{{ demographics_title }}",
+            pages: [
+                [
+                    {% for field in demographics_fields %}
+                    {
+                        name: "{{ field.name }}",
+                        prompt: "{{ field.label }}",
+                        required: {{ 'true' if field.required else 'false' }},
+                        {% if field.field_type == 'text' %}
+                        type: 'text'{% if field.placeholder %},
+                        placeholder: "{{ field.placeholder }}"{% endif %}
+                        {% elif field.field_type == 'number' %}
+                        type: 'text',
+                        input_type: 'number'{% if field.range_min is defined %},
+                        min: {{ field.range_min }},
+                        max: {{ field.range_max }}{% endif %}{% if field.placeholder %},
+                        placeholder: "{{ field.placeholder }}"{% endif %}
+                        {% elif field.field_type == 'dropdown' %}
+                        type: 'drop-down',
+                        options: {{ field.options | tojson }}
+                        {% elif field.field_type == 'radio' %}
+                        type: 'multi-choice',
+                        options: {{ field.options | tojson }}
+                        {% elif field.field_type == 'checkbox' %}
+                        type: 'multi-select',
+                        options: {{ field.options | tojson }}
+                        {% endif %}
+                    }{% if not loop.last %},{% endif %}
+                    {% endfor %}
+                ]
+            ],
+            button_label_finish: "{{ demographics_submit_text }}",
+            data: {
+                trial_type: 'demographics'
+            }
+        });
+        {% endif %}
+
         // Instructions
-        {% if instructions %}
+        {% if instructions_is_multi_page %}
+        // Multi-page instructions using jsPsych instructions plugin
+        timeline.push({
+            type: jsPsychInstructions,
+            pages: [
+                {% for page in instructions_pages %}
+                `<div class="instructions-page">
+                    {% if page.title %}<h2>{{ page.title }}</h2>{% endif %}
+                    <div>{{ page.content }}</div>
+                    {% if instructions_show_page_numbers and instructions_pages|length > 1 %}
+                    <p class="page-number">Page {{ loop.index }} of {{ instructions_pages|length }}</p>
+                    {% endif %}
+                </div>`{% if not loop.last %},{% endif %}
+                {% endfor %}
+            ],
+            show_clickable_nav: true,
+            allow_backward: {{ 'true' if instructions_allow_backwards else 'false' }},
+            button_label_next: "{{ instructions_button_next }}",
+            button_label_previous: "Previous",
+            button_label_finish: "{{ instructions_button_finish }}",
+            data: {
+                trial_type: 'instructions'
+            }
+        });
+        {% elif instructions %}
+        // Simple single-page instructions
         timeline.push({
             type: jsPsychHtmlKeyboardResponse,
             stimulus: `
@@ -139,20 +224,20 @@ async function runExperiment() {
             return item;
         });
 
-        // Create trials from items
-        // TODO: This needs to call the trial creation logic
-        // For now, assume items have rendered_elements that we can display
-        for (const item of listItems) {
-            timeline.push({
-                type: jsPsychHtmlButtonResponse,
-                stimulus: item.rendered_elements.text || 'No text',
-                choices: item.rendered_elements.choices || ['Option A', 'Option B'],
-                data: {
-                    trial_type: 'experimental_trial',
-                    item_id: item.id,
-                    item_metadata: item.item_metadata
-                }
-            });
+        // Load pre-generated trials for this list
+        const trialsData = await fetch('data/trials.json').then(r => r.json());
+        const listTrials = trialsData[assignedList.id];
+        
+        if (!listTrials || listTrials.length === 0) {
+            throw new Error(
+                `No trials found for list '${assignedList.name}' (id: ${assignedList.id}). ` +
+                `Ensure trials were generated correctly.`
+            );
+        }
+
+        // Add pre-generated trials to timeline
+        for (const trial of listTrials) {
+            timeline.push(trial);
         }
 
         // Completion

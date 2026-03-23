@@ -28,9 +28,8 @@ from __future__ import annotations
 from collections import defaultdict
 from collections.abc import Callable, Iterator
 from pathlib import Path
-from typing import Any
 
-from bead.items.item import Item
+from bead.items.item import Item, MetadataValue
 from bead.resources.lexical_item import LexicalItem
 from bead.resources.lexicon import Lexicon
 from bead.resources.template import Template
@@ -41,7 +40,9 @@ def create_cross_product_items(
     lexicons: dict[str, Lexicon],
     *,
     cross_product_slot: str = "verb",
-    metadata_extractor: Callable[[Template, LexicalItem], dict[str, Any]] | None = None,
+    metadata_extractor: (
+        Callable[[Template, LexicalItem], dict[str, MetadataValue]] | None
+    ) = None,
     filter_fn: Callable[[Template, LexicalItem], bool] | None = None,
 ) -> Iterator[Item]:
     """Generate cross-product items from templates and lexicons.
@@ -62,7 +63,8 @@ def create_cross_product_items(
     cross_product_slot : str
         Slot name to vary across items (default: "verb").
         This slot's lexicon will be crossed with all templates.
-    metadata_extractor : Callable[[Template, LexicalItem], dict[str, Any]] | None
+    metadata_extractor : Callable[[Template, LexicalItem], \
+            dict[str, MetadataValue]] | None
         Optional function to extract metadata from template and lexical item.
         Receives (template, lexical_item) and returns dict for item_metadata.
     filter_fn : Callable[[Template, LexicalItem], bool] | None
@@ -115,7 +117,7 @@ def create_cross_product_items(
     ...     filter_fn=filter_transitive_only
     ... ))  # doctest: +SKIP
     """
-    # Get the lexicon for the cross-product slot
+    # get the lexicon for the cross-product slot
     if cross_product_slot not in lexicons:
         raise ValueError(
             f"Lexicon for slot '{cross_product_slot}' not found. "
@@ -124,20 +126,20 @@ def create_cross_product_items(
 
     cross_product_lexicon = lexicons[cross_product_slot]
 
-    # Generate items
+    # generate items
     for template in templates:
         for lexical_item in cross_product_lexicon:
-            # Apply filter if provided
+            # apply filter if provided
             if filter_fn and not filter_fn(template, lexical_item):
                 continue
 
-            # Extract metadata
+            # extract metadata
             if metadata_extractor:
                 item_metadata = metadata_extractor(template, lexical_item)
             else:
                 item_metadata = _default_metadata_extractor(template, lexical_item)
 
-            # Create rendered elements
+            # create rendered elements
             rendered_elements = {
                 "template_name": template.name,
                 "template_string": template.template_string,
@@ -145,7 +147,7 @@ def create_cross_product_items(
                 f"{cross_product_slot}_form": lexical_item.form or lexical_item.lemma,
             }
 
-            # Create item
+            # create item
             item = Item(
                 item_template_id=template.id,
                 rendered_elements=rendered_elements,
@@ -157,22 +159,22 @@ def create_cross_product_items(
 
 def _default_metadata_extractor(
     template: Template, lexical_item: LexicalItem
-) -> dict[str, Any]:
+) -> dict[str, MetadataValue]:
     """Extract default metadata for cross-product items.
 
     Parameters
     ----------
-    template : Template
+    template
         Template being used.
-    lexical_item : LexicalItem
+    lexical_item
         Lexical item being crossed.
 
     Returns
     -------
-    dict[str, Any]
+    dict[str, MetadataValue]
         Default metadata dictionary.
     """
-    metadata = {
+    metadata: dict[str, MetadataValue] = {
         "template_id": str(template.id),
         "template_name": template.name,
         "template_structure": template.template_string,
@@ -181,12 +183,12 @@ def _default_metadata_extractor(
         "combination_type": "cross_product",
     }
 
-    # Add lexical item features
+    # add lexical item features
     if lexical_item.features:
         for key, value in lexical_item.features.items():
             metadata[f"lexical_feature_{key}"] = value
 
-    # Add lexical item features as attributes
+    # add lexical item features as attributes
     if lexical_item.features:
         for key, value in lexical_item.features.items():
             metadata[f"lexical_attr_{key}"] = value
@@ -202,7 +204,9 @@ def create_filtered_cross_product_items(
     template_filter: Callable[[Template], bool] | None = None,
     item_filter: Callable[[LexicalItem], bool] | None = None,
     combination_filter: Callable[[Template, LexicalItem], bool] | None = None,
-    metadata_extractor: Callable[[Template, LexicalItem], dict[str, Any]] | None = None,
+    metadata_extractor: (
+        Callable[[Template, LexicalItem], dict[str, MetadataValue]] | None
+    ) = None,
 ) -> Iterator[Item]:
     """Generate cross-product items with multiple filter levels.
 
@@ -223,7 +227,8 @@ def create_filtered_cross_product_items(
         Filter for lexical items (applied before cross-product).
     combination_filter : Callable[[Template, LexicalItem], bool] | None
         Filter for combinations (applied during generation).
-    metadata_extractor : Callable[[Template, LexicalItem], dict[str, Any]] | None
+    metadata_extractor : Callable[[Template, LexicalItem], \
+            dict[str, MetadataValue]] | None
         Metadata extraction function.
 
     Yields
@@ -249,7 +254,7 @@ def create_filtered_cross_product_items(
     ...     combination_filter=combination_filter
     ... ))  # doctest: +SKIP
     """
-    # Get lexicon
+    # get lexicon
     if cross_product_slot not in lexicons:
         raise ValueError(
             f"Lexicon for slot '{cross_product_slot}' not found. "
@@ -258,17 +263,17 @@ def create_filtered_cross_product_items(
 
     cross_product_lexicon = lexicons[cross_product_slot]
 
-    # Filter templates
+    # filter templates
     filtered_templates = templates
     if template_filter:
         filtered_templates = [t for t in templates if template_filter(t)]
 
-    # Filter lexical items
+    # filter lexical items
     filtered_items = list(cross_product_lexicon)
     if item_filter:
         filtered_items = [item for item in filtered_items if item_filter(item)]
 
-    # Generate cross-product with combination filter
+    # generate cross-product with combination filter
     yield from create_cross_product_items(
         filtered_templates,
         {cross_product_slot: _create_temp_lexicon(filtered_items)},
@@ -302,9 +307,11 @@ def create_stratified_cross_product_items(
     lexicons: dict[str, Lexicon],
     *,
     cross_product_slot: str = "verb",
-    stratify_by: Callable[[LexicalItem], Any],
+    stratify_by: Callable[[LexicalItem], str],
     items_per_stratum: int,
-    metadata_extractor: Callable[[Template, LexicalItem], dict[str, Any]] | None = None,
+    metadata_extractor: (
+        Callable[[Template, LexicalItem], dict[str, MetadataValue]] | None
+    ) = None,
 ) -> Iterator[Item]:
     """Generate stratified sample of cross-product items.
 
@@ -320,11 +327,12 @@ def create_stratified_cross_product_items(
         Lexicons keyed by slot name.
     cross_product_slot : str
         Slot name to vary across items.
-    stratify_by : Callable[[LexicalItem], Any]
+    stratify_by : Callable[[LexicalItem], str]
         Function to extract stratum key from lexical items.
     items_per_stratum : int
         Number of items to sample from each stratum.
-    metadata_extractor : Callable[[Template, LexicalItem], dict[str, Any]] | None
+    metadata_extractor : Callable[[Template, LexicalItem], \
+            dict[str, MetadataValue]] | None
         Metadata extraction function.
 
     Yields
@@ -350,7 +358,7 @@ def create_stratified_cross_product_items(
     ...     items_per_stratum=10
     ... ))  # doctest: +SKIP
     """
-    # Get lexicon
+    # get lexicon
     if cross_product_slot not in lexicons:
         raise ValueError(
             f"Lexicon for slot '{cross_product_slot}' not found. "
@@ -359,20 +367,20 @@ def create_stratified_cross_product_items(
 
     cross_product_lexicon = lexicons[cross_product_slot]
 
-    # Group items by stratum
-    strata: dict[Any, list[LexicalItem]] = defaultdict(list)
+    # group items by stratum
+    strata: dict[str, list[LexicalItem]] = defaultdict(list)
     for item in cross_product_lexicon:
         stratum = stratify_by(item)
         strata[stratum].append(item)
 
-    # Sample from each stratum
+    # sample from each stratum
     sampled_items: list[LexicalItem] = []
     for _stratum, stratum_items in strata.items():
-        # Take first items_per_stratum items (or all if fewer available)
+        # take first items_per_stratum items (or all if fewer available)
         n_to_take = min(items_per_stratum, len(stratum_items))
         sampled_items.extend(stratum_items[:n_to_take])
 
-    # Generate cross-product with sampled items
+    # generate cross-product with sampled items
     for item in create_cross_product_items(
         templates,
         {cross_product_slot: _create_temp_lexicon(sampled_items)},

@@ -11,6 +11,9 @@ from bead.active_learning.models.magnitude import MagnitudeModel
 from bead.config.active_learning import MagnitudeModelConfig
 from bead.items.item import Item
 
+# mark all tests in this module as slow model training tests
+pytestmark = pytest.mark.slow_model_training
+
 
 class TestFixedEffectsMode:
     """Test MagnitudeModel with fixed effects mode."""
@@ -125,9 +128,7 @@ class TestFixedEffectsMode:
         with pytest.raises(ValueError, match="cannot contain empty strings"):
             model.train(sample_items, sample_unbounded_labels, participant_ids)
 
-    def test_train_validates_bounds(
-        self, sample_items: list[Item]
-    ) -> None:
+    def test_train_validates_bounds(self, sample_items: list[Item]) -> None:
         """Test that train validates label bounds for bounded case."""
         config = MagnitudeModelConfig(
             model_name="bert-base-uncased",
@@ -480,7 +481,7 @@ class TestSaveLoad:
             model2.load(tmpdir)
 
             # Check config preserved
-            assert model2.config.bounded == True
+            assert model2.config.bounded
             assert model2.config.min_value == 0.0
             assert model2.config.max_value == 100.0
             assert model2.config.distribution == "truncated_normal"
@@ -557,7 +558,9 @@ class TestDistributions:
 
         participant_ids = ["default"] * len(sample_items)
         # Should handle endpoints without errors
-        metrics = model.train(sample_items, sample_bounded_endpoint_labels, participant_ids)
+        metrics = model.train(
+            sample_items, sample_bounded_endpoint_labels, participant_ids
+        )
 
         assert "train_mse" in metrics
         predictions = model.predict(sample_items[:5], participant_ids[:5])

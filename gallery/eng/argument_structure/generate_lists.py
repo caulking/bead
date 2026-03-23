@@ -9,13 +9,20 @@ from __future__ import annotations
 
 import json
 import sys
+import traceback
 from pathlib import Path
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import yaml
-from rich.console import Console
-from rich.table import Table
 
+from bead.cli.display import (
+    console,
+    create_summary_table,
+    print_error,
+    print_header,
+    print_success,
+    print_warning,
+)
 from bead.items.item import Item
 from bead.lists import (
     BalanceConstraint,
@@ -31,8 +38,6 @@ from bead.lists.constraints import (
     GroupedQuantileConstraint,
 )
 from bead.lists.partitioner import ListPartitioner
-
-console = Console()
 
 
 def load_config(config_path: Path) -> dict:
@@ -64,7 +69,7 @@ def load_2afc_pairs(pairs_path: Path) -> tuple[list[Item], dict[UUID, dict]]:
                 # So we need: {"metadata": {item_metadata values}}
                 metadata_dict[item.id] = {"metadata": dict(item.item_metadata)}
 
-    console.print(f"[green]✓[/green] Loaded {len(items)} 2AFC pairs")
+    print_success(f"Loaded {len(items)} 2AFC pairs")
     return items, metadata_dict
 
 
@@ -157,39 +162,37 @@ def main() -> None:
     base_dir = Path(__file__).parent
     config_path = base_dir / "config.yaml"
 
-    console.rule("[bold]Experiment List Generation[/bold]")
+    print_header("Experiment List Generation")
     console.print(f"Base directory: [cyan]{base_dir}[/cyan]")
     console.print(f"Configuration: [cyan]{config_path}[/cyan]\n")
 
     # Load configuration
-    console.rule("[1/5] Loading Configuration")
+    print_header("[1/5] Loading Configuration")
     config = load_config(config_path)
     list_config = config["lists"]
     n_lists = list_config["n_lists"]
     items_per_list = list_config["items_per_list"]
     strategy = list_config.get("strategy", "balanced")
 
-    console.print("[green]✓[/green] Configuration loaded")
-    console.print(f"  • Lists to generate: [cyan]{n_lists}[/cyan]")
-    console.print(f"  • Items per list: [cyan]{items_per_list}[/cyan]")
-    console.print(f"  • Strategy: [cyan]{strategy}[/cyan]\n")
+    print_success("Configuration loaded")
+    console.print(f"  - Lists to generate: [cyan]{n_lists}[/cyan]")
+    console.print(f"  - Items per list: [cyan]{items_per_list}[/cyan]")
+    console.print(f"  - Strategy: [cyan]{strategy}[/cyan]\n")
 
     # Load 2AFC pairs
-    console.rule("[2/5] Loading 2AFC Pairs")
+    print_header("[2/5] Loading 2AFC Pairs")
     pairs_path = base_dir / config["paths"]["2afc_pairs"]
     items, metadata_dict = load_2afc_pairs(pairs_path)
 
     # Build constraints
     console.print()
-    console.rule("[3/5] Building Constraints")
+    print_header("[3/5] Building Constraints")
     list_constraints, batch_constraints = build_constraints(config)
-    console.print(f"[green]✓[/green] Built {len(list_constraints)} list constraints")
-    console.print(
-        f"[green]✓[/green] Built {len(batch_constraints)} batch constraints\n"
-    )
+    print_success(f"Built {len(list_constraints)} list constraints")
+    print_success(f"Built {len(batch_constraints)} batch constraints\n")
 
     # Partition items into lists
-    console.rule("[4/5] Partitioning Items")
+    print_header("[4/5] Partitioning Items")
     partitioner = ListPartitioner(random_seed=42)
     item_uuids = [item.id for item in items]
 
@@ -222,28 +225,24 @@ def main() -> None:
                     metadata=metadata_dict,
                 )
 
-        console.print(f"[green]✓[/green] Created {len(experiment_lists)} lists")
+        print_success(f"Created {len(experiment_lists)} lists")
         for i, exp_list in enumerate(experiment_lists):
             console.print(
-                f"  • List {i + 1}: [cyan]{len(exp_list.item_refs)}[/cyan] items"
+                f"  - List {i + 1}: [cyan]{len(exp_list.item_refs)}[/cyan] items"
             )
 
     except Exception as e:
-        console.print(f"[red]✗[/red] Error during partitioning: {e}")
-        import traceback
-
+        print_error(f"Error during partitioning: {e}")
         traceback.print_exc()
         sys.exit(1)
 
     # Save lists
     console.print()
-    console.rule("[5/5] Saving Lists")
+    print_header("[5/5] Saving Lists")
     output_path = base_dir / config["paths"]["experiment_lists"]
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     # Create list collection
-    from uuid import uuid4
-
     list_collection = ListCollection(
         name="argument_structure_lists",
         source_items_id=uuid4(),  # Generate a UUID for the source items
@@ -261,25 +260,20 @@ def main() -> None:
     )
 
     # Save as JSONL
-    with open(output_path, "w") as f:
-        for exp_list in list_collection.lists:
-            f.write(exp_list.model_dump_json() + "\n")
+    list_collection.to_jsonl(output_path)
 
-    console.print(
-        f"[green]✓[/green] Saved {len(experiment_lists)} lists to [cyan]{output_path}[/cyan]\n"
-    )
+    print_success(f"Saved {len(experiment_lists)} lists to {output_path}\n")
 
     # Print summary table
-    console.rule("[bold]Summary[/bold]")
-    table = Table(show_header=False, box=None, padding=(0, 2))
-    table.add_row("Total lists:", f"[cyan]{len(experiment_lists)}[/cyan]")
-    table.add_row(
-        "Total items distributed:",
-        f"[cyan]{sum(len(lst.item_refs) for lst in experiment_lists)}[/cyan]",
-    )
-    table.add_row(
-        "Items per list:",
-        f"[cyan]{[len(lst.item_refs) for lst in experiment_lists]}[/cyan]",
+    print_header("Summary")
+    table = create_summary_table(
+        {
+            "Total lists": str(len(experiment_lists)),
+            "Total items distributed": str(
+                sum(len(lst.item_refs) for lst in experiment_lists)
+            ),
+            "Items per list": str([len(lst.item_refs) for lst in experiment_lists]),
+        }
     )
     console.print(table)
 
@@ -288,11 +282,9 @@ if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        console.print("\n[yellow]⚠️  Interrupted by user[/yellow]")
+        print_warning("Interrupted by user")
         sys.exit(130)
     except Exception as e:
-        console.print(f"\n[red]✗ Unexpected error: {e}[/red]")
-        import traceback
-
+        print_error(f"Unexpected error: {e}")
         traceback.print_exc()
         sys.exit(1)

@@ -17,9 +17,8 @@ Integration Points
 from __future__ import annotations
 
 from collections import defaultdict
-from collections.abc import Callable
+from collections.abc import Callable, Hashable
 from itertools import product
-from typing import Any
 from uuid import UUID, uuid4
 
 from bead.items.item import Item, MetadataValue
@@ -263,7 +262,7 @@ def create_binary_items_with_context(
 
 def create_binary_items_from_groups(
     items: list[Item],
-    group_by: Callable[[Item], Any],
+    group_by: Callable[[Item], Hashable],
     prompt: str,
     binary_options: tuple[str, str] = ("yes", "no"),
     *,
@@ -280,7 +279,7 @@ def create_binary_items_from_groups(
     ----------
     items : list[Item]
         Source items to process.
-    group_by : Callable[[Item], Any]
+    group_by : Callable[[Item], Hashable]
         Function to extract grouping key from items.
     prompt : str
         The question/prompt for all items.
@@ -321,7 +320,7 @@ def create_binary_items_from_groups(
     2
     """
     # Group items
-    groups: dict[Any, list[Item]] = defaultdict(list)
+    groups: dict[Hashable, list[Item]] = defaultdict(list)
     for item in items:
         group_key = group_by(item)
         groups[group_key].append(item)
