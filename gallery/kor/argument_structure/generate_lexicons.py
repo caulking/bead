@@ -200,11 +200,20 @@ def main(verb_limit: int | None = None, save_csv: bool = True) -> None:
     # Generate bleached nouns csv and jsonl
     bleached_nouns = pd.DataFrame(columns=['word', 'semantic_class', 'number', 'countability', 'final_consonant'])
 
-    word = ['사람', '사람들', '단체', '단체들', '물건', '물건들', '장소', '장소들', '사건', '사건들']
-    semantic_class = ['animate', 'animate', 'animate', 'animate', 'inanimate_object', 'inanimate_object', 'location', 'location', 'event', 'event']
-    number = ['singular', 'plural', 'singular', 'plural', 'singular', 'plural', 'singular', 'plural', 'singular', 'plural']
-    countability = ['countable', 'countable', 'countable', 'countable', 'countable', 'countable', 'countable', 'countable', 'countable', 'countable']
-    final_consonant = ['yes', 'yes', 'no', 'yes', 'yes', 'yes', 'no', 'yes', 'yes', 'yes']
+    # Five singular bleached nouns — one per core semantic class.
+    # Plurals excluded: Korean 들 suffix produces multi-subword tokens under klue/bert-base.
+    # Five entries keep exhaustive cross-products manageable for test runs.
+    word = ['사람', '단체', '물건', '장소', '사건']
+    semantic_class = ['animate', 'animate', 'inanimate_object', 'location', 'event']
+    number = ['singular'] * len(word)
+    countability = ['countable'] * len(word)
+    final_consonant = [
+        'yes',  
+        'no',   
+        'yes',  
+        'no',   
+        'yes',  
+    ]
 
     bleached_nouns['word'] = word
     bleached_nouns['semantic_class'] = semantic_class
@@ -330,6 +339,7 @@ def main(verb_limit: int | None = None, save_csv: bool = True) -> None:
         for row in reader:
             item = LexicalItem(
                 lemma=row["lemma"],
+                form=row["form"],
                 language_code="kor",
                 features={"pos": row["pos"], "tense": row["tense"]}
             )

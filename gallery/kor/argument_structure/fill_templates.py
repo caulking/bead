@@ -14,6 +14,7 @@ Korean-specific rendering rules are applied:
 
 import argparse
 import logging
+from itertools import islice
 from pathlib import Path
 
 import yaml
@@ -140,6 +141,32 @@ def main() -> None:
         help="Dry run mode: use 10 verbs with one simple and one progressive template (both with 3+ nouns)",
     )
     parser.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="Limit verb lexicon to N unique lemmas (for quick test runs)",
+    )
+    parser.add_argument(
+        "--max-per-template",
+        type=int,
+        default=None,
+        help="Cap output to N filled templates per template (for test runs)",
+    )
+    parser.add_argument(
+        "--skip-templates",
+        nargs="+",
+        default=[],
+        metavar="NAME",
+        help="Template names to skip (e.g. subj-verb-that.)",
+    )
+    parser.add_argument(
+        "--only-templates",
+        nargs="+",
+        default=[],
+        metavar="NAME",
+        help="Only fill these templates (e.g. subj_nom-verb. subj_nom-obj_acc-verb.)",
+    )
+    parser.add_argument(
         "--output",
         type=Path,
         default=None,
@@ -204,23 +231,28 @@ def main() -> None:
         lex_path = Path(lex_config["path"])
         lexicon = Lexicon.from_jsonl(lex_path, lex_config["name"])
 
-        # In dry-run mode, limit verb lexicon to 10 verbs
+        # Determine verb limit: dry-run uses 10, --limit uses the given value
+        verb_limit = None
         if args.dry_run and lex_config["name"] == "verbs":
-            # Get first 10 unique verb lemmas
+            verb_limit = 10
+        elif args.limit is not None and lex_config["name"] == "verbs":
+            verb_limit = args.limit
+
+        if verb_limit is not None:
             verb_lemmas = []
             limited_items = {}
             for item_id, item in lexicon.items.items():
                 if item.lemma not in verb_lemmas:
                     verb_lemmas.append(item.lemma)
-                    if len(verb_lemmas) >= 10:
+                    if len(verb_lemmas) >= verb_limit:
                         break
-                # Keep all forms of verbs we're including
-                if item.lemma in verb_lemmas[:10]:
+                if item.lemma in verb_lemmas[:verb_limit]:
                     limited_items[item_id] = item
 
             lexicon.items = limited_items
+            label = "DRY RUN" if args.dry_run else "LIMIT"
             logger.info(
-                f"DRY RUN: Limited verbnet_verbs to 10 lemmas ({len(lexicon.items)} forms)"
+                f"{label}: Limited verbs to {verb_limit} lemmas ({len(lexicon.items)} forms)"
             )
 
         lexicons.append(lexicon)
@@ -280,13 +312,20 @@ def main() -> None:
     logger.info("Filling templates...")
     filled_templates = []
     for i, template in enumerate(templates, 1):
+        if args.only_templates and template.name not in args.only_templates:
+            continue
+        if template.name in args.skip_templates:
+            logger.info(f"Skipping template {i}/{len(templates)}: {template.name}")
+            continue
         logger.info(f"Filling template {i}/{len(templates)}: {template.name}")
         try:
-            combos = list(
-                strategy.generate_from_template(
-                    template=template, lexicons=lexicons, language_code="kor"
-                )
+            gen = strategy.generate_from_template(
+                template=template, lexicons=lexicons, language_code="kor"
             )
+            if args.max_per_template is not None:
+                combos = list(islice(gen, args.max_per_template))
+            else:
+                combos = list(gen)
 
             # Convert combinations to FilledTemplate objects
             for combo in combos:

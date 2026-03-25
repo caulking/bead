@@ -138,7 +138,7 @@ def main(verb_limit: int | None = None) -> None:
             "inst": Slot(
                 name="inst",
                 description="instrumental case marker",
-                constraints=[Constraint(expression="self.features.get('pos')=='PART.INST")]
+                constraints=[Constraint(expression="self.features.get('pos')=='PART.INST'")]
             ),
             "verb": Slot(
                 name="verb",
@@ -472,7 +472,8 @@ def main(verb_limit: int | None = None) -> None:
                 constraints=[Constraint(expression="self.features.get('pos')=='V' and self.features.get('verb_form')!='V.PTCP'")]
             )},
         constraints=[Constraint(expression="noun_subj.features.get('final_consonant') == nom.features.get('final_consonant')"),
-                    Constraint(expression="noun_dobj.features.get('final_consonant') == acc.features.get('final_consonant')")],
+                    Constraint(expression="noun_dobj.features.get('final_consonant') == acc.features.get('final_consonant')"),
+                    Constraint(expression="noun_pobj.features.get('final_consonant') == inst.features.get('final_consonant')")],
         description="Transitive sentence with instrumental argument",
         language_code="kor",
     )

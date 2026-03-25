@@ -171,10 +171,9 @@ template:
       description: "ALL UniMorph verbs (exhaustive cross-product with all frames)"
 
     comp_verb:
-      strategy: "mlm"
-      description: "MLM selection of complement clause verbs"
-      max_fills: 5
-      enforce_unique: true
+      strategy: "exhaustive"
+      description: "All V.PTCP verb forms for complement clauses"
+      # This template is skipped in test runs.
 
     # comp_verb_gerund:
     #   strategy: "mlm"
@@ -183,56 +182,43 @@ template:
     #   enforce_unique: true
 
     # ========================================================================
-    # NOUNS - MLM with constraints
-    # Uses existing NOUN constraints from templates (bleached nouns)
+    # NOUNS - exhaustive cross-product
     # ========================================================================
     noun_subj:
-      strategy: "mlm"
-      description: "MLM selection of subject nouns (from bleached nouns)"
-      max_fills: 5
-      enforce_unique: true
+      strategy: "exhaustive"
+      description: "All bleached nouns as subjects"
 
     noun_dobj:
-      strategy: "mlm"
-      description: "MLM selection of direct object nouns"
-      max_fills: 5
-      enforce_unique: true
+      strategy: "exhaustive"
+      description: "All bleached nouns as direct objects"
 
     # noun_iobj:
-    #   strategy: "mlm"
-    #   description: "MLM selection of indirect object nouns"
-    #   max_fills: 5
-    #   enforce_unique: true
+    #   strategy: "exhaustive"
+    #   description: "All bleached nouns as indirect objects"
 
     noun_pobj:
-      strategy: "mlm"
-      description: "MLM selection of prepositional object nouns"
-      max_fills: 5
-      enforce_unique: true
+      strategy: "exhaustive"
+      description: "All bleached nouns as prepositional objects"
 
     noun_pobj2:
-      strategy: "mlm"
-      description: "MLM selection of second prepositional object nouns"
-      max_fills: 5
-      enforce_unique: true
+      strategy: "exhaustive"
+      description: "All bleached nouns as second prepositional objects"
 
     # noun_pobj3:
-    #   strategy: "mlm"
-    #   description: "MLM selection of third prepositional object nouns"
-    #   max_fills: 5
-    #   enforce_unique: true
+    #   strategy: "exhaustive"
+    #   description: "All bleached nouns as third prepositional objects"
 
     # subj:
-    #   strategy: "mlm"
-    #   description: "MLM selection of subject nouns"
-    #   max_fills: 5
-    #   enforce_unique: true
+    #   strategy: "exhaustive"
+    #   description: "All bleached nouns as subjects (alt slot name)"
 
     comp_subj:
-      strategy: "mlm"
-      description: "MLM selection of complement clause subjects"
-      max_fills: 5
-      enforce_unique: true
+      strategy: "exhaustive"
+      description: "All bleached nouns as complement clause subjects"
+
+    comp_nom:
+      strategy: "exhaustive"
+      description: "All nominative case markers for complement clause subjects"
 
     # comp_obj:
     #   strategy: "mlm"
