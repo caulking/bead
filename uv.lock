@@ -230,7 +230,7 @@ requires-dist = [
     { name = "anthropic", marker = "extra == 'api'", specifier = ">=0.8.0" },
     { name = "click", specifier = ">=8.0.0" },
     { name = "datasets", specifier = ">=2.14.0" },
-    { name = "didactic", specifier = ">=0.3.2" },
+    { name = "didactic", specifier = ">=0.4.3" },
     { name = "evaluate", specifier = ">=0.4.0" },
     { name = "glazing", specifier = ">=0.2.0" },
     { name = "google-generativeai", marker = "extra == 'api'", specifier = ">=0.3.0" },
@@ -507,15 +507,15 @@ wheels = [
 
 [[package]]
 name = "didactic"
-version = "0.3.2"
+version = "0.4.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "annotated-types" },
     { name = "panproto" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/1b/d2/bbc0afbe778b9e2d08bd2155e98cde64a4037c1842c6296442f71c9dc410/didactic-0.3.2.tar.gz", hash = "sha256:1eb57ab2b1141cc601067b4bf4936bd3aa52e40ab4778f54820fe033eed25185", size = 93998, upload-time = "2026-05-04T17:54:29.843Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/2b/04/aad0b04f350050f847fe9609e422456e73f48fbf7a10429d2090079f01d6/didactic-0.4.3.tar.gz", hash = "sha256:71c0988b5da6dd2965e46d279c1774cd2abf64373ff4c45c32f595f0699eb434", size = 100240, upload-time = "2026-05-05T18:55:41.239Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/08/9d/4bc16b2d229a801063710e8f7f82a9dc84bab2065b5cce167d18ea976781/didactic-0.3.2-py3-none-any.whl", hash = "sha256:093a60ebd205c52e9675448ff9f621ce3f4ad78a983a6e18a98a3361ab7f3a03", size = 119513, upload-time = "2026-05-04T17:54:28.559Z" },
+    { url = "https://files.pythonhosted.org/packages/17/a5/3ac3da8c62e8181592e6baeb8a09b9add914a6013a19b6c6f9b5929080b1/didactic-0.4.3-py3-none-any.whl", hash = "sha256:729943219fc6675433b3462c4585bcd8fe7f39b454534f14afd2ce52e6a26a41", size = 125863, upload-time = "2026-05-05T18:55:39.832Z" },
 ]
 
 [[package]]
