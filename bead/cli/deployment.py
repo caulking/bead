@@ -12,7 +12,7 @@ from typing import cast
 from uuid import UUID
 
 import click
-from pydantic import ValidationError
+from didactic.api import ValidationError
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 

@@ -9,7 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import click
-from pydantic import ValidationError
+from didactic.api import ValidationError
 
 from bead.cli.display import create_progress, print_error, print_info, print_success
 from bead.resources.adapters.cache import AdapterCache

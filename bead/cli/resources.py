@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any, cast
 
 import click
-from pydantic import ValidationError
+from didactic.api import ValidationError
 from rich.console import Console
 from rich.table import Table
 
