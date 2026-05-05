@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Literal
 
 import didactic.api as dx
@@ -82,7 +81,7 @@ class SimulationRunnerConfig(dx.Model):
         Desired correlation between annotators (0.0-1.0).
     output_format : Literal["dict", "dataframe", "jsonl"]
         Output format for simulation results.
-    save_path : Path | None
+    save_path : str | None
         Path to save simulation results.
     """
 
@@ -92,4 +91,4 @@ class SimulationRunnerConfig(dx.Model):
     n_annotators: int = 1
     inter_annotator_correlation: float | None = None
     output_format: Literal["dict", "dataframe", "jsonl"] = "dict"
-    save_path: Path | None = None
+    save_path: str | None = None
