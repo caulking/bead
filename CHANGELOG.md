@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+#### Transforms (`bead.transforms`)
+
+- **TransformContext** carrying span metadata (lemma, POS, head index, tokens) for value-level transformations
+- **TransformRegistry** for registering and resolving named transform pipelines
+- **morphology** transforms: inflection adjustments driven by `InflectionSpec`
+- **text** transforms: case and whitespace normalizers
+- Pipeline syntax `[[label|transform1|transform2]]` in prompt span references; transforms resolve display text against the registry at trial generation time
+- 69 tests covering registry, morphology, text, and prompt integration
+
+### Changed
+
+- `bead.deployment.jspsych.trials` accepts an optional `TransformRegistry` and passes it through prompt resolution
+- Prompt span reference regex now recognizes the `|transform` suffix on `[[label]]` and `[[label:text]]` forms
+
 ## [0.2.0] - 2026-02-09
 
 ### Added

@@ -27,7 +27,9 @@ from bead.items.spans import (
 from bead.tokenization.config import TokenizerConfig
 from bead.tokenization.tokenizers import TokenizedText, create_tokenizer
 
-_SPAN_REF_PATTERN = re.compile(r"\[\[([^\]:]+?)(?::([^\]]+?))?\]\]")
+_SPAN_REF_PATTERN = re.compile(
+    r"\[\[([^\]:|]+?)(?::([^\]|]+?))?(?:\|([^\]]+?))?\]\]"
+)
 
 
 def tokenize_item(
