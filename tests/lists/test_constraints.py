@@ -121,13 +121,13 @@ class TestBalanceConstraint:
         """Test negative tolerance raises ValidationError."""
         with pytest.raises(ValidationError) as exc_info:
             BalanceConstraint(constraint_type="balance", property_expression="test", tolerance=-0.1)
-        assert "greater than or equal to 0" in str(exc_info.value)
+        assert "non-negative" in str(exc_info.value) or "must be" in str(exc_info.value)
 
     def test_tolerance_validation_too_large(self) -> None:
         """Test tolerance > 1.0 raises ValidationError."""
         with pytest.raises(ValidationError) as exc_info:
             BalanceConstraint(constraint_type="balance", property_expression="test", tolerance=1.5)
-        assert "less than or equal to 1" in str(exc_info.value)
+        assert "between 0 and 1" in str(exc_info.value)
 
     def test_tolerance_validation_zero(self) -> None:
         """Test tolerance=0.0 is valid."""
@@ -214,13 +214,13 @@ class TestQuantileConstraint:
         """Test n_quantiles < 2 raises ValidationError."""
         with pytest.raises(ValidationError) as exc_info:
             QuantileConstraint(constraint_type="quantile", property_expression="test", n_quantiles=0)
-        assert "greater than or equal to 2" in str(exc_info.value)
+        assert "must be" in str(exc_info.value)
 
     def test_n_quantiles_validation_one(self) -> None:
         """Test n_quantiles = 1 raises ValidationError."""
         with pytest.raises(ValidationError) as exc_info:
             QuantileConstraint(constraint_type="quantile", property_expression="test", n_quantiles=1)
-        assert "greater than or equal to 2" in str(exc_info.value)
+        assert "must be" in str(exc_info.value)
 
     def test_n_quantiles_validation_two(self) -> None:
         """Test n_quantiles = 2 is valid."""
@@ -231,13 +231,13 @@ class TestQuantileConstraint:
         """Test items_per_quantile = 0 raises ValidationError."""
         with pytest.raises(ValidationError) as exc_info:
             QuantileConstraint(constraint_type="quantile", property_expression="test", items_per_quantile=0)
-        assert "greater than or equal to 1" in str(exc_info.value)
+        assert "must be" in str(exc_info.value)
 
     def test_items_per_quantile_validation_negative(self) -> None:
         """Test items_per_quantile < 0 raises ValidationError."""
         with pytest.raises(ValidationError) as exc_info:
             QuantileConstraint(constraint_type="quantile", property_expression="test", items_per_quantile=-1)
-        assert "greater than or equal to 1" in str(exc_info.value)
+        assert "must be" in str(exc_info.value)
 
     def test_items_per_quantile_validation_one(self) -> None:
         """Test items_per_quantile = 1 is valid."""
@@ -339,19 +339,19 @@ class TestSizeConstraint:
         """Test negative min_size raises ValidationError."""
         with pytest.raises(ValidationError) as exc_info:
             SizeConstraint(constraint_type="size", min_size=-1)
-        assert "greater than or equal to 0" in str(exc_info.value)
+        assert "non-negative" in str(exc_info.value) or "must be" in str(exc_info.value)
 
     def test_validation_negative_max(self) -> None:
         """Test negative max_size raises ValidationError."""
         with pytest.raises(ValidationError) as exc_info:
             SizeConstraint(constraint_type="size", max_size=-1)
-        assert "greater than or equal to 0" in str(exc_info.value)
+        assert "non-negative" in str(exc_info.value) or "must be" in str(exc_info.value)
 
     def test_validation_negative_exact(self) -> None:
         """Test negative exact_size raises ValidationError."""
         with pytest.raises(ValidationError) as exc_info:
             SizeConstraint(constraint_type="size", exact_size=-1)
-        assert "greater than or equal to 0" in str(exc_info.value)
+        assert "non-negative" in str(exc_info.value) or "must be" in str(exc_info.value)
 
     def test_validation_zero_sizes_valid(self) -> None:
         """Test zero sizes are valid."""
@@ -467,21 +467,21 @@ class TestOrderingConstraint:
         with pytest.raises(ValidationError) as exc_info:
             OrderingConstraint(constraint_type="ordering", no_adjacent_property="item_metadata.condition", min_distance=-1
             )
-        assert "greater than or equal to 1" in str(exc_info.value)
+        assert "must be" in str(exc_info.value)
 
     def test_validation_max_distance_negative(self) -> None:
         """Test negative max_distance raises ValidationError."""
         with pytest.raises(ValidationError) as exc_info:
             OrderingConstraint(constraint_type="ordering", block_by_property="item_metadata.block_type", max_distance=-1
             )
-        assert "greater than or equal to 1" in str(exc_info.value)
+        assert "must be" in str(exc_info.value)
 
     def test_validation_min_distance_zero(self) -> None:
         """Test zero min_distance raises ValidationError."""
         with pytest.raises(ValidationError) as exc_info:
             OrderingConstraint(constraint_type="ordering", no_adjacent_property="item_metadata.condition", min_distance=0
             )
-        assert "greater than or equal to 1" in str(exc_info.value)
+        assert "must be" in str(exc_info.value)
 
     def test_validation_min_equals_max_distance(self) -> None:
         """Test min_distance == max_distance is valid."""

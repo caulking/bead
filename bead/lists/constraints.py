@@ -78,6 +78,10 @@ class UniquenessConstraint(ListConstraint):
     allow_null: bool = False
     priority: int = 1
 
+    __axioms__ = (
+        dx.axiom("priority >= 1", message="priority must be >= 1"),
+    )
+
     @dx.validates("property_expression")
     def _check_property_expression(self, value: str) -> str:
         return _check_non_empty(type(self), value)
@@ -136,6 +140,14 @@ class BalanceConstraint(ListConstraint):
     tolerance: float = 0.1
     priority: int = 1
 
+    __axioms__ = (
+        dx.axiom(
+            "tolerance >= 0 and tolerance <= 1",
+            message="tolerance must be between 0 and 1",
+        ),
+        dx.axiom("priority >= 1", message="priority must be >= 1"),
+    )
+
     @dx.validates("property_expression")
     def _check_property_expression(self, value: str) -> str:
         return _check_non_empty(type(self), value)
@@ -179,6 +191,15 @@ class QuantileConstraint(ListConstraint):
     items_per_quantile: int = 2
     priority: int = 1
 
+    __axioms__ = (
+        dx.axiom("n_quantiles >= 2", message="n_quantiles must be >= 2"),
+        dx.axiom(
+            "items_per_quantile >= 1",
+            message="items_per_quantile must be >= 1",
+        ),
+        dx.axiom("priority >= 1", message="priority must be >= 1"),
+    )
+
     @dx.validates("property_expression")
     def _check_property_expression(self, value: str) -> str:
         return _check_non_empty(type(self), value)
@@ -211,6 +232,15 @@ class GroupedQuantileConstraint(ListConstraint):
     items_per_quantile: int = 2
     priority: int = 1
 
+    __axioms__ = (
+        dx.axiom("n_quantiles >= 2", message="n_quantiles must be >= 2"),
+        dx.axiom(
+            "items_per_quantile >= 1",
+            message="items_per_quantile must be >= 1",
+        ),
+        dx.axiom("priority >= 1", message="priority must be >= 1"),
+    )
+
     @dx.validates("property_expression", "group_by_expression")
     def _check_expr(self, value: str) -> str:
         return _check_non_empty(type(self), value)
@@ -237,6 +267,14 @@ class DiversityConstraint(ListConstraint):
     context: dict[str, ContextValue] = dx.field(default_factory=dict)
     priority: int = 1
 
+    __axioms__ = (
+        dx.axiom(
+            "min_unique_values >= 1",
+            message="min_unique_values must be >= 1",
+        ),
+        dx.axiom("priority >= 1", message="priority must be >= 1"),
+    )
+
     @dx.validates("property_expression")
     def _check_property_expression(self, value: str) -> str:
         return _check_non_empty(type(self), value)
@@ -245,9 +283,7 @@ class DiversityConstraint(ListConstraint):
 class SizeConstraint(ListConstraint):
     """Size requirements for a list.
 
-    Specify ``exact_size``, or ``min_size`` and/or ``max_size``. Use
-    ``validate_size_constraint`` to enforce that at least one is set and
-    that ``min_size <= max_size``.
+    Specify ``exact_size``, or ``min_size`` and/or ``max_size``.
 
     Attributes
     ----------
@@ -268,27 +304,32 @@ class SizeConstraint(ListConstraint):
     exact_size: int | None = None
     priority: int = 1
 
-
-def validate_size_constraint(constraint: SizeConstraint) -> None:
-    """Raise ``ValueError`` if *constraint*'s size parameters are inconsistent."""
-    if (
-        constraint.exact_size is None
-        and constraint.min_size is None
-        and constraint.max_size is None
-    ):
-        raise ValueError(
-            "Must specify at least one of: min_size, max_size, exact_size"
-        )
-    if constraint.exact_size is not None and (
-        constraint.min_size is not None or constraint.max_size is not None
-    ):
-        raise ValueError("exact_size cannot be used with min_size or max_size")
-    if (
-        constraint.min_size is not None
-        and constraint.max_size is not None
-        and constraint.min_size > constraint.max_size
-    ):
-        raise ValueError("min_size must be <= max_size")
+    __axioms__ = (
+        dx.axiom(
+            "exact_size != None or min_size != None or max_size != None",
+            message="Must specify at least one of: min_size, max_size, exact_size",
+        ),
+        dx.axiom(
+            "exact_size == None or (min_size == None and max_size == None)",
+            message="exact_size cannot be used with min_size or max_size",
+        ),
+        dx.axiom(
+            "min_size == None or max_size == None or min_size <= max_size",
+            message="min_size must be <= max_size",
+        ),
+        dx.axiom(
+            "min_size == None or min_size >= 0",
+            message="min_size must be non-negative",
+        ),
+        dx.axiom(
+            "max_size == None or max_size >= 0",
+            message="max_size must be non-negative",
+        ),
+        dx.axiom(
+            "exact_size == None or exact_size >= 0",
+            message="exact_size must be non-negative",
+        ),
+    )
 
 
 class OrderingPair(BeadBaseModel):
@@ -342,25 +383,29 @@ class OrderingConstraint(ListConstraint):
     randomize_within_blocks: bool = True
     priority: int = 1
 
-
-def validate_ordering_constraint(constraint: OrderingConstraint) -> None:
-    """Raise ``ValueError`` if *constraint*'s distance options are inconsistent."""
-    if (
-        constraint.min_distance is not None
-        and constraint.no_adjacent_property is None
-    ):
-        raise ValueError("min_distance requires no_adjacent_property to be set")
-    if (
-        constraint.max_distance is not None
-        and constraint.block_by_property is None
-    ):
-        raise ValueError("max_distance requires block_by_property to be set")
-    if (
-        constraint.min_distance is not None
-        and constraint.max_distance is not None
-        and constraint.min_distance > constraint.max_distance
-    ):
-        raise ValueError("min_distance cannot be greater than max_distance")
+    __axioms__ = (
+        dx.axiom(
+            "min_distance == None or no_adjacent_property != None",
+            message="min_distance requires no_adjacent_property to be set",
+        ),
+        dx.axiom(
+            "max_distance == None or block_by_property != None",
+            message="max_distance requires block_by_property to be set",
+        ),
+        dx.axiom(
+            "min_distance == None or max_distance == None or "
+            "min_distance <= max_distance",
+            message="min_distance cannot be greater than max_distance",
+        ),
+        dx.axiom(
+            "min_distance == None or min_distance >= 1",
+            message="min_distance must be >= 1",
+        ),
+        dx.axiom(
+            "max_distance == None or max_distance >= 1",
+            message="max_distance must be >= 1",
+        ),
+    )
 
 
 # ---------------------------------------------------------------------------
