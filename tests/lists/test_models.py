@@ -6,7 +6,7 @@ import time
 from uuid import UUID, uuid4
 
 import pytest
-from pydantic import ValidationError
+from didactic.api import ValidationError
 
 from bead.lists import ExperimentList, ListCollection
 

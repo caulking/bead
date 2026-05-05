@@ -5,7 +5,7 @@ from __future__ import annotations
 from uuid import UUID
 
 import pytest
-from pydantic import ValidationError
+from didactic.api import ValidationError
 
 from bead.resources import LexicalItem
 

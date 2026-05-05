@@ -6,7 +6,7 @@ from __future__ import annotations
 from uuid import uuid4
 
 import pytest
-from pydantic import ValidationError
+from didactic.api import ValidationError
 
 from bead.items.item import Item, ModelOutput
 from bead.items.item_template import (

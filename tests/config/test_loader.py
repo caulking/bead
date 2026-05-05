@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 import yaml
-from pydantic import ValidationError
+from didactic.api import ValidationError
 
 from bead.config.config import BeadConfig
 from bead.config.loader import load_config, load_yaml_file, merge_configs

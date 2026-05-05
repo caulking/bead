@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
-from pydantic import ValidationError
+from didactic.api import ValidationError
 
 from bead.active_learning.config import (
     MixedEffectsConfig,
