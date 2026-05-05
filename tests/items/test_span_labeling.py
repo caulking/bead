@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import didactic.api as dx
 from uuid import uuid4
 
 import pytest
@@ -70,7 +71,7 @@ class TestCreateSpanItem:
 
     def test_empty_text_raises(self) -> None:
         """Test that empty text raises error."""
-        with pytest.raises(ValueError, match="text cannot be empty"):
+        with pytest.raises((ValueError, dx.ValidationError), match="text cannot be empty"):
             create_span_item(text="", spans=[], prompt="Test")
 
     def test_invalid_span_index_raises(self) -> None:
@@ -82,7 +83,7 @@ class TestCreateSpanItem:
             ),
         ]
 
-        with pytest.raises(ValueError, match="index 99"):
+        with pytest.raises((ValueError, dx.ValidationError), match="index 99"):
             create_span_item(
                 text="Short text.",
                 spans=spans,
@@ -143,7 +144,7 @@ class TestCreateInteractiveSpanItem:
 
     def test_empty_text_raises(self) -> None:
         """Test that empty text raises error."""
-        with pytest.raises(ValueError, match="text cannot be empty"):
+        with pytest.raises((ValueError, dx.ValidationError), match="text cannot be empty"):
             create_interactive_span_item(text="", prompt="Test")
 
 
@@ -234,7 +235,7 @@ class TestAddSpansToItem:
             ),
         ]
 
-        with pytest.raises(ValueError, match="index 99"):
+        with pytest.raises((ValueError, dx.ValidationError), match="index 99"):
             add_spans_to_item(item, spans)
 
 

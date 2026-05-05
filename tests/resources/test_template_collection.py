@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import didactic.api as dx
 from pathlib import Path
 from uuid import uuid4
 
@@ -98,7 +99,7 @@ def test_add_raises_error_on_duplicate_id() -> None:
     template = Template(name="test", template_string="{x}.", slots={"x": slot})
 
     collection = collection.with_template(template)
-    with pytest.raises(ValueError, match="already exists"):
+    with pytest.raises((ValueError, dx.ValidationError), match="already exists"):
         collection = collection.with_template(template)
 def test_add_many_adds_multiple_templates() -> None:
     """Test that add_many() adds multiple templates."""
@@ -270,7 +271,7 @@ def test_search_by_template_string() -> None:
 def test_search_invalid_field_raises_error() -> None:
     """Test that search() with invalid field raises error."""
     collection = TemplateCollection(name="test")
-    with pytest.raises(ValueError, match="Invalid field"):
+    with pytest.raises((ValueError, dx.ValidationError), match="Invalid field"):
         collection.search("test", field="invalid")
 
 
@@ -298,7 +299,7 @@ def test_merge_with_error_strategy_raises_on_duplicates() -> None:
     # Add same template to c2
     c2 = c2.with_(templates=(template,))
 
-    with pytest.raises(ValueError, match="Duplicate template IDs found"):
+    with pytest.raises((ValueError, dx.ValidationError), match="Duplicate template IDs found"):
         c1.merge(c2, strategy="error")
 
 

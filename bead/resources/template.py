@@ -96,6 +96,14 @@ class Template(BeadBaseModel):
             raise ValueError("template_string must be non-empty")
         return value
 
+    @dx.validates("language_code")
+    def _check_language_code(
+        self, value: LanguageCode | None
+    ) -> LanguageCode | None:
+        from bead.data.language_codes import validate_iso639_code  # noqa: PLC0415
+
+        return validate_iso639_code(value)
+
     @property
     def required_slot_names(self) -> frozenset[str]:
         """Names of all slots flagged as required."""

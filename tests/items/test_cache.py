@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import didactic.api as dx
 from pathlib import Path
 
 import numpy as np
@@ -258,7 +259,7 @@ def test_cache_initialization_default_dir() -> None:
 
 def test_cache_initialization_unknown_backend() -> None:
     """Test cache initialization with unknown backend raises error."""
-    with pytest.raises(ValueError, match="Unknown backend"):
+    with pytest.raises((ValueError, dx.ValidationError), match="Unknown backend"):
         ModelOutputCache(backend="invalid")  # type: ignore
 
 

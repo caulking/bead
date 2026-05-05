@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import didactic.api as dx
 import pytest
 
 from bead.resources.constraints import Constraint
@@ -162,7 +163,7 @@ class TestConstraintCombine:
         c1 = Constraint(expression="a")
         c2 = Constraint(expression="b")
 
-        with pytest.raises(ValueError, match="Invalid logic operator"):
+        with pytest.raises((ValueError, dx.ValidationError), match="Invalid logic operator"):
             Constraint.combine(c1, c2, logic="xor")
 
     def test_combine_single_constraint(self) -> None:
@@ -178,7 +179,7 @@ class TestConstraintCombine:
 
     def test_combine_empty_raises_error(self) -> None:
         """Test that combining zero constraints raises error."""
-        with pytest.raises(ValueError, match="Must provide at least one constraint"):
+        with pytest.raises((ValueError, dx.ValidationError), match="Must provide at least one constraint"):
             Constraint.combine(logic="and")
 
     def test_combine_preserves_parentheses(self) -> None:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import didactic.api as dx
 import time
 from uuid import UUID, uuid4
 
@@ -106,7 +107,7 @@ class TestExperimentList:
         """Test removing a non-existent item raises ValueError."""
         item_id = uuid4()
 
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises((ValueError, dx.ValidationError)) as exc_info:
             empty_experiment_list.without_item(item_id)
         assert "not found in list" in str(exc_info.value)
 
@@ -175,7 +176,7 @@ class TestExperimentList:
             item_refs=tuple(sample_item_uuids[:3]),
             presentation_order=tuple(sample_item_uuids[:5]),
         )
-        with pytest.raises(ValueError, match="extra UUIDs"):
+        with pytest.raises((ValueError, dx.ValidationError), match="extra UUIDs"):
             validate_presentation_order(exp_list)
 
     def test_presentation_order_validation_missing_uuids(
@@ -190,7 +191,7 @@ class TestExperimentList:
             item_refs=tuple(sample_item_uuids[:5]),
             presentation_order=tuple(sample_item_uuids[:3]),
         )
-        with pytest.raises(ValueError, match="missing UUIDs"):
+        with pytest.raises((ValueError, dx.ValidationError), match="missing UUIDs"):
             validate_presentation_order(exp_list)
 
     def test_presentation_order_validation_duplicates(
@@ -208,7 +209,7 @@ class TestExperimentList:
             item_refs=item_refs,
             presentation_order=presentation_order,
         )
-        with pytest.raises(ValueError, match="duplicate UUIDs"):
+        with pytest.raises((ValueError, dx.ValidationError), match="duplicate UUIDs"):
             validate_presentation_order(exp_list)
 
     def test_serialization_roundtrip(

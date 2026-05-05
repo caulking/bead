@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import didactic.api as dx
 from uuid import uuid4
 
 import pytest
@@ -49,18 +50,18 @@ class TestCreateBinaryItem:
 
     def test_empty_text_raises_error(self) -> None:
         """Test that empty text raises error."""
-        with pytest.raises(ValueError, match="text cannot be empty"):
+        with pytest.raises((ValueError, dx.ValidationError), match="text cannot be empty"):
             create_binary_item("")
 
-        with pytest.raises(ValueError, match="text cannot be empty"):
+        with pytest.raises((ValueError, dx.ValidationError), match="text cannot be empty"):
             create_binary_item("   ")
 
     def test_invalid_binary_options_raises_error(self) -> None:
         """Test that invalid binary_options raises error."""
-        with pytest.raises(ValueError, match="binary_options must contain exactly 2"):
+        with pytest.raises((ValueError, dx.ValidationError), match="binary_options must contain exactly 2"):
             create_binary_item("Text", binary_options=("yes",))
 
-        with pytest.raises(ValueError, match="binary_options must contain exactly 2"):
+        with pytest.raises((ValueError, dx.ValidationError), match="binary_options must contain exactly 2"):
             create_binary_item("Text", binary_options=("yes", "no", "maybe"))
 
     def test_with_custom_template_id(self) -> None:

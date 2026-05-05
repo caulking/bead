@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import didactic.api as dx
 from uuid import uuid4
 
 import pytest
@@ -60,29 +61,29 @@ class TestCreateOrdinalScaleItem:
 
     def test_empty_text_raises_error(self) -> None:
         """Test that empty text raises error."""
-        with pytest.raises(ValueError, match="text cannot be empty"):
+        with pytest.raises((ValueError, dx.ValidationError), match="text cannot be empty"):
             create_ordinal_scale_item("", scale_bounds=(1, 7))
 
-        with pytest.raises(ValueError, match="text cannot be empty"):
+        with pytest.raises((ValueError, dx.ValidationError), match="text cannot be empty"):
             create_ordinal_scale_item("   ", scale_bounds=(1, 7))
 
     def test_invalid_scale_bounds_raises_error(self) -> None:
         """Test that invalid scale bounds raise error."""
         # min >= max
-        with pytest.raises(ValueError, match="scale_min.*must be less than"):
+        with pytest.raises((ValueError, dx.ValidationError), match="scale_min.*must be less than"):
             create_ordinal_scale_item("Text", scale_bounds=(5, 5))
 
-        with pytest.raises(ValueError, match="scale_min.*must be less than"):
+        with pytest.raises((ValueError, dx.ValidationError), match="scale_min.*must be less than"):
             create_ordinal_scale_item("Text", scale_bounds=(7, 3))
 
     def test_scale_labels_outside_bounds_raises_error(self) -> None:
         """Test that scale labels outside bounds raise error."""
-        with pytest.raises(ValueError, match="scale_labels key.*outside scale bounds"):
+        with pytest.raises((ValueError, dx.ValidationError), match="scale_labels key.*outside scale bounds"):
             create_ordinal_scale_item(
                 "Text", scale_bounds=(1, 5), scale_labels={0: "Too Low", 5: "Good"}
             )
 
-        with pytest.raises(ValueError, match="scale_labels key.*outside scale bounds"):
+        with pytest.raises((ValueError, dx.ValidationError), match="scale_labels key.*outside scale bounds"):
             create_ordinal_scale_item(
                 "Text", scale_bounds=(1, 5), scale_labels={1: "Low", 6: "Too High"}
             )

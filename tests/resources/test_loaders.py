@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import didactic.api as dx
 from pathlib import Path
 
 import pytest
@@ -157,7 +158,7 @@ test,NOUN"""
         csv_file = tmp_path / "test.csv"
         csv_file.write_text(csv_content)
 
-        with pytest.raises(ValueError, match="lemma"):
+        with pytest.raises((ValueError, dx.ValidationError), match="lemma"):
             from_csv(
                 path=csv_file,
                 name="test",

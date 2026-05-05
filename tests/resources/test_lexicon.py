@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import didactic.api as dx
 from pathlib import Path
 from uuid import uuid4
 
@@ -104,7 +105,7 @@ def test_add_raises_error_on_duplicate_id() -> None:
     item = LexicalItem(lemma="walk", language_code="eng")
     lexicon = lexicon.with_item(item)
     # Try to add the same item again
-    with pytest.raises(ValueError, match="already exists"):
+    with pytest.raises((ValueError, dx.ValidationError), match="already exists"):
         lexicon = lexicon.with_item(item)
 def test_add_many_adds_multiple_items() -> None:
     """Test that add_many() adds multiple items."""
@@ -156,7 +157,7 @@ def test_adding_same_item_twice_fails() -> None:
     lexicon = Lexicon(name="test")
     item = LexicalItem(lemma="walk", language_code="eng")
     lexicon = lexicon.with_item(item)
-    with pytest.raises(ValueError, match="already exists"):
+    with pytest.raises((ValueError, dx.ValidationError), match="already exists"):
         lexicon = lexicon.with_item(item)
 # ============================================================================
 # Filtering Operations (8 tests)
@@ -287,7 +288,7 @@ def test_search_with_no_matches() -> None:
 def test_search_invalid_field_raises_error() -> None:
     """Test that search() with invalid field raises error."""
     lexicon = Lexicon(name="test")
-    with pytest.raises(ValueError, match="Invalid field"):
+    with pytest.raises((ValueError, dx.ValidationError), match="Invalid field"):
         lexicon.search("test", field="invalid")
 
 
@@ -340,7 +341,7 @@ def test_merge_with_error_strategy_raises_on_duplicates() -> None:
     # Add same item to lex2
     lex2 = lex2.with_(items=(item1,))
 
-    with pytest.raises(ValueError, match="Duplicate item IDs found"):
+    with pytest.raises((ValueError, dx.ValidationError), match="Duplicate item IDs found"):
         lex1.merge(lex2, strategy="error")
 
 
@@ -500,7 +501,7 @@ def test_from_dataframe_raises_on_missing_lemma() -> None:
     """Test that from_dataframe() raises error if no lemma column."""
     df = pd.DataFrame({"pos": ["VERB", "NOUN"]})
 
-    with pytest.raises(ValueError, match="must have a 'lemma' column"):
+    with pytest.raises((ValueError, dx.ValidationError), match="must have a 'lemma' column"):
         Lexicon.from_dataframe(df, "test")
 
 

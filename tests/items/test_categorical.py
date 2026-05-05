@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import didactic.api as dx
 from uuid import uuid4
 
 import pytest
@@ -42,10 +43,10 @@ class TestCreateCategoricalItem:
 
     def test_empty_text_raises_error(self) -> None:
         """Test that empty text raises error."""
-        with pytest.raises(ValueError, match="text cannot be empty"):
+        with pytest.raises((ValueError, dx.ValidationError), match="text cannot be empty"):
             create_categorical_item("", categories=["A", "B"])
 
-        with pytest.raises(ValueError, match="text cannot be empty"):
+        with pytest.raises((ValueError, dx.ValidationError), match="text cannot be empty"):
             create_categorical_item("   ", categories=["A", "B"])
 
     def test_too_few_categories_raises_error(self) -> None:

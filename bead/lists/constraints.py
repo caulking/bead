@@ -437,6 +437,13 @@ class BatchCoverageConstraint(BatchConstraint):
     min_coverage: float = 1.0
     priority: int = 1
 
+    __axioms__ = (
+        dx.axiom(
+            "min_coverage >= 0 and min_coverage <= 1",
+            message="min_coverage must be between 0 and 1",
+        ),
+    )
+
     @dx.validates("property_expression")
     def _check_property_expression(self, value: str) -> str:
         return _check_non_empty(type(self), value)
@@ -465,6 +472,13 @@ class BatchBalanceConstraint(BatchConstraint):
     context: dict[str, ContextValue] = dx.field(default_factory=dict)
     tolerance: float = 0.1
     priority: int = 1
+
+    __axioms__ = (
+        dx.axiom(
+            "tolerance >= 0 and tolerance <= 1",
+            message="tolerance must be between 0 and 1",
+        ),
+    )
 
     @dx.validates("property_expression")
     def _check_property_expression(self, value: str) -> str:
@@ -511,6 +525,13 @@ class BatchDiversityConstraint(BatchConstraint):
     context: dict[str, ContextValue] = dx.field(default_factory=dict)
     priority: int = 1
 
+    __axioms__ = (
+        dx.axiom(
+            "max_lists_per_value >= 1",
+            message="max_lists_per_value must be >= 1",
+        ),
+    )
+
     @dx.validates("property_expression")
     def _check_property_expression(self, value: str) -> str:
         return _check_non_empty(type(self), value)
@@ -536,6 +557,13 @@ class BatchMinOccurrenceConstraint(BatchConstraint):
     min_occurrences: int
     context: dict[str, ContextValue] = dx.field(default_factory=dict)
     priority: int = 1
+
+    __axioms__ = (
+        dx.axiom(
+            "min_occurrences >= 1",
+            message="min_occurrences must be >= 1",
+        ),
+    )
 
     @dx.validates("property_expression")
     def _check_property_expression(self, value: str) -> str:

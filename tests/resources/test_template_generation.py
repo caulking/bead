@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import didactic.api as dx
 from typing import Any
 
 import pytest
@@ -210,7 +211,7 @@ class TestMultiFrameMapper:
 
         mapper = TestMultiMapper()
 
-        with pytest.raises(ValueError, match="frame_data must be provided"):
+        with pytest.raises((ValueError, dx.ValidationError), match="frame_data must be provided"):
             mapper.generate_from_frame()
 
     def test_variant_data_passed_to_generate_variant(self) -> None:

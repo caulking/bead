@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import didactic.api as dx
 from uuid import UUID, uuid4
 
 import pytest
@@ -26,8 +27,8 @@ class TestTemplateClassCreation:
         assert cls.property_name == "transitive"
         assert cls.property_value is True
         assert len(cls) == 0
-        assert cls.templates == {}
-        assert cls.tags == []
+        assert cls.templates == ()
+        assert cls.tags == ()
 
     def test_create_with_tags(self) -> None:
         """Test creating a class with tags."""
@@ -52,12 +53,12 @@ class TestTemplateClassCreation:
 
     def test_validate_empty_name(self) -> None:
         """Test that empty name raises ValueError."""
-        with pytest.raises(ValueError, match="name must be non-empty"):
+        with pytest.raises((ValueError, dx.ValidationError), match="name must be non-empty"):
             TemplateClass(name="", property_name="test")
 
     def test_validate_empty_property_name(self) -> None:
         """Test that empty property_name raises ValueError."""
-        with pytest.raises(ValueError, match="property_name must be non-empty"):
+        with pytest.raises((ValueError, dx.ValidationError), match="property_name must be non-empty"):
             TemplateClass(name="test", property_name="")
 
     def test_has_id_and_timestamps(self) -> None:
@@ -161,7 +162,7 @@ class TestTemplateClassLanguageMethods:
         zu_templates = monolingual_transitive_template_class.get_templates_by_language(
             "zu"
         )
-        assert zu_templates == []
+        assert zu_templates == ()
 
     def test_is_monolingual_empty(self) -> None:
         """Test is_monolingual() on empty class."""
@@ -235,7 +236,7 @@ class TestTemplateClassCRUDOperations:
             slots={"s": Slot(name="s"), "v": Slot(name="v"), "o": Slot(name="o")},
         )
         cls = cls.with_template(template)
-        with pytest.raises(ValueError, match="already exists in class"):
+        with pytest.raises((ValueError, dx.ValidationError), match="already exists in class"):
             cls = cls.with_template(template)
     def test_remove_template(self) -> None:
         """Test removing a template from the class."""
@@ -261,7 +262,7 @@ class TestTemplateClassCRUDOperations:
         )
         cls = cls.with_template(template)
         original_modified = cls.modified_at
-        cls.without_template(template.id)
+        cls, _ = cls.without_template(template.id)
         assert cls.modified_at > original_modified
 
     def test_remove_nonexistent_template_raises_error(self) -> None:
@@ -455,7 +456,7 @@ class TestTemplateClassEdgeCases:
         # Language codes are normalized to ISO 639-3 (3-letter codes)
         assert cls.languages() == {"eng"}
         # Can query using 2-letter or 3-letter codes (both work)
-        assert cls.get_templates_by_language("en") == [t1]
+        assert cls.get_templates_by_language("en") == (t1,)
 
     def test_property_value_can_be_none(self) -> None:
         """Test that property_value can be None."""
@@ -510,7 +511,7 @@ class TestTemplateClassEdgeCases:
         assert len(cls) == 3
 
         # Remove one
-        cls.without_template(templates[0].id)
+        cls, _ = cls.without_template(templates[0].id)
         assert len(cls) == 2
 
         # Add it back
@@ -519,5 +520,5 @@ class TestTemplateClassEdgeCases:
 
         # Remove all
         for template in templates:
-            cls.without_template(template.id)
+            cls, _ = cls.without_template(template.id)
         assert len(cls) == 0

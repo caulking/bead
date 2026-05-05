@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import didactic.api as dx
 import os
 
 import numpy as np
@@ -153,7 +154,7 @@ class TestGoogleAdapterInitialization:
 
         cache = ModelOutputCache(backend="memory")
 
-        with pytest.raises(ValueError, match="Google API key must be provided"):
+        with pytest.raises((ValueError, dx.ValidationError), match="Google API key must be provided"):
             GoogleAdapter(model_name="gemini-pro", cache=cache)
 
 
@@ -306,7 +307,7 @@ class TestGoogleComputeNLI:
         mock_model.generate_content.return_value = mock_response
         mocker.patch("time.sleep")
 
-        with pytest.raises(ValueError, match="did not include text"):
+        with pytest.raises((ValueError, dx.ValidationError), match="did not include text"):
             google_adapter.compute_nli("premise", "hypothesis")
 
     def test_compute_nli_uses_cache(

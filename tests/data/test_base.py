@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import didactic.api as dx
 import time
 
-import didactic.api as dx
 import pytest
 
 from bead.data.base import BeadBaseModel

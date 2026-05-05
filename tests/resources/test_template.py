@@ -127,7 +127,7 @@ class TestTemplate:
         assert template.slots == {"word": slot}
         assert template.description is None
         assert template.language_code is None
-        assert template.tags == []
+        assert template.tags == ()
         assert template.metadata == {}
 
     def test_create_with_multiple_slots(self) -> None:

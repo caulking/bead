@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import didactic.api as dx
 from uuid import uuid4
 
 import pytest
@@ -45,7 +46,7 @@ class TestCreateForcedChoiceItem:
 
     def test_requires_at_least_two_options(self) -> None:
         """Test that at least 2 options are required."""
-        with pytest.raises(ValueError, match="At least 2 options required"):
+        with pytest.raises((ValueError, dx.ValidationError), match="At least 2 options required"):
             create_forced_choice_item("Only one")
 
     def test_with_custom_template_id(self) -> None:

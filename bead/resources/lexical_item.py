@@ -10,7 +10,7 @@ from __future__ import annotations
 import didactic.api as dx
 
 from bead.data.base import BeadBaseModel, JsonValue
-from bead.data.language_codes import LanguageCode
+from bead.data.language_codes import LanguageCode, validate_iso639_code
 from bead.resources.constraints import Constraint
 
 
@@ -46,6 +46,10 @@ class LexicalItem(BeadBaseModel):
         if not value or not value.strip():
             raise ValueError("lemma must be non-empty")
         return value
+
+    @dx.validates("language_code")
+    def _check_language_code(self, value: LanguageCode) -> LanguageCode:
+        return validate_iso639_code(value)
 
 
 class MWEComponent(LexicalItem):

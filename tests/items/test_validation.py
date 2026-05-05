@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import didactic.api as dx
 from uuid import uuid4
 
 import pytest
@@ -497,7 +498,7 @@ class TestGetTaskTypeRequirements:
 
     def test_unknown_task_type_raises_error(self) -> None:
         """Test that unknown task type raises ValueError."""
-        with pytest.raises(ValueError, match="Unknown task type"):
+        with pytest.raises((ValueError, dx.ValidationError), match="Unknown task type"):
             get_task_type_requirements("unknown_task")
 
 
@@ -516,7 +517,7 @@ class TestValidateItemForTaskType:
         from bead.items.ordinal_scale import create_ordinal_scale_item
 
         item = create_ordinal_scale_item("Text", scale_bounds=(1, 5))
-        with pytest.raises(ValueError, match="forced_choice items must have"):
+        with pytest.raises((ValueError, dx.ValidationError), match="forced_choice items must have"):
             validate_item_for_task_type(item, "forced_choice")
 
     def test_multi_select_valid(self) -> None:
@@ -535,7 +536,7 @@ class TestValidateItemForTaskType:
             options=["A", "B"],
             item_metadata={"min_selections": 3, "max_selections": 1},
         )
-        with pytest.raises(ValueError, match="min_selections <= max_selections"):
+        with pytest.raises((ValueError, dx.ValidationError), match="min_selections <= max_selections"):
             validate_item_for_task_type(item, "multi_select")
 
     def test_ordinal_scale_valid(self) -> None:
@@ -552,7 +553,7 @@ class TestValidateItemForTaskType:
             rendered_elements={"text": "Test", "prompt": "Rate this:"},
             item_metadata={"scale_min": 7, "scale_max": 1},
         )
-        with pytest.raises(ValueError, match="scale_min < scale_max"):
+        with pytest.raises((ValueError, dx.ValidationError), match="scale_min < scale_max"):
             validate_item_for_task_type(item, "ordinal_scale")
 
     def test_magnitude_valid(self) -> None:
@@ -576,7 +577,7 @@ class TestValidateItemForTaskType:
             rendered_elements={"text": "Test", "prompt": "Enter value:"},
             item_metadata={"min_value": 100, "max_value": 0},
         )
-        with pytest.raises(ValueError, match="min_value < max_value"):
+        with pytest.raises((ValueError, dx.ValidationError), match="min_value < max_value"):
             validate_item_for_task_type(item, "magnitude")
 
     def test_binary_valid(self) -> None:
@@ -593,7 +594,7 @@ class TestValidateItemForTaskType:
             rendered_elements={"text": "Test", "prompt": ""},
             item_metadata={},
         )
-        with pytest.raises(ValueError, match="non-empty 'prompt'"):
+        with pytest.raises((ValueError, dx.ValidationError), match="non-empty 'prompt'"):
             validate_item_for_task_type(item, "binary")
 
     def test_categorical_valid(self) -> None:
@@ -642,7 +643,7 @@ class TestValidateItemForTaskType:
             item_metadata={"n_unfilled_slots": 1},
             unfilled_slots=[],  # Empty!
         )
-        with pytest.raises(ValueError, match="unfilled_slots field populated"):
+        with pytest.raises((ValueError, dx.ValidationError), match="unfilled_slots field populated"):
             validate_item_for_task_type(item, "cloze")
 
 
@@ -730,7 +731,7 @@ class TestInferTaskTypeFromItem:
             rendered_elements={"text": "Test", "prompt": "Answer"},
             item_metadata={},  # No distinguishing metadata
         )
-        with pytest.raises(ValueError, match="Could be binary or free_text"):
+        with pytest.raises((ValueError, dx.ValidationError), match="Could be binary or free_text"):
             infer_task_type_from_item(item)
 
     def test_no_match_raises_error(self) -> None:
@@ -740,5 +741,5 @@ class TestInferTaskTypeFromItem:
             rendered_elements={"unknown_key": "value"},
             item_metadata={},
         )
-        with pytest.raises(ValueError, match="Could not infer task type"):
+        with pytest.raises((ValueError, dx.ValidationError), match="Could not infer task type"):
             infer_task_type_from_item(item)

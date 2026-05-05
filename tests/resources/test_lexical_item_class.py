@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import didactic.api as dx
 from uuid import UUID, uuid4
 
 import pytest
@@ -26,8 +27,8 @@ class TestLexicalItemClassCreation:
         assert cls.property_name == "causative"
         assert cls.property_value is True
         assert len(cls) == 0
-        assert cls.items == {}
-        assert cls.tags == []
+        assert cls.items == ()
+        assert cls.tags == ()
 
     def test_create_with_tags(self) -> None:
         """Test creating a class with tags."""
@@ -52,12 +53,12 @@ class TestLexicalItemClassCreation:
 
     def test_validate_empty_name(self) -> None:
         """Test that empty name raises ValueError."""
-        with pytest.raises(ValueError, match="name must be non-empty"):
+        with pytest.raises((ValueError, dx.ValidationError), match="name must be non-empty"):
             LexicalItemClass(name="", property_name="test")
 
     def test_validate_empty_property_name(self) -> None:
         """Test that empty property_name raises ValueError."""
-        with pytest.raises(ValueError, match="property_name must be non-empty"):
+        with pytest.raises((ValueError, dx.ValidationError), match="property_name must be non-empty"):
             LexicalItemClass(name="test", property_name="")
 
     def test_has_id_and_timestamps(self) -> None:
@@ -137,7 +138,7 @@ class TestLexicalItemClassLanguageMethods:
     ) -> None:
         """Test filtering by nonexistent language code."""
         zu_items = monolingual_causative_class.get_items_by_language("zu")
-        assert zu_items == []
+        assert zu_items == ()
 
     def test_is_monolingual_empty(self) -> None:
         """Test is_monolingual() on empty class."""
@@ -210,7 +211,7 @@ class TestLexicalItemClassCRUDOperations:
         cls = LexicalItemClass(name="test", property_name="causative")
         item = LexicalItem(lemma="break", language_code="eng")
         cls = cls.with_item(item)
-        with pytest.raises(ValueError, match="already exists in class"):
+        with pytest.raises((ValueError, dx.ValidationError), match="already exists in class"):
             cls = cls.with_item(item)
     def test_remove_item(self) -> None:
         """Test removing an item from the class."""
@@ -228,7 +229,7 @@ class TestLexicalItemClassCRUDOperations:
         item = LexicalItem(lemma="break", language_code="eng")
         cls = cls.with_item(item)
         original_modified = cls.modified_at
-        cls.without_item(item.id)
+        cls, _ = cls.without_item(item.id)
         assert cls.modified_at > original_modified
 
     def test_remove_nonexistent_item_raises_error(self) -> None:
@@ -437,7 +438,7 @@ class TestLexicalItemClassEdgeCases:
         assert len(cls) == 3
 
         # Remove one
-        cls.without_item(items[0].id)
+        cls, _ = cls.without_item(items[0].id)
         assert len(cls) == 2
 
         # Add it back
@@ -446,5 +447,5 @@ class TestLexicalItemClassEdgeCases:
 
         # Remove all
         for item in items:
-            cls.without_item(item.id)
+            cls, _ = cls.without_item(item.id)
         assert len(cls) == 0

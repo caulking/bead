@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import didactic.api as dx
 from uuid import UUID, uuid4
 
 import pytest
@@ -162,7 +163,7 @@ def test_partition_invalid_n_lists(sample_item_metadata: MetadataDict) -> None:
     partitioner = ListPartitioner()
     items = list(sample_item_metadata.keys())
 
-    with pytest.raises(ValueError, match="n_lists must be >= 1"):
+    with pytest.raises((ValueError, dx.ValidationError), match="n_lists must be >= 1"):
         partitioner.partition(items, 0, metadata=sample_item_metadata)
 
 
@@ -171,7 +172,7 @@ def test_partition_invalid_strategy(sample_item_metadata: MetadataDict) -> None:
     partitioner = ListPartitioner()
     items = list(sample_item_metadata.keys())
 
-    with pytest.raises(ValueError, match="Unknown strategy"):
+    with pytest.raises((ValueError, dx.ValidationError), match="Unknown strategy"):
         partitioner.partition(
             items, 5, strategy="unknown", metadata=sample_item_metadata
         )

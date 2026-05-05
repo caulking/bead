@@ -24,7 +24,7 @@ class TestBatchCoverageConstraint:
 
         assert constraint.constraint_type == "coverage"
         assert constraint.property_expression == "item['template_id']"
-        assert constraint.target_values == list(range(10))
+        assert constraint.target_values == tuple(range(10))
         assert constraint.min_coverage == 1.0
 
     def test_create_with_min_coverage(self) -> None:
@@ -74,7 +74,7 @@ class TestBatchCoverageConstraint:
                 target_values=[1, 2, 3],
                 min_coverage=-0.1,
             )
-        assert "greater than or equal to 0" in str(exc_info.value)
+        assert "between 0 and 1" in str(exc_info.value)
 
     def test_min_coverage_validation_too_large(self) -> None:
         """Test min_coverage > 1.0 raises ValidationError."""
@@ -83,7 +83,7 @@ class TestBatchCoverageConstraint:
                 target_values=[1, 2, 3],
                 min_coverage=1.5,
             )
-        assert "less than or equal to 1" in str(exc_info.value)
+        assert "between 0 and 1" in str(exc_info.value)
 
     def test_min_coverage_validation_zero(self) -> None:
         """Test min_coverage=0.0 is valid."""
@@ -116,7 +116,7 @@ class TestBatchCoverageConstraint:
         )
 
         data = constraint.model_dump()
-        restored = BatchCoverageConstraint(constraint_type="coverage", **data)
+        restored = BatchCoverageConstraint(**data)
 
         assert restored.property_expression == constraint.property_expression
         assert restored.target_values == constraint.target_values
@@ -182,7 +182,7 @@ class TestBatchBalanceConstraint:
                 target_distribution={"A": 0.5, "B": 0.5},
                 tolerance=-0.1,
             )
-        assert "greater than or equal to 0" in str(exc_info.value)
+        assert "between 0 and 1" in str(exc_info.value)
 
     def test_tolerance_validation_too_large(self) -> None:
         """Test tolerance > 1.0 raises ValidationError."""
@@ -191,7 +191,7 @@ class TestBatchBalanceConstraint:
                 target_distribution={"A": 0.5, "B": 0.5},
                 tolerance=1.5,
             )
-        assert "less than or equal to 1" in str(exc_info.value)
+        assert "between 0 and 1" in str(exc_info.value)
 
     def test_target_distribution_validation_empty(self) -> None:
         """Test empty target_distribution raises ValidationError."""
@@ -247,7 +247,7 @@ class TestBatchBalanceConstraint:
         )
 
         data = constraint.model_dump()
-        restored = BatchBalanceConstraint(constraint_type="balance", **data)
+        restored = BatchBalanceConstraint(**data)
 
         assert restored.property_expression == constraint.property_expression
         assert restored.target_distribution == constraint.target_distribution
@@ -289,7 +289,7 @@ class TestBatchDiversityConstraint:
             BatchDiversityConstraint(constraint_type="diversity", property_expression="item['test']",
                 max_lists_per_value=0,
             )
-        assert "greater than or equal to 1" in str(exc_info.value)
+        assert ">= 1" in str(exc_info.value)
 
     def test_max_lists_per_value_validation_negative(self) -> None:
         """Test negative max_lists_per_value raises ValidationError."""
@@ -297,7 +297,7 @@ class TestBatchDiversityConstraint:
             BatchDiversityConstraint(constraint_type="diversity", property_expression="item['test']",
                 max_lists_per_value=-1,
             )
-        assert "greater than or equal to 1" in str(exc_info.value)
+        assert ">= 1" in str(exc_info.value)
 
     def test_max_lists_per_value_validation_one(self) -> None:
         """Test max_lists_per_value=1 is valid."""
@@ -320,7 +320,7 @@ class TestBatchDiversityConstraint:
         )
 
         data = constraint.model_dump()
-        restored = BatchDiversityConstraint(constraint_type="diversity", **data)
+        restored = BatchDiversityConstraint(**data)
 
         assert restored.property_expression == constraint.property_expression
         assert restored.max_lists_per_value == constraint.max_lists_per_value
@@ -371,7 +371,7 @@ class TestBatchMinOccurrenceConstraint:
             BatchMinOccurrenceConstraint(constraint_type="min_occurrence", property_expression="item['test']",
                 min_occurrences=0,
             )
-        assert "greater than or equal to 1" in str(exc_info.value)
+        assert ">= 1" in str(exc_info.value)
 
     def test_min_occurrences_validation_negative(self) -> None:
         """Test negative min_occurrences raises ValidationError."""
@@ -379,7 +379,7 @@ class TestBatchMinOccurrenceConstraint:
             BatchMinOccurrenceConstraint(constraint_type="min_occurrence", property_expression="item['test']",
                 min_occurrences=-5,
             )
-        assert "greater than or equal to 1" in str(exc_info.value)
+        assert ">= 1" in str(exc_info.value)
 
     def test_min_occurrences_validation_one(self) -> None:
         """Test min_occurrences=1 is valid."""
@@ -402,7 +402,7 @@ class TestBatchMinOccurrenceConstraint:
         )
 
         data = constraint.model_dump()
-        restored = BatchMinOccurrenceConstraint(constraint_type="min_occurrence", **data)
+        restored = BatchMinOccurrenceConstraint(**data)
 
         assert restored.property_expression == constraint.property_expression
         assert restored.min_occurrences == constraint.min_occurrences

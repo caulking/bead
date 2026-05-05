@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import didactic.api as dx
 from uuid import uuid4
 
 import numpy as np
@@ -163,7 +164,7 @@ class TestItemConstructor:
             ],
         )
 
-        with pytest.raises(ValueError, match="references missing"):
+        with pytest.raises((ValueError, dx.ValidationError), match="references missing"):
             constructor._render_elements(template, {})
 
     def test_render_elements_multiple(self, constructor) -> None:
@@ -429,7 +430,7 @@ class TestItemConstructor:
             constraints=[constraint_id],
         )
 
-        with pytest.raises(ValueError, match="not found"):
+        with pytest.raises((ValueError, dx.ValidationError), match="not found"):
             constructor._check_constraints(template, {}, [], {})
 
     def test_compute_model_outputs_missing_constraint(self, constructor) -> None:
@@ -444,7 +445,7 @@ class TestItemConstructor:
             constraints=[constraint_id],
         )
 
-        with pytest.raises(ValueError, match="not found"):
+        with pytest.raises((ValueError, dx.ValidationError), match="not found"):
             constructor._compute_model_outputs(template, {}, {})
 
     def test_construct_items_preserves_filled_refs(self, constructor) -> None:

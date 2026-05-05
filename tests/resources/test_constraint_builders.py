@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import didactic.api as dx
 import pytest
 
 from bead.resources.constraint_builders import (
@@ -79,7 +80,7 @@ class TestAgreementConstraintBuilder:
         """Test that agreement requires at least 2 slots."""
         builder = AgreementConstraintBuilder("case")
 
-        with pytest.raises(ValueError, match="at least 2 slot names"):
+        with pytest.raises((ValueError, dx.ValidationError), match="at least 2 slot names"):
             builder.build("noun")
 
     def test_feature_name_preserved(self) -> None:
@@ -190,14 +191,14 @@ class TestSetMembershipConstraintBuilder:
         builder = SetMembershipConstraintBuilder()
 
         # Neither provided
-        with pytest.raises(ValueError, match="Exactly one of"):
+        with pytest.raises((ValueError, dx.ValidationError), match="Exactly one of"):
             builder.build(
                 slot_name="verb",
                 property_path="lemma",
             )
 
         # Both provided
-        with pytest.raises(ValueError, match="Exactly one of"):
+        with pytest.raises((ValueError, dx.ValidationError), match="Exactly one of"):
             builder.build(
                 slot_name="verb",
                 property_path="lemma",
