@@ -11,6 +11,7 @@ from bead.lists import ExperimentList, ListCollection
 from bead.lists.constraints import (
     BalanceConstraint,
     OrderingConstraint,
+    OrderingPair,
     QuantileConstraint,
     SizeConstraint,
     UniquenessConstraint,
@@ -70,7 +71,7 @@ def experiment_list_with_items(sample_item_uuids: list[UUID]) -> ExperimentList:
     """
     exp_list = ExperimentList(name="list_with_items", list_number=1)
     for item_id in sample_item_uuids[:20]:
-        exp_list.add_item(item_id)
+        exp_list = exp_list.with_item(item_id)
     return exp_list
 
 
@@ -188,7 +189,7 @@ def sample_list_collection(
         partitioning_strategy="balanced",
         partitioning_config={"n_lists": 1, "seed": 42},
     )
-    collection.add_list(experiment_list_with_items)
+    collection = collection.with_list(experiment_list_with_items)
     return collection
 
 
@@ -201,7 +202,10 @@ def ordering_constraint_precedence() -> OrderingConstraint:
     OrderingConstraint
         Constraint with precedence pairs.
     """
-    return OrderingConstraint(constraint_type="ordering", precedence_pairs=[(uuid4(), uuid4())])
+    return OrderingConstraint(
+        constraint_type="ordering",
+        precedence_pairs=(OrderingPair(before=uuid4(), after=uuid4()),),
+    )
 
 
 @pytest.fixture

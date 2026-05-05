@@ -228,8 +228,7 @@ def sample_experiment_list(sample_items: dict[UUID, Item]) -> ExperimentList:
         name="test_list", list_number=0, list_constraints=[constraint]
     )
     for item_id in sample_items.keys():
-        exp_list.add_item(item_id)
-
+        exp_list = exp_list.with_item(item_id)
     return exp_list
 
 
@@ -246,7 +245,7 @@ def sample_precedence_constraint() -> OrderingConstraint:
     item2 = UUID("87654321-4321-8765-4321-876543218765")
 
     return OrderingConstraint(
-        precedence_pairs=[(item1, item2)],
+        precedence_pairs=(OrderingPair(before=item1, after=item2),),
     )
 
 

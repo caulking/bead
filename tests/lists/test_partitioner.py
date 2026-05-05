@@ -380,8 +380,7 @@ def test_check_uniqueness_satisfied() -> None:
 
     exp_list = ExperimentList(name="test", list_number=0)
     for item_id in items:
-        exp_list.add_item(item_id)
-
+        exp_list = exp_list.with_item(item_id)
     constraint = UniquenessConstraint(constraint_type="uniqueness", property_expression="item['prop']")
     assert partitioner._check_uniqueness(exp_list, constraint, metadata)
 
@@ -394,8 +393,7 @@ def test_check_uniqueness_violated() -> None:
 
     exp_list = ExperimentList(name="test", list_number=0)
     for item_id in items:
-        exp_list.add_item(item_id)
-
+        exp_list = exp_list.with_item(item_id)
     constraint = UniquenessConstraint(constraint_type="uniqueness", property_expression="item['prop']")
     assert not partitioner._check_uniqueness(exp_list, constraint, metadata)
 
@@ -406,8 +404,7 @@ def test_check_size_satisfied() -> None:
 
     exp_list = ExperimentList(name="test", list_number=0)
     for _ in range(20):
-        exp_list.add_item(uuid4())
-
+        exp_list = exp_list.with_item(uuid4())
     constraint = SizeConstraint(constraint_type="size", min_size=10, max_size=30)
     assert partitioner._check_size(exp_list, constraint)
 
@@ -418,8 +415,7 @@ def test_check_size_violated() -> None:
 
     exp_list = ExperimentList(name="test", list_number=0)
     for _ in range(5):
-        exp_list.add_item(uuid4())
-
+        exp_list = exp_list.with_item(uuid4())
     constraint = SizeConstraint(constraint_type="size", min_size=10, max_size=30)
     assert not partitioner._check_size(exp_list, constraint)
 

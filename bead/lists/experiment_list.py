@@ -75,6 +75,13 @@ class ExperimentList(BeadBaseModel):
     list_metadata: dict[str, MetadataValue] = dx.field(default_factory=dict)
     balance_metrics: dict[str, MetadataValue] = dx.field(default_factory=dict)
 
+    __axioms__ = (
+        dx.axiom(
+            "list_number >= 0",
+            message="list_number must be non-negative",
+        ),
+    )
+
     @dx.validates("name")
     def _check_name(self, value: str) -> str:
         if not value or not value.strip():

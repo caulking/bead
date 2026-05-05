@@ -99,8 +99,7 @@ def sample_lists_file(tmp_path: Path, sample_items_file: Path) -> Path:
         start_idx = list_num * 3
         end_idx = start_idx + 4
         for item_id in item_ids[start_idx:end_idx]:
-            exp_list.add_item(item_id)
-
+            exp_list = exp_list.with_item(item_id)
         lines.append(exp_list.model_dump_json())
 
     lists_file.write_text("\n".join(lines) + "\n")

@@ -387,7 +387,7 @@ class TestOrderingConstraint:
         constraint = OrderingConstraint(constraint_type="ordering")
 
         assert constraint.constraint_type == "ordering"
-        assert constraint.precedence_pairs == []
+        assert constraint.precedence_pairs == ()
         assert constraint.no_adjacent_property is None
         assert constraint.block_by_property is None
         assert constraint.min_distance is None
@@ -398,10 +398,10 @@ class TestOrderingConstraint:
     def test_create_with_precedence(self) -> None:
         """Test creating with precedence pairs."""
         item_a, item_b = uuid4(), uuid4()
-        constraint = OrderingConstraint(constraint_type="ordering", precedence_pairs=[(item_a, item_b)])
+        constraint = OrderingConstraint(constraint_type="ordering", precedence_pairs=(OrderingPair(before=item_a, after=item_b),))
 
         assert len(constraint.precedence_pairs) == 1
-        assert constraint.precedence_pairs[0] == (item_a, item_b)
+        assert (constraint.precedence_pairs[0].before, constraint.precedence_pairs[0].after) == (item_a, item_b)
 
     def test_create_with_no_adjacent(self) -> None:
         """Test creating with no_adjacent_property."""
@@ -501,7 +501,7 @@ class TestOrderingConstraint:
     def test_serialization_roundtrip(self) -> None:
         """Test serialization roundtrip works."""
         item_a, item_b = uuid4(), uuid4()
-        constraint = OrderingConstraint(constraint_type="ordering", precedence_pairs=[(item_a, item_b)],
+        constraint = OrderingConstraint(constraint_type="ordering", precedence_pairs=(OrderingPair(before=item_a, after=item_b),),
             no_adjacent_property="item_metadata.condition",
             min_distance=2,
         )
@@ -510,7 +510,7 @@ class TestOrderingConstraint:
         restored = OrderingConstraint(**data)
 
         assert len(restored.precedence_pairs) == 1
-        assert restored.precedence_pairs[0] == (item_a, item_b)
+        assert (restored.precedence_pairs[0].before, restored.precedence_pairs[0].after) == (item_a, item_b)
         assert restored.no_adjacent_property == constraint.no_adjacent_property
         assert restored.min_distance == constraint.min_distance
 

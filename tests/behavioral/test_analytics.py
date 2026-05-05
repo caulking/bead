@@ -205,7 +205,7 @@ class TestAnalyticsCollection:
     def test_add_analytics(self, sample_analytics: JudgmentAnalytics) -> None:
         """Test adding analytics to collection."""
         collection = AnalyticsCollection(name="test")
-        collection.add_analytics(sample_analytics)
+        collection = collection.with_analytics(sample_analytics)
         assert len(collection) == 1
 
     def test_add_many(self) -> None:
@@ -455,8 +455,7 @@ class TestAnalyticsCollection:
     def test_jsonl_roundtrip(self, sample_analytics: JudgmentAnalytics) -> None:
         """Test saving and loading from JSONL."""
         collection = AnalyticsCollection(name="test")
-        collection.add_analytics(sample_analytics)
-
+        collection = collection.with_analytics(sample_analytics)
         with tempfile.TemporaryDirectory() as tmpdir:
             path = Path(tmpdir) / "analytics.jsonl"
             collection.to_jsonl(path)
@@ -468,8 +467,7 @@ class TestAnalyticsCollection:
     def test_to_dataframe_pandas(self, sample_analytics: JudgmentAnalytics) -> None:
         """Test converting to pandas DataFrame."""
         collection = AnalyticsCollection(name="test")
-        collection.add_analytics(sample_analytics)
-
+        collection = collection.with_analytics(sample_analytics)
         df = collection.to_dataframe(backend="pandas")
         assert isinstance(df, pd.DataFrame)
         assert len(df) == 1
@@ -479,8 +477,7 @@ class TestAnalyticsCollection:
     def test_to_dataframe_polars(self, sample_analytics: JudgmentAnalytics) -> None:
         """Test converting to polars DataFrame."""
         collection = AnalyticsCollection(name="test")
-        collection.add_analytics(sample_analytics)
-
+        collection = collection.with_analytics(sample_analytics)
         df = collection.to_dataframe(backend="polars")
         assert isinstance(df, pl.DataFrame)
         assert len(df) == 1
@@ -501,8 +498,7 @@ class TestAnalyticsCollection:
     ) -> None:
         """Test DataFrame without metrics columns."""
         collection = AnalyticsCollection(name="test")
-        collection.add_analytics(sample_analytics)
-
+        collection = collection.with_analytics(sample_analytics)
         df = collection.to_dataframe(include_metrics=False)
         assert "keystroke_mean_iki" not in df.columns
 
@@ -511,7 +507,6 @@ class TestAnalyticsCollection:
     ) -> None:
         """Test DataFrame without flag columns."""
         collection = AnalyticsCollection(name="test")
-        collection.add_analytics(sample_analytics)
-
+        collection = collection.with_analytics(sample_analytics)
         df = collection.to_dataframe(include_flags=False)
         assert "is_flagged" not in df.columns

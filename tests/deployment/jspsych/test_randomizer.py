@@ -60,7 +60,7 @@ class TestGenerateRandomizerFunction:
         item1 = UUID("12345678-1234-5678-1234-567812345678")
         item2 = UUID("87654321-4321-8765-4321-876543218765")
         item_ids = [item1, item2]
-        constraint = OrderingConstraint(precedence_pairs=[(item1, item2)])
+        constraint = OrderingConstraint(precedence_pairs=(OrderingPair(before=item1, after=item2),))
         metadata = {
             item1: {},
             item2: {},
@@ -254,7 +254,7 @@ class TestPrepareTemplateContext:
         """Test template context preparation with precedence."""
         item1 = uuid4()
         item2 = uuid4()
-        constraint = OrderingConstraint(precedence_pairs=[(item1, item2)])
+        constraint = OrderingConstraint(precedence_pairs=(OrderingPair(before=item1, after=item2),))
         metadata = {item1: {}, item2: {}}
 
         context = _prepare_template_context([item1, item2], [constraint], metadata)
