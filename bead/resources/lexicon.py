@@ -55,7 +55,7 @@ class Lexicon(BeadBaseModel):
         """Return the number of items in the lexicon."""
         return len(self.items)
 
-    def __iter__(self) -> Iterator[LexicalItem]:  # type: ignore[override]
+    def __iter__(self) -> Iterator[LexicalItem]:
         """Iterate over the lexicon's items."""
         return iter(self.items)
 
@@ -258,19 +258,25 @@ class Lexicon(BeadBaseModel):
         if is_polars:
             assert isinstance(df, pl.DataFrame)
             columns_list: list[str] = df.columns
-            rows: list[dict[str, JsonValue]] = df.to_dicts()
+            polars_rows = df.to_dicts()
+            rows: list[dict[str, JsonValue]] = [dict(r) for r in polars_rows]
         else:
             assert isinstance(df, pd.DataFrame)
             columns_list = list(df.columns)
-            rows = df.to_dict("records")  # type: ignore[assignment]
+            pandas_rows = df.to_dict(orient="records")
+            rows = [{str(k): v for k, v in r.items()} for r in pandas_rows]
 
         if "lemma" not in columns_list:
             raise ValueError("DataFrame must have a 'lemma' column")
 
         def is_not_null(value: object) -> bool:
+            if value is None:
+                return False
             if is_polars:
-                return value is not None
-            return bool(pd.notna(value))  # type: ignore[arg-type]
+                return True
+            if isinstance(value, float):
+                return value == value  # NaN is the only float != itself
+            return True
 
         items: list[LexicalItem] = []
         for row in rows:

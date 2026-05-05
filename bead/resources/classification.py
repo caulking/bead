@@ -71,7 +71,7 @@ class LexicalItemClass(BeadBaseModel):
         """Return whether an item with *item_id* is present."""
         return any(item.id == item_id for item in self.items)
 
-    def __iter__(self) -> Iterator[LexicalItem]:  # type: ignore[override]
+    def __iter__(self) -> Iterator[LexicalItem]:
         """Iterate over class members."""
         return iter(self.items)
 
@@ -181,7 +181,7 @@ class TemplateClass(BeadBaseModel):
         """Return whether a template with *template_id* is present."""
         return any(template.id == template_id for template in self.templates)
 
-    def __iter__(self) -> Iterator[Template]:  # type: ignore[override]
+    def __iter__(self) -> Iterator[Template]:
         """Iterate over the templates in the class."""
         return iter(self.templates)
 

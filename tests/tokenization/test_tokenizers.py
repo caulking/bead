@@ -180,7 +180,7 @@ class TestCreateTokenizer:
     def test_unknown_backend_raises(self) -> None:
         """Test that unknown backend raises ValueError."""
         with pytest.raises(dx.ValidationError):
-            TokenizerConfig(backend="unknown")  # type: ignore[arg-type]
+            TokenizerConfig.model_validate({"backend": "unknown"})
 
     def test_spacy_backend_without_install(self) -> None:
         """Test that spaCy backend works or raises ImportError gracefully."""

@@ -7,6 +7,7 @@ validation.
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Self
 from uuid import UUID
@@ -101,7 +102,7 @@ def validate_jsonlines_file(
                     report = report.add_error(f"Line {line_num}: {e}")
                     if strict:
                         return report
-                except Exception as e:  # noqa: BLE001
+                except (ValueError, TypeError) as e:
                     report = report.add_error(f"Line {line_num}: parse error - {e}")
                     if strict:
                         return report
@@ -112,7 +113,7 @@ def validate_jsonlines_file(
 
 
 def validate_uuid_references(
-    objects: list[dx.Model], reference_pool: dict[UUID, dx.Model]
+    objects: Sequence[dx.Model], reference_pool: Mapping[UUID, dx.Model]
 ) -> ValidationReport:
     """Verify every UUID-typed field in *objects* points into *reference_pool*.
 
@@ -135,7 +136,8 @@ def validate_uuid_references(
                 continue
 
             if isinstance(field_value, (list, tuple)):
-                for item in field_value:  # pyright: ignore[reportUnknownVariableType]
+                items: tuple[object, ...] = tuple(field_value)
+                for item in items:
                     if not isinstance(item, UUID):
                         continue
                     if item not in reference_pool:
@@ -155,7 +157,7 @@ def validate_uuid_references(
 
 
 def validate_provenance_chain(
-    metadata: MetadataTracker, repository: dict[UUID, dx.Model]
+    metadata: MetadataTracker, repository: Mapping[UUID, dx.Model]
 ) -> ValidationReport:
     """Validate every parent reference in *metadata*'s provenance chain."""
     report = ValidationReport(valid=True, object_count=len(metadata.provenance))

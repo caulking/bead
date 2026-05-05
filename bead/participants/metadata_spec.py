@@ -84,7 +84,7 @@ class FieldSpec(BeadBaseModel):
             return False
 
         if self.range is not None and isinstance(value, int | float):
-            if not self.range.contains(value):  # type: ignore[arg-type]
+            if not self.range.contains(float(value)):
                 return False
 
         return True

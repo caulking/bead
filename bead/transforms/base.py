@@ -56,8 +56,9 @@ class SpanTextTransform(Protocol):
     is purely textual (e.g. lowercasing).
     """
 
-    def __call__(self, text: str, context: TransformContext) -> str:
+    def __call__(self, text: str, context: TransformContext, /) -> str:
         """Apply the transform to *text*."""
+        ...
 
 
 class TransformPipeline:

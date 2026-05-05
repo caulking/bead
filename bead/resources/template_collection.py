@@ -52,7 +52,7 @@ class TemplateCollection(BeadBaseModel):
         """Return the number of templates in the collection."""
         return len(self.templates)
 
-    def __iter__(self) -> Iterator[Template]:  # type: ignore[override]
+    def __iter__(self) -> Iterator[Template]:
         """Iterate over the templates."""
         return iter(self.templates)
 

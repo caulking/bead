@@ -54,14 +54,16 @@ def test_beadbasemodel_touched_returns_new_instance() -> None:
 
 def test_beadbasemodel_forbids_extra_fields() -> None:
     with pytest.raises(dx.ValidationError):
-        SampleModel(name="test", value=42, extra_field="not allowed")  # type: ignore[call-arg]
+        SampleModel.model_validate(
+            {"name": "test", "value": 42, "extra_field": "not allowed"}
+        )
 
 
 def test_beadbasemodel_is_frozen() -> None:
     """Frozen Models reject in-place attribute assignment."""
     obj = SampleModel(name="test", value=42)
     with pytest.raises((AttributeError, TypeError)):
-        obj.value = 99  # type: ignore[misc]
+        setattr(obj, "value", 99)
 
 
 def test_beadbasemodel_timestamps_ordered() -> None:

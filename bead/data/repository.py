@@ -10,8 +10,7 @@ from __future__ import annotations
 from pathlib import Path
 from uuid import UUID
 
-import didactic.api as dx
-
+from bead.data.base import BeadBaseModel
 from bead.data.serialization import (
     append_jsonlines,
     read_jsonlines,
@@ -19,7 +18,7 @@ from bead.data.serialization import (
 )
 
 
-class Repository[T: dx.Model]:
+class Repository[T: BeadBaseModel]:
     """Generic CRUD repository for didactic Models persisted as JSONLines.
 
     Parameters
@@ -44,7 +43,7 @@ class Repository[T: dx.Model]:
 
     def _load_cache(self) -> None:
         objects = read_jsonlines(self.storage_path, self.model_class)
-        self.cache = {obj.id: obj for obj in objects}  # type: ignore[attr-defined]
+        self.cache = {obj.id: obj for obj in objects}
 
     def get(self, object_id: UUID) -> T | None:
         """Return the object with *object_id* if present, else ``None``."""
@@ -53,7 +52,7 @@ class Repository[T: dx.Model]:
         if not self.storage_path.exists():
             return None
         for obj in read_jsonlines(self.storage_path, self.model_class):
-            if obj.id == object_id:  # type: ignore[attr-defined]
+            if obj.id == object_id:
                 return obj
         return None
 
@@ -70,7 +69,7 @@ class Repository[T: dx.Model]:
         self.storage_path.parent.mkdir(parents=True, exist_ok=True)
         append_jsonlines([obj], self.storage_path)
         if self.use_cache:
-            self.cache[obj.id] = obj  # type: ignore[attr-defined]
+            self.cache[obj.id] = obj
 
     def add_many(self, objects: list[T]) -> None:
         """Append every object in *objects* to storage and update the cache."""
@@ -80,14 +79,14 @@ class Repository[T: dx.Model]:
         append_jsonlines(objects, self.storage_path)
         if self.use_cache:
             for obj in objects:
-                self.cache[obj.id] = obj  # type: ignore[attr-defined]
+                self.cache[obj.id] = obj
 
     def update(self, obj: T) -> None:
         """Replace the stored object with the same id by *obj*."""
         if self.use_cache:
-            self.cache[obj.id] = obj  # type: ignore[attr-defined]
+            self.cache[obj.id] = obj
         objects = list(self.cache.values()) if self.use_cache else self.get_all()
-        objects = [o if o.id != obj.id else obj for o in objects]  # type: ignore[attr-defined]
+        objects = [o if o.id != obj.id else obj for o in objects]
         self.storage_path.parent.mkdir(parents=True, exist_ok=True)
         write_jsonlines(objects, self.storage_path)
 
@@ -96,7 +95,7 @@ class Repository[T: dx.Model]:
         if self.use_cache:
             self.cache.pop(object_id, None)
         objects = list(self.cache.values()) if self.use_cache else self.get_all()
-        objects = [o for o in objects if o.id != object_id]  # type: ignore[attr-defined]
+        objects = [o for o in objects if o.id != object_id]
         if objects:
             self.storage_path.parent.mkdir(parents=True, exist_ok=True)
             write_jsonlines(objects, self.storage_path)

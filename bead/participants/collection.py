@@ -173,11 +173,13 @@ class ParticipantCollection(BeadBaseModel):
         if is_polars:
             assert isinstance(df, pl.DataFrame)
             columns_list: list[str] = df.columns
-            rows: list[dict[str, JsonValue]] = df.to_dicts()  # type: ignore[assignment]
+            polars_rows = df.to_dicts()
+            rows: list[dict[str, JsonValue]] = [dict(r) for r in polars_rows]
         else:
             assert isinstance(df, pd.DataFrame)
             columns_list = list(df.columns)
-            rows = df.to_dict("records")  # type: ignore[assignment]
+            pandas_rows = df.to_dict(orient="records")
+            rows = [{str(k): v for k, v in r.items()} for r in pandas_rows]
 
         participants: list[Participant] = []
         meta_cols = (

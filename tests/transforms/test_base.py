@@ -48,7 +48,7 @@ class TestTransformContext:
         ctx = TransformContext()
 
         with pytest.raises(AttributeError):
-            ctx.lemma = "walk"  # type: ignore[misc]
+            setattr(ctx, "lemma", "walk")
 
 
 class TestTransformPipeline:
