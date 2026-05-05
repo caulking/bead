@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Literal
 
 import didactic.api as dx
@@ -159,10 +158,6 @@ class ActiveLearningLoopConfig(dx.Model):
     data_collection_timeout: int = 3600
 
 
-def _default_logging_dir() -> Path:
-    return Path("logs")
-
-
 class TrainerConfig(dx.Model):
     """Configuration for active-learning trainers.
 
@@ -176,7 +171,7 @@ class TrainerConfig(dx.Model):
         Evaluation strategy.
     save_strategy : str
         Save strategy.
-    logging_dir : Path
+    logging_dir : str
         Logging directory.
     use_wandb : bool
         Use Weights & Biases.
@@ -188,7 +183,7 @@ class TrainerConfig(dx.Model):
     epochs: int = 3
     eval_strategy: str = "epoch"
     save_strategy: str = "epoch"
-    logging_dir: Path = dx.field(default_factory=_default_logging_dir)
+    logging_dir: str = "logs"
     use_wandb: bool = False
     wandb_project: str | None = None
 

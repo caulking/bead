@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import didactic.api as dx
 
-if TYPE_CHECKING:
-    from bead.deployment.distribution import ListDistributionStrategy
+from bead.deployment.distribution import (
+    DistributionStrategyType,
+    ListDistributionStrategy,
+)
 
 
 class SlopitKeystrokeConfig(dx.Model):
@@ -138,11 +139,6 @@ def validate_slopit_integration(config: SlopitIntegrationConfig) -> None:
 
 
 def _default_distribution_strategy() -> ListDistributionStrategy:
-    from bead.deployment.distribution import (  # noqa: PLC0415
-        DistributionStrategyType,
-        ListDistributionStrategy,
-    )
-
     return ListDistributionStrategy(
         strategy_type=DistributionStrategyType.BALANCED
     )

@@ -82,13 +82,13 @@ class ModelMetadata(BeadBaseModel):
 
     model_name: str
     framework: str
-    training_data_path: Path
+    training_data_path: str
     metrics: dict[str, float]
     training_time: float
     training_timestamp: str
     training_config: dict[str, JsonValue] = {}
-    eval_data_path: Path | None = None
-    best_checkpoint: Path | None = None
+    eval_data_path: str | None = None
+    best_checkpoint: str | None = None
 
 
 class BaseTrainer(ABC):

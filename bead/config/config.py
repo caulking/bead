@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 import didactic.api as dx
@@ -106,54 +107,39 @@ class BeadConfig(dx.Model):
         """
         errors: list[str] = []
 
-        if not self.paths.data_dir.exists() and self.paths.data_dir.is_absolute():
-            errors.append(f"data_dir does not exist: {self.paths.data_dir}")
-        if (
-            not self.paths.output_dir.exists()
-            and self.paths.output_dir.is_absolute()
+        for label, path_str in (
+            ("data_dir", self.paths.data_dir),
+            ("output_dir", self.paths.output_dir),
+            ("cache_dir", self.paths.cache_dir),
         ):
-            errors.append(f"output_dir does not exist: {self.paths.output_dir}")
-        if (
-            not self.paths.cache_dir.exists()
-            and self.paths.cache_dir.is_absolute()
-        ):
-            errors.append(f"cache_dir does not exist: {self.paths.cache_dir}")
-        if self.paths.temp_dir is not None and not self.paths.temp_dir.exists():
-            errors.append(f"temp_dir does not exist: {self.paths.temp_dir}")
+            path = Path(path_str)
+            if not path.exists() and path.is_absolute():
+                errors.append(f"{label} does not exist: {path}")
+        if self.paths.temp_dir is not None:
+            temp = Path(self.paths.temp_dir)
+            if not temp.exists():
+                errors.append(f"temp_dir does not exist: {temp}")
 
-        if (
-            self.resources.lexicon_path is not None
-            and not self.resources.lexicon_path.exists()
+        for label, path_str in (
+            ("lexicon_path", self.resources.lexicon_path),
+            ("templates_path", self.resources.templates_path),
+            ("constraints_path", self.resources.constraints_path),
         ):
-            errors.append(
-                f"lexicon_path does not exist: {self.resources.lexicon_path}"
-            )
-        if (
-            self.resources.templates_path is not None
-            and not self.resources.templates_path.exists()
-        ):
-            errors.append(
-                f"templates_path does not exist: {self.resources.templates_path}"
-            )
-        if (
-            self.resources.constraints_path is not None
-            and not self.resources.constraints_path.exists()
-        ):
-            errors.append(
-                f"constraints_path does not exist: {self.resources.constraints_path}"
-            )
+            if path_str is None:
+                continue
+            path = Path(path_str)
+            if not path.exists():
+                errors.append(f"{label} does not exist: {path}")
 
-        if (
-            not self.active_learning.trainer.logging_dir.exists()
-            and self.active_learning.trainer.logging_dir.is_absolute()
-        ):
-            errors.append(
-                f"logging_dir does not exist: {self.active_learning.trainer.logging_dir}"
-            )
+        logging_dir = Path(self.active_learning.trainer.logging_dir)
+        if not logging_dir.exists() and logging_dir.is_absolute():
+            errors.append(f"logging_dir does not exist: {logging_dir}")
 
-        if self.logging.file is not None and not self.logging.file.parent.exists():
-            errors.append(
-                f"logging file parent directory does not exist: {self.logging.file.parent}"
-            )
+        if self.logging.file is not None:
+            log_file = Path(self.logging.file)
+            if not log_file.parent.exists():
+                errors.append(
+                    f"logging file parent directory does not exist: {log_file.parent}"
+                )
 
         return errors
