@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Literal
 
 import didactic.api as dx
@@ -16,7 +17,7 @@ class LoggingConfig(dx.Model):
         Log level.
     format : str
         Log format string.
-    file : str | None
+    file : Path | None
         Log file path.
     console : bool
         Whether to log to console.
@@ -24,5 +25,5 @@ class LoggingConfig(dx.Model):
 
     level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
     format: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    file: str | None = None
+    file: Path | None = None
     console: bool = True

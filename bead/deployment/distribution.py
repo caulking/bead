@@ -9,31 +9,14 @@ metadata-based) for assigning participants to experiment lists.
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import Literal
 
 import didactic.api as dx
 
 from bead.data.base import BeadBaseModel, JsonValue
 
-DistributionStrategyName = Literal[
-    "random",
-    "sequential",
-    "balanced",
-    "latin_square",
-    "stratified",
-    "weighted_random",
-    "quota_based",
-    "metadata_based",
-]
-
 
 class DistributionStrategyType(StrEnum):
-    """Named distribution strategies for list assignment.
-
-    Members are equal to their string values so callers can write
-    ``DistributionStrategyType.BALANCED`` or ``"balanced"`` interchangeably
-    when constructing a ``ListDistributionStrategy``.
-    """
+    """Named distribution strategies for list assignment."""
 
     RANDOM = "random"
     SEQUENTIAL = "sequential"
@@ -168,7 +151,7 @@ class ListDistributionStrategy(BeadBaseModel):
         List index to use in debug mode (>= 0).
     """
 
-    strategy_type: DistributionStrategyName
+    strategy_type: DistributionStrategyType
     strategy_config: dict[str, JsonValue] = dx.field(default_factory=dict)
     max_participants: int | None = None
     error_on_exhaustion: bool = True

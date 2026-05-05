@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Literal
 
 import didactic.api as dx
@@ -171,7 +172,7 @@ class TrainerConfig(dx.Model):
         Evaluation strategy.
     save_strategy : str
         Save strategy.
-    logging_dir : str
+    logging_dir : Path
         Logging directory.
     use_wandb : bool
         Use Weights & Biases.
@@ -183,7 +184,7 @@ class TrainerConfig(dx.Model):
     epochs: int = 3
     eval_strategy: str = "epoch"
     save_strategy: str = "epoch"
-    logging_dir: str = "logs"
+    logging_dir: Path = dx.field(default_factory=lambda: Path("logs"))
     use_wandb: bool = False
     wandb_project: str | None = None
 

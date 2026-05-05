@@ -27,10 +27,10 @@ from bead.config.template import TemplateConfig
 DEV_CONFIG = BeadConfig(
     profile="dev",
     paths=PathsConfig(
-        data_dir="data",
-        output_dir="output",
-        cache_dir=".cache",
-        temp_dir=str(Path(gettempdir()) / "bead_dev"),
+        data_dir=Path("data"),
+        output_dir=Path("output"),
+        cache_dir=Path(".cache"),
+        temp_dir=Path(gettempdir()) / "bead_dev",
         create_dirs=True,
     ),
     resources=ResourceConfig(
@@ -73,10 +73,10 @@ DEV_CONFIG = BeadConfig(
 PROD_CONFIG = BeadConfig(
     profile="prod",
     paths=PathsConfig(
-        data_dir=str(Path("/var/bead/data").absolute()),
-        output_dir=str(Path("/var/bead/output").absolute()),
-        cache_dir=str(Path("/var/bead/cache").absolute()),
-        temp_dir=str(Path("/var/bead/temp").absolute()),
+        data_dir=Path("/var/bead/data").absolute(),
+        output_dir=Path("/var/bead/output").absolute(),
+        cache_dir=Path("/var/bead/cache").absolute(),
+        temp_dir=Path("/var/bead/temp").absolute(),
         create_dirs=True,
     ),
     resources=ResourceConfig(
@@ -116,7 +116,7 @@ PROD_CONFIG = BeadConfig(
     logging=LoggingConfig(
         level="WARNING",
         console=False,
-        file="/var/log/bead/app.log",
+        file=Path("/var/log/bead/app.log"),
     ),
 )
 """Production configuration profile."""
@@ -125,10 +125,10 @@ PROD_CONFIG = BeadConfig(
 TEST_CONFIG = BeadConfig(
     profile="test",
     paths=PathsConfig(
-        data_dir=str(Path(gettempdir()) / "bead_test" / "data"),
-        output_dir=str(Path(gettempdir()) / "bead_test" / "output"),
-        cache_dir=str(Path(gettempdir()) / "bead_test" / "cache"),
-        temp_dir=str(Path(gettempdir()) / "bead_test" / "temp"),
+        data_dir=Path(gettempdir()) / "bead_test" / "data",
+        output_dir=Path(gettempdir()) / "bead_test" / "output",
+        cache_dir=Path(gettempdir()) / "bead_test" / "cache",
+        temp_dir=Path(gettempdir()) / "bead_test" / "temp",
         create_dirs=True,
     ),
     resources=ResourceConfig(

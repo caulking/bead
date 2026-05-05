@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
 import didactic.api as dx
@@ -107,39 +106,35 @@ class BeadConfig(dx.Model):
         """
         errors: list[str] = []
 
-        for label, path_str in (
+        for label, path in (
             ("data_dir", self.paths.data_dir),
             ("output_dir", self.paths.output_dir),
             ("cache_dir", self.paths.cache_dir),
         ):
-            path = Path(path_str)
             if not path.exists() and path.is_absolute():
                 errors.append(f"{label} does not exist: {path}")
-        if self.paths.temp_dir is not None:
-            temp = Path(self.paths.temp_dir)
-            if not temp.exists():
-                errors.append(f"temp_dir does not exist: {temp}")
+        if self.paths.temp_dir is not None and not self.paths.temp_dir.exists():
+            errors.append(f"temp_dir does not exist: {self.paths.temp_dir}")
 
-        for label, path_str in (
+        for label, path in (
             ("lexicon_path", self.resources.lexicon_path),
             ("templates_path", self.resources.templates_path),
             ("constraints_path", self.resources.constraints_path),
         ):
-            if path_str is None:
-                continue
-            path = Path(path_str)
-            if not path.exists():
+            if path is not None and not path.exists():
                 errors.append(f"{label} does not exist: {path}")
 
-        logging_dir = Path(self.active_learning.trainer.logging_dir)
+        logging_dir = self.active_learning.trainer.logging_dir
         if not logging_dir.exists() and logging_dir.is_absolute():
             errors.append(f"logging_dir does not exist: {logging_dir}")
 
-        if self.logging.file is not None:
-            log_file = Path(self.logging.file)
-            if not log_file.parent.exists():
-                errors.append(
-                    f"logging file parent directory does not exist: {log_file.parent}"
-                )
+        if (
+            self.logging.file is not None
+            and not self.logging.file.parent.exists()
+        ):
+            errors.append(
+                f"logging file parent directory does not exist: "
+                f"{self.logging.file.parent}"
+            )
 
         return errors

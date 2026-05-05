@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Literal
 
 import didactic.api as dx
@@ -59,7 +60,7 @@ class TemplateConfig(dx.Model):
         Device for MLM inference.
     mlm_cache_enabled : bool
         Enable MLM prediction caching.
-    mlm_cache_dir : str | None
+    mlm_cache_dir : Path | None
         Directory for MLM prediction cache.
     slot_strategies : dict[str, SlotStrategyConfig] | None
         Per-slot strategy configuration for mixed filling.
@@ -83,7 +84,7 @@ class TemplateConfig(dx.Model):
     mlm_top_k: int = 20
     mlm_device: str = "cpu"
     mlm_cache_enabled: bool = True
-    mlm_cache_dir: str | None = None
+    mlm_cache_dir: Path | None = None
 
     slot_strategies: dict[str, dx.Embed[SlotStrategyConfig]] | None = None
 
