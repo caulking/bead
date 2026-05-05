@@ -22,7 +22,7 @@ class TestTransformContext:
         assert ctx.lemma is None
         assert ctx.pos is None
         assert ctx.head_index is None
-        assert ctx.tokens == []
+        assert ctx.tokens == ()
         assert ctx.metadata == {}
 
     def test_fields_set(self) -> None:
@@ -40,7 +40,7 @@ class TestTransformContext:
         assert ctx.lemma == "run"
         assert ctx.pos == "VERB"
         assert ctx.head_index == 0
-        assert ctx.tokens == ["run", "to"]
+        assert ctx.tokens == ("run", "to")
         assert ctx.metadata == {"key": "value"}
 
     def test_frozen(self) -> None:

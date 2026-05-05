@@ -256,7 +256,7 @@ class TestBuildTransformContext:
     def test_extracts_tokens(self, item_with_metadata: Item) -> None:
         ctx = _build_transform_context("event", item_with_metadata)
 
-        assert ctx.tokens == ["ran"]
+        assert ctx.tokens == ("ran",)
 
     def test_extracts_head_index(self, item_with_metadata: Item) -> None:
         ctx = _build_transform_context("event", item_with_metadata)
@@ -269,11 +269,11 @@ class TestBuildTransformContext:
 
         assert ctx.lemma is None
         assert ctx.pos is None
-        assert ctx.tokens == ["The", "boy"]
+        assert ctx.tokens == ("The", "boy")
 
     def test_missing_label(self, item_with_metadata: Item) -> None:
         """Missing label returns empty context."""
         ctx = _build_transform_context("nonexistent", item_with_metadata)
 
         assert ctx.lemma is None
-        assert ctx.tokens == []
+        assert ctx.tokens == ()
