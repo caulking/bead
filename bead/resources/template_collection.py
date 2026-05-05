@@ -261,5 +261,5 @@ class TemplateCollection(BeadBaseModel):
             for line in f:
                 line = line.strip()
                 if line:
-                    templates.append(Template(**json.loads(line)))
+                    templates.append(Template.model_validate_json(line))
         return cls(name=name, templates=tuple(templates))

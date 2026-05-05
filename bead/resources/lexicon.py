@@ -322,5 +322,5 @@ class Lexicon(BeadBaseModel):
             for line in f:
                 line = line.strip()
                 if line:
-                    items.append(LexicalItem(**json.loads(line)))
+                    items.append(LexicalItem.model_validate_json(line))
         return cls(name=name, items=tuple(items))
