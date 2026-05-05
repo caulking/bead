@@ -10,6 +10,7 @@ from didactic.api import ValidationError
 from bead.lists.constraints import (
     BalanceConstraint,
     OrderingConstraint,
+    OrderingPair,
     QuantileConstraint,
     SizeConstraint,
     UniquenessConstraint,
