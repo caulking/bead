@@ -16,14 +16,15 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Text Processing :: Linguistic",
     "Typing :: Typed",
 ]
-requires-python = ">=3.13"
+requires-python = ">=3.14"
 dependencies = [
-    "pydantic>=2.0.0",
+    "didactic>=0.3.2",
+    "panproto>=0.43",
     "pyyaml>=6.0.0",
     "jinja2>=3.0.0",
     "uuid-utils>=0.7.0",
@@ -107,7 +108,7 @@ markers = [
 
 [tool.ruff]
 line-length = 88
-target-version = "py313"
+target-version = "py314"
 exclude = ["gallery"]
 
 [tool.ruff.lint]
@@ -123,7 +124,7 @@ convention = "numpy"
 [tool.pyright]
 include = ["bead"]
 typeCheckingMode = "strict"
-pythonVersion = "3.13"
+pythonVersion = "3.14"
 reportMissingTypeStubs = false
 useLibraryCodeForTypes = true
 # Disable reportUnknown* checks - industry standard for ML libraries with incomplete type stubs
