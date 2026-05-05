@@ -7,6 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+#### Model layer migrated from Pydantic to didactic
+
+- Every `pydantic.BaseModel` and `@dataclass` model in `bead.data`, `bead.items`,
+  `bead.tokenization`, `bead.resources`, `bead.lists`, `bead.participants`,
+  `bead.config`, `bead.active_learning.config`, `bead.dsl.ast`,
+  `bead.deployment.distribution`, `bead.deployment.jspsych.config`,
+  `bead.behavioral.analytics`, `bead.templates.filler.FilledTemplate`, and
+  `bead.transforms.base.TransformContext` now extends `dx.Model` (or
+  `dx.TaggedUnion` for the discriminated unions in `bead.lists.constraints` and
+  `bead.dsl.ast`).
+- All models are frozen by default; mutating `add_*` / `update_modified_time`
+  methods become pure `with_*` / `touched` methods that return new instances.
+  Cross-field `@model_validator(mode="after")` checks extract to free
+  `validate_*` functions that callers invoke explicitly.
+- `list[T]` field declarations become `tuple[T, ...]`; nested-Model fields wrap
+  with `dx.Embed[T]`. Heterogeneous tuples (e.g. `tuple[int, int]` for scale
+  bounds, `tuple[UUID, UUID]` for ordering precedence pairs) become small
+  named records (`ScaleBounds`, `OrderingPair`).
+- `dict[UUID, X]` and `dict[int, X]` mappings become tuples of records
+  (`ConstraintSatisfaction`, `ScalePointLabel`, etc.) — didactic dict keys must
+  be `str`. `dict[str, JsonValue]` replaces `dict[str, Any]`.
+- `Path`-typed configuration fields (`PathsConfig.data_dir`, `LoggingConfig.file`,
+  `TrainerConfig.logging_dir`, `TemplateConfig.mlm_cache_dir`,
+  `ResourceConfig.{lexicon,templates,constraints}_path`,
+  `ModelMetadata.{training_data_path,eval_data_path,best_checkpoint}`) are
+  stored as `str`; callers wrap with `pathlib.Path` on access. Will revert to
+  `Path` once panproto/didactic#21 lands.
+- `ExperimentConfig.instructions` no longer accepts a bare `str`; pass
+  `InstructionsConfig.from_text("...")` for a single-page string.
+- `BeadBaseModel.update_modified_time()` (mutating) renamed to `touched()`
+  (pure, returns a new instance).
+
+#### Toolchain
+
+- `requires-python` raised to `>=3.14`; pyright `pythonVersion` and ruff
+  `target-version` follow.
+- `pydantic` removed from project dependencies; `didactic>=0.4.3` and
+  `panproto>=0.43` added.
+
 ### Added
 
 #### Transforms (`bead.transforms`)
