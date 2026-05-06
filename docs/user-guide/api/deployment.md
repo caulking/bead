@@ -7,6 +7,7 @@ The `bead.deployment` module provides jsPsych 8.x experiment generation with ser
 Generate a jsPsych experiment from lists:
 
 ```python
+from bead.items.item_template import ScaleBounds, ScalePointLabel  # noqa
 from pathlib import Path
 
 from bead.data.serialization import read_jsonlines
@@ -15,6 +16,7 @@ from bead.deployment.distribution import (
     ListDistributionStrategy,
 )
 from bead.deployment.jspsych.config import ExperimentConfig
+from bead.deployment.jspsych.config import InstructionsConfig
 from bead.deployment.jspsych.generator import JsPsychExperimentGenerator
 from bead.items.item import Item
 from bead.items.item_template import ItemTemplate, PresentationSpec, TaskSpec
@@ -32,7 +34,7 @@ template = ItemTemplate(
     task_type="ordinal_scale",
     task_spec=TaskSpec(
         prompt="How natural does this sentence sound?",
-        scale_bounds=(1, 7),
+        scale_bounds=ScaleBounds(min=1, max=7),
     ),
     presentation_spec=PresentationSpec(mode="static"),
 )
@@ -40,14 +42,14 @@ template = ItemTemplate(
 # Link items to template
 items_dict = {item.id: item for item in items}
 for item in items_dict.values():
-    item.item_template_id = template.id
+    item = item.with_(item_template_id=template.id)
 
 # Create experiment config
 config = ExperimentConfig(
     experiment_type="likert_rating",
     title="Sentence Acceptability Study",
     description="Rate how natural each sentence sounds",
-    instructions="You will see sentences. Rate how natural each one sounds.",
+    instructions=InstructionsConfig.from_text("You will see sentences. Rate how natural each one sounds."),
     randomize_trial_order=True,
     show_progress_bar=True,
     distribution_strategy=ListDistributionStrategy(
@@ -215,7 +217,7 @@ config = ExperimentConfig(
     experiment_type="likert_rating",
     title="Study with Behavioral Capture",
     description="Captures keystrokes and focus events",
-    instructions="Rate how natural each sentence sounds.",
+    instructions=InstructionsConfig.from_text("Rate how natural each sentence sounds."),
     distribution_strategy=ListDistributionStrategy(
         strategy_type=DistributionStrategyType.BALANCED
     ),
@@ -290,7 +292,7 @@ config = ExperimentConfig(
     experiment_type="span_labeling",
     title="Named Entity Annotation",
     description="Annotate named entities in text",
-    instructions="Select spans of text and assign entity labels.",
+    instructions=InstructionsConfig.from_text("Select spans of text and assign entity labels."),
     distribution_strategy=ListDistributionStrategy(
         strategy_type=DistributionStrategyType.BALANCED
     ),
@@ -334,7 +336,7 @@ config = ExperimentConfig(
     experiment_type="likert_rating",
     title="Acceptability with Entity Highlights",
     description="Rate sentences with highlighted entities",
-    instructions="Rate how natural each sentence sounds. Entities are highlighted.",
+    instructions=InstructionsConfig.from_text("Rate how natural each sentence sounds. Entities are highlighted."),
     distribution_strategy=ListDistributionStrategy(
         strategy_type=DistributionStrategyType.BALANCED
     ),
@@ -358,8 +360,8 @@ from bead.items.spans import Span, SpanLabel, SpanSegment
 item = create_ordinal_scale_item(
     text="The boy broke the vase.",
     prompt="How likely is it that [[breaker]] existed after [[event:the breaking]]?",
-    scale_bounds=(1, 5),
-    scale_labels={1: "Very unlikely", 5: "Very likely"},
+    scale_bounds=ScaleBounds(min=1, max=5),
+    scale_labels=(ScalePointLabel(point=1, label="Very unlikely"), ScalePointLabel(point=5, label="Very likely"),),
 )
 
 item = add_spans_to_item(
@@ -398,7 +400,7 @@ config = ExperimentConfig(
     experiment_type="forced_choice",
     title="Study Title",
     description="Study description",
-    instructions="Instructions for participants",
+    instructions=InstructionsConfig.from_text("Instructions for participants"),
     distribution_strategy=ListDistributionStrategy(
         strategy_type=DistributionStrategyType.BALANCED
     ),
@@ -444,8 +446,8 @@ template = ItemTemplate(
     task_type="ordinal_scale",
     task_spec=TaskSpec(
         prompt="Rate naturalness:",
-        scale_bounds=(1, 7),
-        scale_labels={1: "Very unnatural", 7: "Very natural"},
+        scale_bounds=ScaleBounds(min=1, max=7),
+        scale_labels=(ScalePointLabel(point=1, label="Very unnatural"), ScalePointLabel(point=7, label="Very natural"),),
     ),
     presentation_spec=PresentationSpec(
         mode="static",
@@ -483,21 +485,21 @@ template = ItemTemplate(
     judgment_type="acceptability",
     task_type="ordinal_scale",
     task_spec=TaskSpec(
-        prompt="How natural does this sentence sound?", scale_bounds=(1, 7)
+        prompt="How natural does this sentence sound?", scale_bounds=ScaleBounds(min=1, max=7)
     ),
     presentation_spec=PresentationSpec(mode="static"),
 )
 
 items_dict = {item.id: item for item in items}
 for item in items_dict.values():
-    item.item_template_id = template.id
+    item = item.with_(item_template_id=template.id)
 
 # Generate experiment
 config = ExperimentConfig(
     experiment_type="likert_rating",
     title="Study",
     description="Acceptability",
-    instructions="Rate how natural each sentence sounds",
+    instructions=InstructionsConfig.from_text("Rate how natural each sentence sounds"),
     distribution_strategy=ListDistributionStrategy(
         strategy_type=DistributionStrategyType.BALANCED
     ),
@@ -577,7 +579,7 @@ template = ItemTemplate(
     task_type="ordinal_scale",
     task_spec=TaskSpec(
         prompt="How natural does this sentence sound?",
-        scale_bounds=(1, 7),
+        scale_bounds=ScaleBounds(min=1, max=7),
     ),
     presentation_spec=PresentationSpec(mode="static"),
 )
@@ -585,14 +587,14 @@ template = ItemTemplate(
 # Link items to template
 items_dict = {item.id: item for item in items}
 for item in items_dict.values():
-    item.item_template_id = template.id
+    item = item.with_(item_template_id=template.id)
 
 # Create config
 config = ExperimentConfig(
     experiment_type="likert_rating",
     title="Sentence Acceptability Study",
     description="Rate how natural each sentence sounds",
-    instructions="Rate each sentence on a scale from 1 to 7.",
+    instructions=InstructionsConfig.from_text("Rate each sentence on a scale from 1 to 7."),
     randomize_trial_order=True,
     show_progress_bar=True,
     distribution_strategy=ListDistributionStrategy(

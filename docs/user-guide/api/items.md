@@ -11,6 +11,7 @@ The items module provides 9 task-type-specific utilities for programmatic item c
 Create N-alternative forced choice items (2AFC, 3AFC, etc.):
 
 ```python
+from bead.items.item_template import ScaleBounds, ScalePointLabel  # noqa
 from bead.items.forced_choice import create_forced_choice_item
 
 # Create 2AFC item
@@ -72,9 +73,9 @@ from bead.items.ordinal_scale import create_ordinal_scale_item
 # Create 7-point Likert item
 item = create_ordinal_scale_item(
     text="How natural is this sentence?",
-    scale_bounds=(1, 7),
+    scale_bounds=ScaleBounds(min=1, max=7),
     prompt="Rate the sentence:",
-    scale_labels={1: "Very unnatural", 7: "Very natural"},
+    scale_labels=(ScalePointLabel(point=1, label="Very unnatural"), ScalePointLabel(point=7, label="Very natural"),),
 )
 
 # Default 7-point scale
@@ -92,7 +93,7 @@ sentences = ["Sentence 1", "Sentence 2", "Sentence 3"]
 
 items = create_ordinal_scale_items_from_texts(
     sentences,
-    scale_bounds=(1, 7),
+    scale_bounds=ScaleBounds(min=1, max=7),
     metadata_fn=lambda text: {"length": len(text)},
 )
 ```
@@ -264,7 +265,7 @@ from bead.tokenization.config import TokenizerConfig
 # start with a rating item
 rating_item = create_ordinal_scale_item(
     text="The scientist discovered a new element.",
-    scale_bounds=(1, 7),
+    scale_bounds=ScaleBounds(min=1, max=7),
     prompt="Rate the naturalness of this sentence:",
 )
 
@@ -306,8 +307,8 @@ from bead.items.spans import Span, SpanLabel, SpanSegment
 item = create_ordinal_scale_item(
     text="The boy broke the vase.",
     prompt="How likely is it that [[breaker]] existed after [[event:the breaking]]?",
-    scale_bounds=(1, 5),
-    scale_labels={1: "Very unlikely", 5: "Very likely"},
+    scale_bounds=ScaleBounds(min=1, max=5),
+    scale_labels=(ScalePointLabel(point=1, label="Very unlikely"), ScalePointLabel(point=5, label="Very likely"),),
 )
 
 item = add_spans_to_item(
@@ -450,7 +451,7 @@ from bead.items.validation import (
 )
 
 # Create an item to validate
-item = create_ordinal_scale_item(text="The cat sleeps", scale_bounds=(1, 7))
+item = create_ordinal_scale_item(text="The cat sleeps", scale_bounds=ScaleBounds(min=1, max=7))
 
 # Validate structure
 validate_item_for_task_type(item, "ordinal_scale")  # Raises ValueError if invalid
