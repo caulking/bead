@@ -36,6 +36,11 @@ class VarianceComponents(dx.Model):
     n_groups: int
     n_observations_per_group: dict[str, int]
 
+    __axioms__ = (
+        dx.axiom("variance >= 0", message="variance must be non-negative"),
+        dx.axiom("n_groups >= 1", message="n_groups must be >= 1"),
+    )
+
 
 class RandomEffectsSpec(dx.Model):
     """Specification of random effects structure.
@@ -87,3 +92,18 @@ class MixedEffectsConfig(dx.Model):
     adaptive_regularization: bool = True
     min_samples_for_random_effects: int = 5
     random_effects_spec: dx.Embed[RandomEffectsSpec] | None = None
+
+    __axioms__ = (
+        dx.axiom(
+            "prior_variance >= 0",
+            message="prior_variance must be non-negative",
+        ),
+        dx.axiom(
+            "regularization_strength >= 0",
+            message="regularization_strength must be non-negative",
+        ),
+        dx.axiom(
+            "min_samples_for_random_effects >= 1",
+            message="min_samples_for_random_effects must be >= 1",
+        ),
+    )

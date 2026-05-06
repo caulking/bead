@@ -143,7 +143,7 @@ training_items = read_jsonlines(Path("items/2afc_pairs.jsonl"), Item)[:5]
 # Create model config
 config = ForcedChoiceModelConfig(
     model_name="bert-base-uncased",
-    max_epochs=10,
+    num_epochs=10,
     batch_size=16,
     learning_rate=2e-5,
 )
@@ -192,8 +192,7 @@ participant_ids = ["p1", "p1", "p2", "p2", "p1"]
 # Configure mixed effects
 config = ForcedChoiceModelConfig(
     model_name="bert-base-uncased",
-    mixed_effects_mode="mixed",  # "fixed_only", "random_only", or "mixed"
-    mixed_effects_config=MixedEffectsConfig(
+    mixed_effects=MixedEffectsConfig(
         mode="random_intercepts",  # "fixed", "random_intercepts", "random_slopes"
         prior_mean=0.0,
         prior_variance=1.0,
@@ -223,9 +222,9 @@ import numpy as np
 
 # Krippendorff's alpha (handles missing data)
 reliability_data = {
-    'rater1': [0, 1, 0],
-    'rater2': [0, 1, 0],
-    'rater3': [1, None, 0],  # Missing value for item 1
+    "rater1": [0, 1, 0],
+    "rater2": [0, 1, 0],
+    "rater3": [1, None, 0],  # Missing value for item 1
 }
 
 alpha = InterAnnotatorMetrics.krippendorff_alpha(reliability_data)

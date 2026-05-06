@@ -127,15 +127,19 @@ metadata = {item.id: {"metadata": dict(item.item_metadata)} for item in items}
 
 # Define constraints
 list_constraints = [
-    UniquenessConstraint(constraint_type="uniqueness", property_expression="item.metadata.group_key"),
-    DiversityConstraint(constraint_type="diversity", 
+    UniquenessConstraint(
+        constraint_type="uniqueness", property_expression="item.metadata.group_key"
+    ),
+    DiversityConstraint(
+        constraint_type="diversity",
         property_expression="item.metadata.template_id",
         min_unique_values=5,
     ),
 ]
 
 batch_constraints = [
-    BatchCoverageConstraint(constraint_type="coverage", 
+    BatchCoverageConstraint(
+        constraint_type="coverage",
         property_expression="item.metadata.template_id",
         target_values=[0, 1, 2, 3, 4, 5, 6, 7, 8],
         min_coverage=1.0,
@@ -160,6 +164,7 @@ print(f"Created {len(lists)} lists")
 Generate jsPsych experiment:
 
 ```python
+from bead.items.item_template import ScaleBounds
 from pathlib import Path
 
 from bead.data.serialization import read_jsonlines
@@ -196,8 +201,9 @@ template = ItemTemplate(
 
 # Link items to template
 items_dict = {item.id: item for item in items}
-for item in items_dict.values():
-    item = item.with_(item_template_id=template.id)
+items_dict = {
+    item.id: item.with_(item_template_id=template.id) for item in items_dict.values()
+}
 
 # Create experiment config
 config = ExperimentConfig(
@@ -336,7 +342,7 @@ from bead.deployment.distribution import (
     DistributionStrategyType,
     ListDistributionStrategy,
 )
-from bead.deployment.jspsych.config import ExperimentConfig
+from bead.deployment.jspsych.config import ExperimentConfig, InstructionsConfig
 from bead.deployment.jspsych.generator import JsPsychExperimentGenerator
 from bead.items.item_template import ItemTemplate, PresentationSpec, TaskSpec
 
@@ -350,8 +356,9 @@ template = ItemTemplate(
 )
 
 items_dict = {item.id: item for item in items}
-for item in items_dict.values():
-    item = item.with_(item_template_id=template.id)
+items_dict = {
+    item.id: item.with_(item_template_id=template.id) for item in items_dict.values()
+}
 
 config = ExperimentConfig(
     experiment_type="forced_choice",

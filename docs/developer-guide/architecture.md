@@ -244,17 +244,14 @@ Objects reference each other by UUID rather than embedding full copies. This mai
 ```python
 # CORRECT: UUID references
 item = Item(
-    filled_template_refs=[uuid1, uuid2],  # Just UUIDs
-    judgment_type="forced_choice"
+    filled_template_refs=[uuid1, uuid2], judgment_type="forced_choice"  # Just UUIDs
 )
 
 # Resolve references using metadata dict
 template1 = templates_dict[uuid1]  # Look up by UUID
 
 # INCORRECT: Embedding objects
-item = Item(
-    filled_templates=[template_obj1, template_obj2]  # Wrong!
-)
+item = Item(filled_templates=[template_obj1, template_obj2])  # Wrong!
 ```
 
 This pattern applies throughout:
@@ -289,7 +286,7 @@ lexical_item.metadata = {"source": "verbnet", "frame": "run-51.3.2"}
 ```python
 filled_template.metadata = {
     "slot_fillers": {"verb": uuid1, "noun": uuid2},
-    "constraints_satisfied": [constraint_uuid1]
+    "constraints_satisfied": [constraint_uuid1],
 }
 ```
 
@@ -298,7 +295,7 @@ filled_template.metadata = {
 item.metadata = {
     "lm_score_diff": 2.3,
     "model_outputs": [...],
-    "pair_type": "minimal_pair"
+    "pair_type": "minimal_pair",
 }
 ```
 
@@ -306,7 +303,7 @@ item.metadata = {
 ```python
 experiment_list.metadata = {
     "balance_metrics": {"verb_diversity": 0.85},
-    "quantile_distribution": [10, 10, 10, ...]
+    "quantile_distribution": [10, 10, 10, ...],
 }
 ```
 
@@ -325,8 +322,7 @@ def partition_with_batch_constraints(
     metadata: dict[UUID, dict[str, Any]],  # Explicit: UUID → metadata
     batch_constraints: list[BatchConstraint],
     max_iterations: int = 100,
-) -> list[ExperimentList]:
-    ...
+) -> list[ExperimentList]: ...
 ```
 
 **Pydantic validation**:
@@ -408,27 +404,21 @@ bead uses ISO 639 language codes and avoids English-specific assumptions. All li
 ```python
 # English lexical item
 verb_en = LexicalItem(
-    lemma="walk",
-    language_code="eng",  # ISO 639-3
-    features={"pos": "VERB"}
+    lemma="walk", language_code="eng", features={"pos": "VERB"}  # ISO 639-3
 )
 
 # Korean lexical item
 verb_ko = LexicalItem(
-    lemma="걷다",
-    language_code="kor",  # ISO 639-3
-    features={"pos": "VERB"}
+    lemma="걷다", language_code="kor", features={"pos": "VERB"}  # ISO 639-3
 )
 
 # Template with language code
 template_en = Template(
-    template_string="{subject} {verb} {object}.",
-    language_code="eng"
+    template_string="{subject} {verb} {object}.", language_code="eng"
 )
 
 template_ko = Template(
-    template_string="{subject} {object} {verb}.",
-    language_code="kor"  # SOV word order
+    template_string="{subject} {object} {verb}.", language_code="kor"  # SOV word order
 )
 ```
 
@@ -477,6 +467,7 @@ class Item(BeadBaseModel):
     filled_template_refs: list[UUID] = Field(default_factory=list)  # UUIDs only
     # NOT: filled_templates: list[FilledTemplate]
 
+
 class ExperimentList(BeadBaseModel):
     item_refs: list[UUID] = Field(default_factory=list)  # UUIDs only
     # NOT: items: list[Item]
@@ -485,8 +476,7 @@ class ExperimentList(BeadBaseModel):
 To resolve references, use separate metadata dictionaries:
 ```python
 partitioner.partition_with_batch_constraints(
-    items=item_uuids,  # list[UUID]
-    metadata=item_metadata  # dict[UUID, dict[str, Any]]
+    items=item_uuids, metadata=item_metadata  # list[UUID]  # dict[UUID, dict[str, Any]]
 )
 ```
 
@@ -509,27 +499,26 @@ partitioner.partition_with_batch_constraints(
 ```python
 # Core creation function
 def create_forced_choice_item(
-    *alternatives: str,
-    metadata: dict[str, Any] | None = None
-) -> Item:
-    ...
+    *alternatives: str, metadata: dict[str, Any] | None = None
+) -> Item: ...
+
 
 # Batch creation from texts
 def create_forced_choice_items_from_texts(
     texts: list[str],
     n_alternatives: int,
-    metadata_fn: Callable[[str], dict[str, Any]] | None = None
-) -> list[Item]:
-    ...
+    metadata_fn: Callable[[str], dict[str, Any]] | None = None,
+) -> list[Item]: ...
+
 
 # Batch creation from groups
 def create_forced_choice_items_from_groups(
     source_items: list[Item],
     group_by: Callable[[Item], Any],
     n_alternatives: int,
-    item_filter: Callable[[Item], bool] | None = None
-) -> list[Item]:
-    ...
+    item_filter: Callable[[Item], bool] | None = None,
+) -> list[Item]: ...
+
 
 # Filtered creation
 def create_filtered_forced_choice_items(
@@ -537,9 +526,8 @@ def create_filtered_forced_choice_items(
     group_by: Callable[[Item], Any],
     n_alternatives: int,
     item_filter: Callable[[Item], bool] | None = None,
-    group_filter: Callable[[Any, list[Item]], bool] | None = None
-) -> list[Item]:
-    ...
+    group_filter: Callable[[Any, list[Item]], bool] | None = None,
+) -> list[Item]: ...
 ```
 
 **Validation**:
@@ -559,12 +547,12 @@ validate_item_for_task_type(item, "forced_choice")  # Raises ValueError if inval
 ```python
 # Direct Item() constructor (manual metadata):
 item = Item(
-    rendered_elements={"option_a": "A", "option_b": "B"},
-    item_metadata={"n_options": 2}
+    rendered_elements={"option_a": "A", "option_b": "B"}, item_metadata={"n_options": 2}
 )
 
 # Task-type utility (automatic metadata):
 from bead.items.forced_choice import create_forced_choice_item
+
 item = create_forced_choice_item("A", "B")  # n_options added automatically
 ```
 
@@ -577,8 +565,7 @@ item = create_forced_choice_item("A", "B")  # n_options added automatically
 **1. Fixed Effects Only** (default):
 ```python
 config = ForcedChoiceModelConfig(
-    model_name="bert-base-uncased",
-    mixed_effects_mode="fixed_only"
+    model_name="bert-base-uncased", mixed_effects_mode="fixed_only"
 )
 model.train(items, labels, participant_ids=["p1", "p1", "p2", "p2"])
 ```
@@ -590,10 +577,10 @@ config = ForcedChoiceModelConfig(
     mixed_effects_config=MixedEffectsConfig(
         random_effects_spec=RandomEffectsSpec(
             participant_intercept=True,  # Participant-level random intercepts
-            item_intercept=True,         # Item-level random intercepts
-            interaction=False
+            item_intercept=True,  # Item-level random intercepts
+            interaction=False,
         )
-    )
+    ),
 )
 ```
 
@@ -605,9 +592,9 @@ config = ForcedChoiceModelConfig(
         random_effects_spec=RandomEffectsSpec(
             participant_intercept=True,
             item_intercept=True,
-            interaction=True  # Participant × item interactions
+            interaction=True,  # Participant × item interactions
         )
-    )
+    ),
 )
 ```
 
@@ -649,7 +636,7 @@ generator = JsPsychExperimentGenerator(config=config, output_dir=Path("output"))
 output_dir = generator.generate(
     lists=[list1, list2, list3, ...],  # Required, must be non-empty
     items=items_dict,
-    templates=templates_dict
+    templates=templates_dict,
 )
 ```
 
@@ -707,8 +694,7 @@ UniquenessConstraint(property_expression="item['verb_lemma']")
 2. **CountConstraint**: Exact count of items matching condition
 ```python
 CountConstraint(
-    filter_expression="item['pair_type'] == 'minimal_pair'",
-    target_count=50
+    filter_expression="item['pair_type'] == 'minimal_pair'", target_count=50
 )
 ```
 
@@ -717,7 +703,7 @@ CountConstraint(
 ProportionConstraint(
     property_expression="item['pair_type']",
     target_distribution={"minimal_pair": 0.5, "control": 0.5},
-    tolerance=0.05
+    tolerance=0.05,
 )
 ```
 
@@ -734,7 +720,7 @@ ProportionConstraint(
 BatchCoverageConstraint(
     property_expression="item['template_id']",
     target_values=list(range(26)),  # All 26 templates
-    min_coverage=1.0  # 100% coverage required
+    min_coverage=1.0,  # 100% coverage required
 )
 ```
 
@@ -743,7 +729,7 @@ BatchCoverageConstraint(
 BatchBalanceConstraint(
     property_expression="item['pair_type']",
     target_distribution={"minimal_pair": 0.5, "control": 0.5},
-    tolerance=0.05
+    tolerance=0.05,
 )
 ```
 
@@ -751,7 +737,7 @@ BatchBalanceConstraint(
 ```python
 BatchDiversityConstraint(
     property_expression="item['verb_lemma']",
-    max_lists_per_value=4  # Each verb in ≤4 lists
+    max_lists_per_value=4,  # Each verb in ≤4 lists
 )
 ```
 
@@ -898,6 +884,7 @@ from bead.active_learning.models.forced_choice import ForcedChoiceModel
 # items/item.py
 class Item(BeadBaseModel):
     filled_template_refs: list[UUID]  # UUID references, not FilledTemplate objects
+
 
 # templates/filler.py
 from bead.resources import Template  # No import from items/

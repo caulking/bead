@@ -7,13 +7,15 @@ The `bead.lists` module provides list partitioning with constraint satisfaction 
 Partition items into balanced lists:
 
 ```python
+from uuid import uuid4
+
 from bead.lists.partitioner import ListPartitioner
 
 # Create partitioner
 partitioner = ListPartitioner(random_seed=42)
 
-# Partition items
-item_uuids = [...]  # List of UUIDs
+# Partition items (use real UUIDs)
+item_uuids = [uuid4() for _ in range(100)]
 lists = partitioner.partition(
     items=item_uuids,
     n_lists=10,
@@ -38,7 +40,8 @@ Constraints apply to each list individually. Available constraint types:
 ```python
 from bead.lists import UniquenessConstraint
 
-constraint = UniquenessConstraint(constraint_type="uniqueness", 
+constraint = UniquenessConstraint(
+    constraint_type="uniqueness",
     property_expression="item.metadata.verb_lemma",
 )
 ```
@@ -48,7 +51,8 @@ constraint = UniquenessConstraint(constraint_type="uniqueness",
 ```python
 from bead.lists import BalanceConstraint
 
-constraint = BalanceConstraint(constraint_type="balance", 
+constraint = BalanceConstraint(
+    constraint_type="balance",
     property_expression="item.metadata.transitivity",
     target_counts={"transitive": 5, "intransitive": 5},
 )
@@ -59,7 +63,8 @@ constraint = BalanceConstraint(constraint_type="balance",
 ```python
 from bead.lists import DiversityConstraint
 
-constraint = DiversityConstraint(constraint_type="diversity", 
+constraint = DiversityConstraint(
+    constraint_type="diversity",
     property_expression="item.metadata.template_id",
     min_unique_values=5,
 )
@@ -88,8 +93,11 @@ lists = partitioner.partition(
     items=[item.id for item in items],
     n_lists=10,
     constraints=[
-        UniquenessConstraint(constraint_type="uniqueness", property_expression="item.metadata.verb_lemma"),
-        DiversityConstraint(constraint_type="diversity", 
+        UniquenessConstraint(
+            constraint_type="uniqueness", property_expression="item.metadata.verb_lemma"
+        ),
+        DiversityConstraint(
+            constraint_type="diversity",
             property_expression="item.metadata.template_id",
             min_unique_values=5,
         ),
@@ -107,7 +115,8 @@ Batch constraints apply across all lists. Available types:
 ```python
 from bead.lists.constraints import BatchCoverageConstraint
 
-constraint = BatchCoverageConstraint(constraint_type="coverage", 
+constraint = BatchCoverageConstraint(
+    constraint_type="coverage",
     property_expression="item.metadata.template_id",
     target_values=list(range(26)),  # All 26 templates
     min_coverage=1.0,  # 100% coverage
@@ -119,7 +128,8 @@ constraint = BatchCoverageConstraint(constraint_type="coverage",
 ```python
 from bead.lists.constraints import BatchBalanceConstraint
 
-constraint = BatchBalanceConstraint(constraint_type="balance", 
+constraint = BatchBalanceConstraint(
+    constraint_type="balance",
     property_expression="item.metadata.condition",
     target_distribution={"A": 0.5, "B": 0.5},
     tolerance=0.1,
@@ -131,7 +141,8 @@ constraint = BatchBalanceConstraint(constraint_type="balance",
 ```python
 from bead.lists.constraints import BatchDiversityConstraint
 
-constraint = BatchDiversityConstraint(constraint_type="diversity", 
+constraint = BatchDiversityConstraint(
+    constraint_type="diversity",
     property_expression="item.metadata.verb_lemma",
     max_lists_per_value=3,  # No verb appears in more than 3 lists
 )
@@ -142,7 +153,8 @@ constraint = BatchDiversityConstraint(constraint_type="diversity",
 ```python
 from bead.lists.constraints import BatchMinOccurrenceConstraint
 
-constraint = BatchMinOccurrenceConstraint(constraint_type="min_occurrence", 
+constraint = BatchMinOccurrenceConstraint(
+    constraint_type="min_occurrence",
     property_expression="item.metadata.template_id",
     min_occurrences=5,  # Each template appears at least 5 times
 )
@@ -170,10 +182,13 @@ lists = partitioner.partition_with_batch_constraints(
     items=item_uuids,
     n_lists=10,
     list_constraints=[
-        UniquenessConstraint(constraint_type="uniqueness", property_expression="item.metadata.verb_lemma"),
+        UniquenessConstraint(
+            constraint_type="uniqueness", property_expression="item.metadata.verb_lemma"
+        ),
     ],
     batch_constraints=[
-        BatchCoverageConstraint(constraint_type="coverage", 
+        BatchCoverageConstraint(
+            constraint_type="coverage",
             property_expression="item.metadata.template_id",
             target_values=list(range(26)),
             min_coverage=1.0,
@@ -202,7 +217,8 @@ metadata = {item.id: {"metadata": dict(item.item_metadata)} for item in items}
 
 partitioner = ListPartitioner(random_seed=42)
 
-constraint = GroupedQuantileConstraint(constraint_type="grouped_quantile", 
+constraint = GroupedQuantileConstraint(
+    constraint_type="grouped_quantile",
     property_expression="item.metadata.lm_score",
     group_by_expression="item.metadata.verb_lemma",
     n_quantiles=4,
@@ -271,8 +287,11 @@ lists = partitioner.partition(
     items=[item.id for item in items],
     n_lists=10,
     constraints=[
-        UniquenessConstraint(constraint_type="uniqueness", property_expression="item.metadata.verb_lemma"),
-        DiversityConstraint(constraint_type="diversity", 
+        UniquenessConstraint(
+            constraint_type="uniqueness", property_expression="item.metadata.verb_lemma"
+        ),
+        DiversityConstraint(
+            constraint_type="diversity",
             property_expression="item.metadata.template_id",
             min_unique_values=5,
         ),
@@ -323,12 +342,16 @@ metadata = {item.id: {"metadata": dict(item.item_metadata)} for item in items}
 
 # Define constraints
 list_constraints = [
-    UniquenessConstraint(constraint_type="uniqueness", property_expression="item.metadata.verb_lemma"),
-    DiversityConstraint(constraint_type="diversity", 
+    UniquenessConstraint(
+        constraint_type="uniqueness", property_expression="item.metadata.verb_lemma"
+    ),
+    DiversityConstraint(
+        constraint_type="diversity",
         property_expression="item.metadata.template_id",
         min_unique_values=5,
     ),
-    GroupedQuantileConstraint(constraint_type="grouped_quantile", 
+    GroupedQuantileConstraint(
+        constraint_type="grouped_quantile",
         property_expression="item.metadata.lm_score",
         group_by_expression="item.metadata.verb_lemma",
         n_quantiles=4,
@@ -336,7 +359,8 @@ list_constraints = [
 ]
 
 batch_constraints = [
-    BatchCoverageConstraint(constraint_type="coverage", 
+    BatchCoverageConstraint(
+        constraint_type="coverage",
         property_expression="item.metadata.template_id",
         target_values=list(range(26)),
         min_coverage=1.0,

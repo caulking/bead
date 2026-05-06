@@ -27,14 +27,11 @@ item_uuids = [uuid1, uuid2, uuid3]
 item_metadata = {
     uuid1: {"verb": "put", "frame": "transitive"},
     uuid2: {"verb": "place", "frame": "transitive"},
-    uuid3: {"verb": "drop", "frame": "transitive"}
+    uuid3: {"verb": "drop", "frame": "transitive"},
 }
 
 # Partitioner receives both
-partitioner.partition_with_batch_constraints(
-    items=item_uuids,
-    metadata=item_metadata
-)
+partitioner.partition_with_batch_constraints(items=item_uuids, metadata=item_metadata)
 ```
 
 ## BeadBaseModel

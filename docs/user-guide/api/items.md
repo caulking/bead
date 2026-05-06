@@ -68,6 +68,7 @@ print(f"Created {len(items)} 2AFC items from {len(source_items)} source items")
 Create Likert-scale or slider items:
 
 ```python
+from bead.items.item_template import ScaleBounds, ScalePointLabel
 from bead.items.ordinal_scale import create_ordinal_scale_item
 
 # Create 7-point Likert item
@@ -75,7 +76,10 @@ item = create_ordinal_scale_item(
     text="How natural is this sentence?",
     scale_bounds=ScaleBounds(min=1, max=7),
     prompt="Rate the sentence:",
-    scale_labels=(ScalePointLabel(point=1, label="Very unnatural"), ScalePointLabel(point=7, label="Very natural"),),
+    scale_labels=(
+        ScalePointLabel(point=1, label="Very unnatural"),
+        ScalePointLabel(point=7, label="Very natural"),
+    ),
 )
 
 # Default 7-point scale
@@ -87,6 +91,7 @@ item = create_ordinal_scale_item(
 **Batch creation**:
 
 ```python
+from bead.items.item_template import ScaleBounds
 from bead.items.ordinal_scale import create_ordinal_scale_items_from_texts
 
 sentences = ["Sentence 1", "Sentence 2", "Sentence 3"]
@@ -257,6 +262,7 @@ print(f"Tokens: {item.tokenized_elements['text']}")
 **Composing spans onto an existing item** (any task type):
 
 ```python
+from bead.items.item_template import ScaleBounds
 from bead.items.ordinal_scale import create_ordinal_scale_item
 from bead.items.span_labeling import add_spans_to_item
 from bead.items.spans import Span, SpanSegment, SpanLabel
@@ -300,6 +306,7 @@ When composing spans with other task types, prompts can reference span labels us
 **Example**: a rating item with highlighted prompt references:
 
 ```python
+from bead.items.item_template import ScaleBounds, ScalePointLabel
 from bead.items.ordinal_scale import create_ordinal_scale_item
 from bead.items.span_labeling import add_spans_to_item
 from bead.items.spans import Span, SpanLabel, SpanSegment
@@ -308,8 +315,13 @@ item = create_ordinal_scale_item(
     text="The boy broke the vase.",
     prompt="How likely is it that [[breaker]] existed after [[event:the breaking]]?",
     scale_bounds=ScaleBounds(min=1, max=5),
-    scale_labels=(ScalePointLabel(point=1, label="Very unlikely"), ScalePointLabel(point=5, label="Very likely"),),
+    scale_labels=(
+        ScalePointLabel(point=1, label="Very unlikely"),
+        ScalePointLabel(point=5, label="Very likely"),
+    ),
 )
+
+from bead.tokenization.config import TokenizerConfig
 
 item = add_spans_to_item(
     item,
@@ -325,6 +337,7 @@ item = add_spans_to_item(
             label=SpanLabel(label="event"),
         ),
     ],
+    tokenizer_config=TokenizerConfig(backend="whitespace"),
 )
 ```
 
@@ -443,6 +456,7 @@ print(f"Scored {len(items_to_score)} items")
 Validate items conform to task-type requirements:
 
 ```python
+from bead.items.item_template import ScaleBounds
 from bead.items.ordinal_scale import create_ordinal_scale_item
 from bead.items.validation import (
     get_task_type_requirements,
@@ -451,7 +465,9 @@ from bead.items.validation import (
 )
 
 # Create an item to validate
-item = create_ordinal_scale_item(text="The cat sleeps", scale_bounds=ScaleBounds(min=1, max=7))
+item = create_ordinal_scale_item(
+    text="The cat sleeps", scale_bounds=ScaleBounds(min=1, max=7)
+)
 
 # Validate structure
 validate_item_for_task_type(item, "ordinal_scale")  # Raises ValueError if invalid
