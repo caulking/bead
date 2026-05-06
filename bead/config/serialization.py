@@ -40,13 +40,13 @@ def config_to_dict(
     """
     # get dictionary with all values, excluding unset fields
     config_dict: dict[str, Any] = config.model_dump(
-        mode="json", exclude_unset=not include_defaults
+        exclude_unset=not include_defaults
     )
 
     if not include_defaults:
         # get default config to compare against
         default_config = get_default_config()
-        default_dict: dict[str, Any] = default_config.model_dump(mode="json")
+        default_dict: dict[str, Any] = default_config.model_dump()
         # remove values that match defaults
         config_dict = _remove_defaults(config_dict, default_dict)  # type: ignore[arg-type]
 

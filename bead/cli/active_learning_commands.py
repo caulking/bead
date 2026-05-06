@@ -764,7 +764,7 @@ def run(
         summary = {
             "iterations_completed": len(loop.iteration_history),
             "total_items_selected": total_items_selected,
-            "config": run_config.model_dump(mode="json"),
+            "config": run_config.model_dump(),
         }
         summary_path = output_dir / "run_summary.json"
         with open(summary_path, "w", encoding="utf-8") as f:

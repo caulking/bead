@@ -47,7 +47,7 @@ class TestCreateSpanItem:
         assert item.rendered_elements["text"] == "John Smith is here."
         assert item.rendered_elements["prompt"] == "Identify the entities."
         assert len(item.spans) == 1
-        assert item.tokenized_elements["text"] == ["John", "Smith", "is", "here."]
+        assert item.tokenized_elements["text"] == ("John", "Smith", "is", "here.",)
 
     def test_with_pre_tokenized(self) -> None:
         """Test creating span item with pre-tokenized text."""
@@ -67,7 +67,7 @@ class TestCreateSpanItem:
             tokens=tokens,
         )
 
-        assert item.tokenized_elements["text"] == tokens
+        assert item.tokenized_elements["text"] == tuple(tokens)
 
     def test_empty_text_raises(self) -> None:
         """Test that empty text raises error."""
@@ -128,7 +128,7 @@ class TestCreateInteractiveSpanItem:
         )
 
         assert isinstance(item, Item)
-        assert item.spans == []  # No pre-defined spans
+        assert item.spans == ()  # No pre-defined spans
         assert "text" in item.tokenized_elements
 
     def test_with_label_set(self) -> None:
@@ -198,7 +198,7 @@ class TestAddSpansToItem:
 
         assert len(result.spans) == 1
         # Token data preserved
-        assert result.tokenized_elements["text"] == ["Hello", "world"]
+        assert result.tokenized_elements["text"] == ("Hello", "world",)
 
     def test_preserves_existing_fields(self) -> None:
         """Test that adding spans preserves all existing fields."""
@@ -217,7 +217,7 @@ class TestAddSpansToItem:
         )
 
         assert result.item_template_id == template_id
-        assert result.options == ["A", "B"]
+        assert result.options == ("A", "B")
         assert result.item_metadata["key"] == "value"
 
     def test_invalid_span_raises(self) -> None:
@@ -251,8 +251,8 @@ class TestTokenizeItem:
 
         result = tokenize_item(item, TokenizerConfig(backend="whitespace"))
 
-        assert result.tokenized_elements["text"] == ["Hello", "world"]
-        assert result.token_space_after["text"] == [True, False]
+        assert result.tokenized_elements["text"] == ("Hello", "world",)
+        assert result.token_space_after["text"] == (True, False,)
 
     def test_multiple_elements(self) -> None:
         """Test tokenizing item with multiple rendered elements."""
@@ -268,17 +268,16 @@ class TestTokenizeItem:
 
         assert "context" in result.tokenized_elements
         assert "target" in result.tokenized_elements
-        assert result.tokenized_elements["context"] == ["The", "cat", "sat."]
-        assert result.tokenized_elements["target"] == ["The", "dog", "ran."]
+        assert result.tokenized_elements["context"] == ("The", "cat", "sat.",)
+        assert result.tokenized_elements["target"] == ("The", "dog", "ran.",)
 
     def test_default_config(self) -> None:
         """Test tokenizing with default config."""
+        pytest.importorskip("spacy")
         item = Item(
             item_template_id=uuid4(),
             rendered_elements={"text": "Hello"},
         )
-
-        # Should not raise (uses spacy by default, or falls back)
         result = tokenize_item(item)
         assert "text" in result.tokenized_elements
 

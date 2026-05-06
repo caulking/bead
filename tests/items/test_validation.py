@@ -9,7 +9,7 @@ from uuid import uuid4
 import pytest
 from didactic.api import ValidationError
 
-from bead.items.item import Item, ModelOutput
+from bead.items.item import ConstraintSatisfaction, Item, ModelOutput
 from bead.items.item_template import (
     ItemElement,
     ItemTemplate,
@@ -54,11 +54,15 @@ def simple_item(simple_template):
     return Item(
         item_template_id=simple_template.id,
         rendered_elements={"sentence": "Test sentence"},
-        constraint_satisfaction={
-            simple_template.constraints[0]: True,
-            simple_template.constraints[1]: True,
-        },
-        model_outputs=[],
+        constraint_satisfaction=(
+            ConstraintSatisfaction(
+                constraint_id=simple_template.constraints[0], satisfied=True
+            ),
+            ConstraintSatisfaction(
+                constraint_id=simple_template.constraints[1], satisfied=True
+            ),
+        ),
+        model_outputs=(),
     )
 
 
@@ -72,42 +76,45 @@ class TestValidateItem:
 
     def test_template_id_mismatch(self, simple_item, simple_template) -> None:
         """Test detection of template ID mismatch."""
-        simple_item.item_template_id = uuid4()
+        simple_item = simple_item.with_(item_template_id=uuid4())
         errors = validate_item(simple_item, simple_template)
         assert len(errors) == 1
         assert "template ID mismatch" in errors[0]
 
     def test_missing_rendered_elements(self, simple_item, simple_template) -> None:
         """Test detection of missing rendered elements."""
-        simple_item.rendered_elements = {}
+        simple_item = simple_item.with_(rendered_elements={})
         errors = validate_item(simple_item, simple_template)
         assert any("Missing rendered elements" in e for e in errors)
 
     def test_extra_rendered_elements(self, simple_item, simple_template) -> None:
         """Test detection of extra rendered elements."""
-        simple_item.rendered_elements["extra"] = "Extra element"
+        rendered = dict(simple_item.rendered_elements)
+        rendered["extra"] = "Extra element"
+        simple_item = simple_item.with_(rendered_elements=rendered)
         errors = validate_item(simple_item, simple_template)
         assert any("Extra rendered elements" in e for e in errors)
 
     def test_missing_constraint_evaluation(self, simple_item, simple_template) -> None:
         """Test detection of missing constraint evaluations."""
-        simple_item.constraint_satisfaction = {}
+        simple_item = simple_item.with_(constraint_satisfaction=())
         errors = validate_item(simple_item, simple_template)
         assert any("Missing constraint evaluations" in e for e in errors)
 
     def test_invalid_model_output(self, simple_item, simple_template) -> None:
         """Test that invalid model outputs are detected."""
-        # Create a model output with wrong type for operation
-        simple_item.model_outputs = [
-            ModelOutput(
-                model_name="test",
-                model_version="1.0",
-                operation="log_probability",
-                inputs={"text": "test"},
-                output="not a number",  # Invalid: should be numeric
-                cache_key="abc123",
+        simple_item = simple_item.with_(
+            model_outputs=(
+                ModelOutput(
+                    model_name="test",
+                    model_version="1.0",
+                    operation="log_probability",
+                    inputs={"text": "test"},
+                    output="not a number",
+                    cache_key="abc123",
+                ),
             )
-        ]
+        )
         errors = validate_item(simple_item, simple_template)
         assert any("should be numeric" in e for e in errors)
 
@@ -266,20 +273,29 @@ class TestValidateConstraintSatisfaction:
 
     def test_missing_constraint(self, simple_item, simple_template) -> None:
         """Test detection of missing constraint evaluation."""
-        simple_item.constraint_satisfaction = {simple_template.constraints[0]: True}
+        simple_item = simple_item.with_(
+            constraint_satisfaction=(
+                ConstraintSatisfaction(
+                    constraint_id=simple_template.constraints[0], satisfied=True
+                ),
+            )
+        )
         errors = validate_constraint_satisfaction(simple_item, simple_template)
         assert len(errors) == 1
         assert "not evaluated" in errors[0]
 
-    def test_non_boolean_value(self, simple_item, simple_template) -> None:
-        """Test detection of non-boolean satisfaction value."""
-        simple_item.constraint_satisfaction[simple_template.constraints[0]] = "true"
-        errors = validate_constraint_satisfaction(simple_item, simple_template)
-        assert any("should be bool" in e for e in errors)
+    def test_non_boolean_value_rejected_at_construction(
+        self, simple_template
+    ) -> None:
+        """Non-bool ``satisfied`` is rejected by the model constructor."""
+        with pytest.raises((dx.ValidationError, AssertionError)):
+            ConstraintSatisfaction(
+                constraint_id=simple_template.constraints[0], satisfied="true"
+            )
 
     def test_all_constraints_missing(self, simple_item, simple_template) -> None:
         """Test when all constraints are missing."""
-        simple_item.constraint_satisfaction = {}
+        simple_item = simple_item.with_(constraint_satisfaction=())
         errors = validate_constraint_satisfaction(simple_item, simple_template)
         assert len(errors) == len(simple_template.constraints)
 
@@ -315,13 +331,26 @@ class TestItemPassesAllConstraints:
 
     def test_one_constraint_fails(self, simple_item, simple_template) -> None:
         """Test when one constraint fails."""
-        simple_item.constraint_satisfaction[simple_template.constraints[0]] = False
+        simple_item = simple_item.with_(
+            constraint_satisfaction=(
+                ConstraintSatisfaction(
+                    constraint_id=simple_template.constraints[0], satisfied=False
+                ),
+                ConstraintSatisfaction(
+                    constraint_id=simple_template.constraints[1], satisfied=True
+                ),
+            )
+        )
         assert item_passes_all_constraints(simple_item) is False
 
     def test_all_constraints_fail(self, simple_item, simple_template) -> None:
         """Test when all constraints fail."""
-        for constraint_id in simple_template.constraints:
-            simple_item.constraint_satisfaction[constraint_id] = False
+        simple_item = simple_item.with_(
+            constraint_satisfaction=tuple(
+                ConstraintSatisfaction(constraint_id=cid, satisfied=False)
+                for cid in simple_template.constraints
+            )
+        )
         assert item_passes_all_constraints(simple_item) is False
 
     def test_no_constraints(self) -> None:
@@ -329,14 +358,22 @@ class TestItemPassesAllConstraints:
         item = Item(
             item_template_id=uuid4(),
             rendered_elements={"test": "text"},
-            constraint_satisfaction={},
+            constraint_satisfaction=(),
         )
         assert item_passes_all_constraints(item) is True
 
     def test_mixed_constraints(self, simple_item, simple_template) -> None:
         """Test with mixed constraint satisfaction."""
-        simple_item.constraint_satisfaction[simple_template.constraints[0]] = True
-        simple_item.constraint_satisfaction[simple_template.constraints[1]] = False
+        simple_item = simple_item.with_(
+            constraint_satisfaction=(
+                ConstraintSatisfaction(
+                    constraint_id=simple_template.constraints[0], satisfied=True
+                ),
+                ConstraintSatisfaction(
+                    constraint_id=simple_template.constraints[1], satisfied=False
+                ),
+            )
+        )
         assert item_passes_all_constraints(simple_item) is False
 
 

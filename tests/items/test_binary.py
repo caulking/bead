@@ -30,7 +30,7 @@ class TestCreateBinaryItem:
         assert isinstance(item, Item)
         assert item.rendered_elements["text"] == "The cat sat on the mat."
         assert item.rendered_elements["prompt"] == "Is this grammatical?"
-        assert item.item_metadata["binary_options"] == ["yes", "no"]
+        assert item.item_metadata["binary_options"] == ("yes", "no",)
 
     def test_default_prompt(self) -> None:
         """Test default prompt."""
@@ -46,7 +46,7 @@ class TestCreateBinaryItem:
             binary_options=("true", "false"),
         )
 
-        assert item.item_metadata["binary_options"] == ["true", "false"]
+        assert item.item_metadata["binary_options"] == ("true", "false",)
 
     def test_empty_text_raises_error(self) -> None:
         """Test that empty text raises error."""
@@ -79,7 +79,7 @@ class TestCreateBinaryItem:
 
         assert item.item_metadata["judgment"] == "grammaticality"
         assert item.item_metadata["verb"] == "walk"
-        assert item.item_metadata["binary_options"] == ["yes", "no"]
+        assert item.item_metadata["binary_options"] == ("yes", "no",)
 
 
 class TestCreateBinaryItemsFromTexts:

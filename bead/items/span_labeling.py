@@ -13,6 +13,7 @@ Integration Points
 
 from __future__ import annotations
 
+import json
 import re
 import warnings
 from collections.abc import Callable
@@ -66,11 +67,10 @@ def tokenize_item(
         tokenized_elements[name] = result.token_texts
         token_space_after[name] = result.space_after_flags
 
-    # create new item with tokenization data
-    data = item.model_dump()
-    data["tokenized_elements"] = tokenized_elements
-    data["token_space_after"] = token_space_after
-    return Item(**data)
+    return item.with_(
+        tokenized_elements=tokenized_elements,
+        token_space_after=token_space_after,
+    ).touched()
 
 
 def _validate_span_indices(
@@ -170,7 +170,7 @@ def create_span_item(
 
     # store span_spec in item metadata for downstream access
     span_spec_data: dict[str, MetadataValue] = {}
-    for k, v in span_spec.model_dump(mode="json").items():
+    for k, v in json.loads(span_spec.model_dump_json()).items():
         span_spec_data[k] = v
 
     # tokenize
@@ -252,7 +252,7 @@ def create_interactive_span_item(
         labels=label_set,
     )
     span_spec_data: dict[str, MetadataValue] = {}
-    for k, v in span_spec.model_dump(mode="json").items():
+    for k, v in json.loads(span_spec.model_dump_json()).items():
         span_spec_data[k] = v
 
     # tokenize
@@ -337,22 +337,18 @@ def add_spans_to_item(
                     stacklevel=2,
                 )
 
-    # build new item with spans
-    data = item.model_dump()
     # merge existing spans with new ones
-    existing_spans = data.get("spans", [])
-    data["spans"] = existing_spans + [s.model_dump() for s in spans]
+    new_spans = (*item.spans, *spans)
 
     # store span_spec in item metadata if provided
+    item_metadata = dict(item.item_metadata)
     if span_spec is not None:
-        item_metadata = dict(data.get("item_metadata", {}))
         span_spec_data: dict[str, MetadataValue] = {}
-        for k, v in span_spec.model_dump(mode="json").items():
+        for k, v in json.loads(span_spec.model_dump_json()).items():
             span_spec_data[k] = v
         item_metadata["_span_spec"] = span_spec_data
-        data["item_metadata"] = item_metadata
 
-    return Item(**data)
+    return item.with_(spans=new_spans, item_metadata=item_metadata).touched()
 
 
 def create_span_items_from_texts(
