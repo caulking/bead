@@ -124,8 +124,10 @@ def load_config(
     >>> config.logging.level
     'DEBUG'
     """
-    # start with profile defaults
-    base_config: dict[str, Any] = get_profile(profile).model_dump()
+    # start with profile defaults (JSON-shape so UUIDs/Paths round-trip)
+    import json  # noqa: PLC0415
+
+    base_config: dict[str, Any] = json.loads(get_profile(profile).model_dump_json())
 
     # merge with YAML file if provided
     if config_path is not None:
@@ -145,5 +147,4 @@ def load_config(
             current[parts[-1]] = value
         base_config = merge_configs(base_config, override_dict)
 
-    # construct and validate BeadConfig
-    return BeadConfig(**base_config)
+    return BeadConfig.model_validate(base_config)

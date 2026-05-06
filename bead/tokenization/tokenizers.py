@@ -11,12 +11,12 @@ import re
 from collections.abc import Callable, Iterator
 from typing import Protocol
 
-from pydantic import BaseModel, ConfigDict
+import didactic.api as dx
 
 from bead.tokenization.config import TokenizerConfig
 
 
-class DisplayToken(BaseModel):
+class DisplayToken(dx.Model):
     """A word-level token with rendering metadata.
 
     Attributes
@@ -31,51 +31,35 @@ class DisplayToken(BaseModel):
         Character offset of the token end in the original text.
     """
 
-    model_config = ConfigDict(extra="forbid", frozen=True)
-
     text: str
-    space_after: bool = True
     start_char: int
     end_char: int
+    space_after: bool = True
 
 
-class TokenizedText(BaseModel):
+class TokenizedText(dx.Model):
     """Result of display-level tokenization.
 
     Attributes
     ----------
-    tokens : list[DisplayToken]
+    tokens : tuple[DisplayToken, ...]
         The sequence of display tokens.
     original_text : str
         The original input text.
     """
 
-    model_config = ConfigDict(extra="forbid", frozen=True)
-
-    tokens: list[DisplayToken]
     original_text: str
+    tokens: tuple[dx.Embed[DisplayToken], ...] = ()
 
     @property
-    def token_texts(self) -> list[str]:
-        """Plain token strings (for ``Item.tokenized_elements``).
-
-        Returns
-        -------
-        list[str]
-            List of token text strings.
-        """
-        return [t.text for t in self.tokens]
+    def token_texts(self) -> tuple[str, ...]:
+        """Plain token strings (for ``Item.tokenized_elements``)."""
+        return tuple(t.text for t in self.tokens)
 
     @property
-    def space_after_flags(self) -> list[bool]:
-        """Per-token space_after flags (for ``Item.token_space_after``).
-
-        Returns
-        -------
-        list[bool]
-            List of boolean flags.
-        """
-        return [t.space_after for t in self.tokens]
+    def space_after_flags(self) -> tuple[bool, ...]:
+        """Per-token ``space_after`` flags (for ``Item.token_space_after``)."""
+        return tuple(t.space_after for t in self.tokens)
 
     def render(self) -> str:
         """Reconstruct display text from tokens with correct spacing.
@@ -120,7 +104,6 @@ class WhitespaceTokenizer:
         for match in re.finditer(r"\S+", text):
             start = match.start()
             end = match.end()
-            # space_after is True if there is whitespace after this token
             space_after = end < len(text) and text[end] == " "
             tokens.append(
                 DisplayToken(
@@ -130,7 +113,7 @@ class WhitespaceTokenizer:
                     end_char=end,
                 )
             )
-        return TokenizedText(tokens=tokens, original_text=text)
+        return TokenizedText(tokens=tuple(tokens), original_text=text)
 
 
 class SpacyTokenizer:
@@ -204,7 +187,7 @@ class SpacyTokenizer:
                     end_char=token.idx + len(token.text),
                 )
             )
-        return TokenizedText(tokens=tokens, original_text=text)
+        return TokenizedText(tokens=tuple(tokens), original_text=text)
 
 
 class StanzaTokenizer:
@@ -301,7 +284,7 @@ class StanzaTokenizer:
                         end_char=end_char,
                     )
                 )
-        return TokenizedText(tokens=tokens, original_text=text)
+        return TokenizedText(tokens=tuple(tokens), original_text=text)
 
 
 def create_tokenizer(config: TokenizerConfig) -> Callable[[str], TokenizedText]:

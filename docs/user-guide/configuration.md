@@ -649,17 +649,13 @@ filled = filler.fill(strategy=config.templates.filling_strategy)
 
 # Stage 3: Create items
 items = create_forced_choice_items_from_groups(
-    filled,
-    group_by=lambda t: t.template_id,
-    n_alternatives=config.items.n_alternatives
+    filled, group_by=lambda t: t.template_id, n_alternatives=config.items.n_alternatives
 )
 
 # Stage 4: Partition lists
 partitioner = ListPartitioner()
 lists = partitioner.partition(
-    items,
-    n_lists=config.lists.n_lists,
-    strategy=config.lists.strategy
+    items, n_lists=config.lists.n_lists, strategy=config.lists.strategy
 )
 
 # Stage 5: Generate experiment
@@ -672,7 +668,7 @@ exp_config = ExperimentConfig(
     description=config.deployment.experiment.description,
     distribution_strategy=ListDistributionStrategy(
         strategy_type=config.deployment.distribution_strategy.strategy_type
-    )
+    ),
 )
 
 generator = JsPsychExperimentGenerator(exp_config, output_dir="experiment/")

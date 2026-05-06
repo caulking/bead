@@ -16,14 +16,15 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Text Processing :: Linguistic",
     "Typing :: Typed",
 ]
-requires-python = ">=3.13"
+requires-python = ">=3.14"
 dependencies = [
-    "pydantic>=2.0.0",
+    "didactic>=0.6.2",
+    "panproto>=0.43",
     "pyyaml>=6.0.0",
     "jinja2>=3.0.0",
     "uuid-utils>=0.7.0",
@@ -107,7 +108,7 @@ markers = [
 
 [tool.ruff]
 line-length = 88
-target-version = "py313"
+target-version = "py314"
 exclude = ["gallery"]
 
 [tool.ruff.lint]
@@ -115,7 +116,12 @@ select = ["E", "F", "I", "N", "D", "UP", "ANN", "B", "A", "C4", "PLC"]
 ignore = ["ANN401"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["ANN"]
+"tests/**" = ["ANN", "D", "E501"]
+# didactic Models cannot use PEP 695 generic syntax: dx.Embed[Range[T]] cannot
+# resolve through the PEP 695 type-parameter machinery, and bare construction
+# raises ValidationError because PEP 695 generics are not auto-parameterised
+# the way typing.Generic[T] is. The Generic[T] form is the supported one.
+"bead/data/range.py" = ["UP046"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"
@@ -123,7 +129,7 @@ convention = "numpy"
 [tool.pyright]
 include = ["bead"]
 typeCheckingMode = "strict"
-pythonVersion = "3.13"
+pythonVersion = "3.14"
 reportMissingTypeStubs = false
 useLibraryCodeForTypes = true
 # Disable reportUnknown* checks - industry standard for ML libraries with incomplete type stubs
