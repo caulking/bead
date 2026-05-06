@@ -183,7 +183,7 @@ class ParticipantCollection(BeadBaseModel):
             if id_column in columns_list:
                 try:
                     pid = UUID(str(row[id_column]))
-                except (ValueError, TypeError):
+                except ValueError, TypeError:
                     pid = None
 
             metadata: dict[str, JsonValue] = {}
