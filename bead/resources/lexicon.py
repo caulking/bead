@@ -119,15 +119,15 @@ class Lexicon(BeadBaseModel):
         )
 
     def filter_by_pos(self, pos: str) -> Self:
-        """Return a new lexicon containing items whose ``features['pos']`` equals *pos*."""
+        """Return items whose ``features['pos']`` equals *pos*."""
         return self.filter(lambda item: item.features.get("pos") == pos)
 
     def filter_by_lemma(self, lemma: str) -> Self:
-        """Return a new lexicon containing items whose lemma equals *lemma*."""
+        """Return items whose lemma equals *lemma*."""
         return self.filter(lambda item: item.lemma == lemma)
 
     def filter_by_feature(self, feature_name: str, feature_value: JsonValue) -> Self:
-        """Return a new lexicon containing items whose feature equals *feature_value*."""
+        """Return items whose feature equals *feature_value*."""
         return self.filter(
             lambda item: item.features.get(feature_name) == feature_value,
         )

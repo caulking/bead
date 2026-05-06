@@ -23,7 +23,7 @@ classifiers = [
 ]
 requires-python = ">=3.14"
 dependencies = [
-    "didactic>=0.5.2",
+    "didactic>=0.6.0",
     "panproto>=0.43",
     "pyyaml>=6.0.0",
     "jinja2>=3.0.0",
@@ -116,7 +116,12 @@ select = ["E", "F", "I", "N", "D", "UP", "ANN", "B", "A", "C4", "PLC"]
 ignore = ["ANN401"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["ANN"]
+"tests/**" = ["ANN", "D", "E501"]
+# didactic Models cannot use PEP 695 generic syntax: dx.Embed[Range[T]] cannot
+# resolve through the PEP 695 type-parameter machinery, and bare construction
+# raises ValidationError because PEP 695 generics are not auto-parameterised
+# the way typing.Generic[T] is. The Generic[T] form is the supported one.
+"bead/data/range.py" = ["UP046"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"

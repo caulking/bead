@@ -10,6 +10,7 @@ import pytest
 from didactic.api import ValidationError
 
 from bead.lists import ExperimentList, ListCollection
+from bead.lists.experiment_list import validate_presentation_order
 
 
 class TestExperimentList:
@@ -168,8 +169,6 @@ class TestExperimentList:
         self, sample_item_uuids: list[UUID]
     ) -> None:
         """Test presentation_order with extra UUIDs is flagged."""
-        from bead.lists.experiment_list import validate_presentation_order
-
         exp_list = ExperimentList(
             name="test",
             list_number=0,
@@ -183,8 +182,6 @@ class TestExperimentList:
         self, sample_item_uuids: list[UUID]
     ) -> None:
         """Test presentation_order with missing UUIDs is flagged."""
-        from bead.lists.experiment_list import validate_presentation_order
-
         exp_list = ExperimentList(
             name="test",
             list_number=0,
@@ -198,8 +195,6 @@ class TestExperimentList:
         self, sample_item_uuids: list[UUID]
     ) -> None:
         """Test presentation_order with duplicates is flagged."""
-        from bead.lists.experiment_list import validate_presentation_order
-
         item_refs = tuple(sample_item_uuids[:3])
         presentation_order = item_refs[:2] + (item_refs[0],)
 

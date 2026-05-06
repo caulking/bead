@@ -28,7 +28,7 @@ def create_ordinal_scale_item(
     text: str,
     scale_bounds: ScaleBounds = _DEFAULT_SCALE_BOUNDS,
     prompt: str | None = None,
-    scale_labels: dict[int, str] | None = None,
+    scale_labels: dict[int, str] | tuple[ScalePointLabel, ...] | None = None,
     item_template_id: UUID | None = None,
     metadata: dict[str, MetadataValue] | None = None,
 ) -> Item:
@@ -82,7 +82,10 @@ def create_ordinal_scale_item(
     >>> item = create_ordinal_scale_item(
     ...     text="I enjoy linguistics.",
     ...     scale_bounds=ScaleBounds(min=1, max=5),
-    ...     scale_labels=(ScalePointLabel(point=1, label="Strongly Disagree"), ScalePointLabel(point=5, label="Strongly Agree"),)
+    ...     scale_labels=(
+    ...         ScalePointLabel(point=1, label="Strongly Disagree"),
+    ...         ScalePointLabel(point=5, label="Strongly Agree"),
+    ...     )
     ... )
     >>> item.item_metadata["scale_labels"][1]
     'Strongly Disagree'
@@ -142,7 +145,7 @@ def create_ordinal_scale_items_from_texts(
     texts: list[str],
     scale_bounds: ScaleBounds = _DEFAULT_SCALE_BOUNDS,
     prompt: str | None = None,
-    scale_labels: dict[int, str] | None = None,
+    scale_labels: dict[int, str] | tuple[ScalePointLabel, ...] | None = None,
     *,
     item_template_id: UUID | None = None,
     metadata_fn: Callable[[str], dict[str, MetadataValue]] | None = None,
@@ -208,7 +211,7 @@ def create_ordinal_scale_items_from_groups(
     group_by: Callable[[Item], Hashable],
     scale_bounds: ScaleBounds = _DEFAULT_SCALE_BOUNDS,
     prompt: str | None = None,
-    scale_labels: dict[int, str] | None = None,
+    scale_labels: dict[int, str] | tuple[ScalePointLabel, ...] | None = None,
     *,
     extract_text: Callable[[Item], str] | None = None,
     include_group_metadata: bool = True,
@@ -302,7 +305,7 @@ def create_ordinal_scale_items_cross_product(
     texts: list[str],
     prompts: list[str],
     scale_bounds: ScaleBounds = _DEFAULT_SCALE_BOUNDS,
-    scale_labels: dict[int, str] | None = None,
+    scale_labels: dict[int, str] | tuple[ScalePointLabel, ...] | None = None,
     *,
     item_template_id: UUID | None = None,
     metadata_fn: (Callable[[str, str], dict[str, MetadataValue]] | None) = None,
@@ -365,7 +368,7 @@ def create_filtered_ordinal_scale_items(
     items: list[Item],
     scale_bounds: ScaleBounds = _DEFAULT_SCALE_BOUNDS,
     prompt: str | None = None,
-    scale_labels: dict[int, str] | None = None,
+    scale_labels: dict[int, str] | tuple[ScalePointLabel, ...] | None = None,
     *,
     item_filter: Callable[[Item], bool] | None = None,
     extract_text: Callable[[Item], str] | None = None,
@@ -478,7 +481,13 @@ def create_likert_5_item(
         text,
         scale_bounds=ScaleBounds(min=1, max=5),
         prompt=prompt,
-        scale_labels=(ScalePointLabel(point=1, label="Strongly Disagree"), ScalePointLabel(point=2, label="Disagree"), ScalePointLabel(point=3, label="Neutral"), ScalePointLabel(point=4, label="Agree"), ScalePointLabel(point=5, label="Strongly Agree"),),
+        scale_labels=(
+            ScalePointLabel(point=1, label="Strongly Disagree"),
+            ScalePointLabel(point=2, label="Disagree"),
+            ScalePointLabel(point=3, label="Neutral"),
+            ScalePointLabel(point=4, label="Agree"),
+            ScalePointLabel(point=5, label="Strongly Agree"),
+        ),
         item_template_id=item_template_id,
         metadata=metadata,
     )
@@ -526,7 +535,10 @@ def create_likert_7_item(
         text,
         scale_bounds=ScaleBounds(min=1, max=7),
         prompt=prompt,
-        scale_labels=(ScalePointLabel(point=1, label="Strongly Disagree"), ScalePointLabel(point=7, label="Strongly Agree"),),
+        scale_labels=(
+            ScalePointLabel(point=1, label="Strongly Disagree"),
+            ScalePointLabel(point=7, label="Strongly Agree"),
+        ),
         item_template_id=item_template_id,
         metadata=metadata,
     )

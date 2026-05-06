@@ -481,7 +481,9 @@ def validate_item_for_task_type(item: Item, task_type: TaskType) -> bool:
     Examples
     --------
     >>> from bead.items.ordinal_scale import create_ordinal_scale_item
-    >>> item = create_ordinal_scale_item("How natural?", scale_bounds=ScaleBounds(min=1, max=7))
+    >>> item = create_ordinal_scale_item(
+    ...     "How natural?", scale_bounds=ScaleBounds(min=1, max=7)
+    ... )
     >>> validate_item_for_task_type(item, "ordinal_scale")
     True
 

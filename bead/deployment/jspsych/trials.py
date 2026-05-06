@@ -24,7 +24,7 @@ from bead.deployment.jspsych.config import (
 from bead.items.item import Item
 from bead.items.item_template import ItemTemplate
 from bead.items.spans import Span
-from bead.transforms.base import TransformRegistry
+from bead.transforms.base import TransformContext, TransformRegistry
 
 
 def _serialize_item_metadata(
@@ -1097,7 +1097,7 @@ _SPAN_REF_PATTERN = re.compile(
 
 @dataclass(frozen=True)
 class _SpanReference:
-    """A parsed ``[[label]]``, ``[[label:text]]``, or ``[[label|transform]]`` reference."""
+    """A parsed ``[[label]]``, ``[[label:text]]``, or ``[[label|transform]]``."""
 
     label: str
     display_text: str | None
@@ -1283,7 +1283,7 @@ def _resolve_prompt_references(
     return result
 
 
-def _build_transform_context(label: str, item: Item) -> "TransformContext":
+def _build_transform_context(label: str, item: Item) -> TransformContext:
     """Build a TransformContext from an item's span metadata.
 
     Extracts head index, tokens, lemma, and POS from the first span
@@ -1302,8 +1302,6 @@ def _build_transform_context(label: str, item: Item) -> "TransformContext":
     TransformContext
         Context populated with available span metadata.
     """
-    from bead.transforms.base import TransformContext
-
     target_span: Span | None = None
     for span in item.spans:
         if span.label and span.label.label == label:

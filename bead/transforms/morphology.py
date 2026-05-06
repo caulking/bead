@@ -18,6 +18,7 @@ import logging
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from bead.resources.adapters.unimorph import UniMorphAdapter
 from bead.transforms.base import TransformContext, TransformRegistry
 
 logger = logging.getLogger(__name__)
@@ -70,10 +71,14 @@ class MorphologicalTransform:
     --------
     >>> spec = InflectionSpec(
     ...     name="gerund",
-    ...     predicate=lambda f: f.get("verb_form") == "V.PTCP" and f.get("tense") == "PRS",
+    ...     predicate=lambda f: (
+    ...         f.get("verb_form") == "V.PTCP" and f.get("tense") == "PRS"
+    ...     ),
     ... )
     >>> t = MorphologicalTransform(spec, language_code="eng")
-    >>> ctx = TransformContext(lemma="run", head_index=0, tokens=["run", "to", "the", "store"])
+    >>> ctx = TransformContext(
+    ...     lemma="run", head_index=0, tokens=["run", "to", "the", "store"]
+    ... )
     >>> t("run to the store", ctx)
     'running to the store'
     """
@@ -99,13 +104,10 @@ class MorphologicalTransform:
         """The inflection specification for this transform."""
         return self._spec
 
-    def _get_adapter(self):
+    def _get_adapter(self) -> UniMorphAdapter:
         """Lazily import and create the UniMorph adapter."""
         if self._adapter is None:
-            from bead.resources.adapters.unimorph import UniMorphAdapter
-
             self._adapter = UniMorphAdapter()
-
         return self._adapter
 
     def _lookup_inflection(self, lemma: str) -> str | None:
@@ -210,6 +212,7 @@ class MorphologicalTransform:
         return " ".join(result_tokens)
 
     def __repr__(self) -> str:
+        """Return a debug representation."""
         return (
             f"MorphologicalTransform("
             f"spec={self._spec.name!r}, "

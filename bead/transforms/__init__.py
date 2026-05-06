@@ -24,7 +24,10 @@ from bead.transforms.base import (
     TransformPipeline,
     TransformRegistry,
 )
-from bead.transforms.morphology import MorphologicalTransform
+from bead.transforms.morphology import (
+    MorphologicalTransform,
+    register_morphological_transforms,
+)
 from bead.transforms.text import (
     CapitalizeTransform,
     LowerTransform,
@@ -78,8 +81,6 @@ def create_default_registry(
 
     # morphological transforms — require a language
     if language_code is not None:
-        from bead.transforms.morphology import register_morphological_transforms
-
         register_morphological_transforms(registry, language_code)
 
     return registry

@@ -20,6 +20,7 @@ class LowerTransform:
     """
 
     def __call__(self, text: str, context: TransformContext) -> str:
+        """Apply ``str.lower`` to *text*."""
         return text.lower()
 
 
@@ -33,6 +34,7 @@ class UpperTransform:
     """
 
     def __call__(self, text: str, context: TransformContext) -> str:
+        """Apply ``str.upper`` to *text*."""
         return text.upper()
 
 
@@ -46,6 +48,7 @@ class CapitalizeTransform:
     """
 
     def __call__(self, text: str, context: TransformContext) -> str:
+        """Apply ``str.capitalize`` to *text*."""
         return text.capitalize()
 
 
@@ -59,4 +62,5 @@ class TitleTransform:
     """
 
     def __call__(self, text: str, context: TransformContext) -> str:
+        """Apply ``str.title`` to *text*."""
         return text.title()

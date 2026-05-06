@@ -2,22 +2,23 @@
 
 from __future__ import annotations
 
-from uuid import uuid4
+# Use fixed UUIDs for consistent testing
+from uuid import UUID, uuid4
 
 import pandas as pd
 import polars as pl
 import pytest
-from bead.behavioral.analytics import AnalysisFlag
 
-from bead.behavioral.analytics import AnalyticsCollection, JudgmentAnalytics
+from bead.behavioral.analytics import (
+    AnalysisFlag,
+    AnalyticsCollection,
+    JudgmentAnalytics,
+)
 from bead.behavioral.merging import (
     filter_flagged_judgments,
     get_exclusion_list,
     merge_behavioral_analytics,
 )
-
-# Use fixed UUIDs for consistent testing
-from uuid import UUID
 
 ITEM_IDS = [
     UUID("11111111-1111-1111-1111-111111111111"),

@@ -70,7 +70,9 @@ class SpanDisplayConfig(dx.Model):
     """
 
     highlight_style: Literal["background", "underline", "border"] = "background"
-    color_palette: tuple[str, ...] = dx.field(default_factory=_default_span_color_palette)
+    color_palette: tuple[str, ...] = dx.field(
+        default_factory=_default_span_color_palette
+    )
     dark_color_palette: tuple[str, ...] = dx.field(
         default_factory=_default_span_dark_palette
     )

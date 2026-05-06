@@ -147,7 +147,8 @@ class OracleAnnotator(SimulatedAnnotator):
         elif task_type == "multi_select":
             if not isinstance(ground_truth, list | tuple):
                 msg = (
-                    f"multi_select ground truth must be list or tuple, got {type(ground_truth)}"
+                    f"multi_select ground truth must be list or tuple, "
+                    f"got {type(ground_truth)}"
                 )
                 raise ValueError(msg)
             options = template.task_spec.options or []

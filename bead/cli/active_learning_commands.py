@@ -107,7 +107,9 @@ class ActiveLearningRunConfig(dx.Model):
 
     data: dx.Embed[RunDataConfig]
     loop: dx.Embed[RunLoopConfig] = dx.field(default_factory=_default_run_loop_config)
-    model: dx.Embed[RunModelConfig] = dx.field(default_factory=_default_run_model_config)
+    model: dx.Embed[RunModelConfig] = dx.field(
+        default_factory=_default_run_model_config
+    )
     selection: dx.Embed[RunSelectionConfig] = dx.field(
         default_factory=_default_run_selection_config
     )

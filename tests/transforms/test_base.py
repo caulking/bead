@@ -9,6 +9,7 @@ from bead.transforms.base import (
     TransformPipeline,
     TransformRegistry,
 )
+from bead.transforms.text import LowerTransform
 
 
 class TestTransformContext:
@@ -102,8 +103,6 @@ class TestTransformPipeline:
 
     def test_repr(self) -> None:
         """Pipeline has an informative repr."""
-        from bead.transforms.text import LowerTransform
-
         pipe = TransformPipeline([LowerTransform()])
 
         assert "LowerTransform" in repr(pipe)

@@ -117,7 +117,9 @@ class SlopitIntegrationConfig(dx.Model):
     paste: dx.Embed[SlopitPasteConfig] = dx.field(
         default_factory=_default_paste_config
     )
-    target_selectors: dict[str, str] = dx.field(default_factory=_default_target_selectors)
+    target_selectors: dict[str, str] = dx.field(
+        default_factory=_default_target_selectors
+    )
 
 
 def validate_slopit_integration(config: SlopitIntegrationConfig) -> None:

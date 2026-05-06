@@ -173,7 +173,9 @@ def fill(
             lex = Lexicon.from_jsonl(str(lex_file), lex_file.stem)
             print_info(f"  Loaded {len(lex)} items from {lex_file.name}")
             # Merge items
-            merged_lexicon = merged_lexicon.with_(items=(*merged_lexicon.items, *lex.items))
+            merged_lexicon = merged_lexicon.with_(
+                items=(*merged_lexicon.items, *lex.items)
+            )
 
         print_info(f"Total merged lexicon: {len(merged_lexicon)} items")
         lexicon = merged_lexicon
@@ -607,7 +609,9 @@ def estimate(
 
         for lex_file in lexicon_files:
             lex = Lexicon.from_jsonl(str(lex_file), lex_file.stem)
-            merged_lexicon = merged_lexicon.with_(items=(*merged_lexicon.items, *lex.items))
+            merged_lexicon = merged_lexicon.with_(
+                items=(*merged_lexicon.items, *lex.items)
+            )
 
         print_info(f"Total merged lexicon: {len(merged_lexicon)} items")
         lexicon = merged_lexicon
@@ -1100,7 +1104,9 @@ def sample_combinations(
         for lex_file in lexicon_files:
             lex = Lexicon.from_jsonl(str(lex_file), lex_file.stem)
             print_info(f"  Loaded {len(lex)} items from {lex_file.name}")
-            merged_lexicon = merged_lexicon.with_(items=(*merged_lexicon.items, *lex.items))
+            merged_lexicon = merged_lexicon.with_(
+                items=(*merged_lexicon.items, *lex.items)
+            )
 
         print_info(f"Total merged lexicon: {len(merged_lexicon)} items")
         lexicon = merged_lexicon

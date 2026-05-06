@@ -127,7 +127,8 @@ class ActiveLearningLoopConfig(dx.Model):
         Maximum number of iterations (> 0).
     budget_per_iteration : int
         Items selected per iteration (> 0).
-    stopping_criterion : Literal["max_iterations", "convergence", "performance_threshold"]
+    stopping_criterion : Literal["max_iterations", "convergence", \
+"performance_threshold"]
         Stopping criterion.
     performance_threshold : float | None
         Performance threshold for stopping (0.0-1.0).
