@@ -106,9 +106,8 @@ class TestForcedChoiceIntegration:
         )
         templates_dict = {dummy_template.id: dummy_template}
 
-        # Update items to reference the template
-        for item in items_list:
-            item.item_template_id = dummy_template.id
+        items_list = [item.with_(item_template_id=dummy_template.id) for item in items_list]
+        items_dict = {item.id: item for item in items_list}
 
         output_dir = generator.generate(lists, items_dict, templates_dict)
 
@@ -191,8 +190,8 @@ class TestMultiSelectIntegration:
         )
         templates_dict = {dummy_template.id: dummy_template}
 
-        for item in items_list:
-            item.item_template_id = dummy_template.id
+        items_list = [item.with_(item_template_id=dummy_template.id) for item in items_list]
+        items_dict = {item.id: item for item in items_list}
 
         output_dir = generator.generate(lists, items_dict, templates_dict)
         assert (output_dir / "index.html").exists()
@@ -246,8 +245,8 @@ class TestBinaryIntegration:
         )
         templates_dict = {dummy_template.id: dummy_template}
 
-        for item in items_list:
-            item.item_template_id = dummy_template.id
+        items_list = [item.with_(item_template_id=dummy_template.id) for item in items_list]
+        items_dict = {item.id: item for item in items_list}
 
         output_dir = generator.generate(lists, items_dict, templates_dict)
         assert (output_dir / "index.html").exists()
@@ -267,7 +266,7 @@ class TestCategoricalIntegration:
         assert len(items_list) == 2
         assert "categories" in items_list[0].item_metadata
         categories = items_list[0].item_metadata["categories"]
-        assert isinstance(categories, list)
+        assert isinstance(categories, list | tuple)
         assert len(categories) == 3
 
         # Stage 4: Partition
@@ -304,8 +303,8 @@ class TestCategoricalIntegration:
         )
         templates_dict = {dummy_template.id: dummy_template}
 
-        for item in items_list:
-            item.item_template_id = dummy_template.id
+        items_list = [item.with_(item_template_id=dummy_template.id) for item in items_list]
+        items_dict = {item.id: item for item in items_list}
 
         output_dir = generator.generate(lists, items_dict, templates_dict)
         assert (output_dir / "index.html").exists()
@@ -357,8 +356,8 @@ class TestOrdinalScaleIntegration:
         )
         templates_dict = {dummy_template.id: dummy_template}
 
-        for item in items_list:
-            item.item_template_id = dummy_template.id
+        items_list = [item.with_(item_template_id=dummy_template.id) for item in items_list]
+        items_dict = {item.id: item for item in items_list}
 
         output_dir = generator.generate(lists, items_dict, templates_dict)
         assert (output_dir / "index.html").exists()
@@ -413,8 +412,8 @@ class TestMagnitudeIntegration:
         )
         templates_dict = {dummy_template.id: dummy_template}
 
-        for item in items_list:
-            item.item_template_id = dummy_template.id
+        items_list = [item.with_(item_template_id=dummy_template.id) for item in items_list]
+        items_dict = {item.id: item for item in items_list}
 
         output_dir = generator.generate(lists, items_dict, templates_dict)
         assert (output_dir / "index.html").exists()
@@ -468,8 +467,8 @@ class TestFreeTextIntegration:
         )
         templates_dict = {dummy_template.id: dummy_template}
 
-        for item in items_list:
-            item.item_template_id = dummy_template.id
+        items_list = [item.with_(item_template_id=dummy_template.id) for item in items_list]
+        items_dict = {item.id: item for item in items_list}
 
         output_dir = generator.generate(lists, items_dict, templates_dict)
         assert (output_dir / "index.html").exists()
@@ -529,8 +528,8 @@ class TestClozeIntegration:
         )
         templates_dict = {dummy_template.id: dummy_template}
 
-        for item in items_list:
-            item.item_template_id = dummy_template.id
+        items_list = [item.with_(item_template_id=dummy_template.id) for item in items_list]
+        items_dict = {item.id: item for item in items_list}
 
         output_dir = generator.generate(lists, items_dict, templates_dict)
         assert (output_dir / "index.html").exists()
