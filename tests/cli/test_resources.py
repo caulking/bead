@@ -368,7 +368,7 @@ def test_list_lexicons_with_pattern(cli_runner: CliRunner, tmp_path: Path) -> No
     # Create multiple lexicons
     for name in ["verbs", "nouns", "adjectives"]:
         lexicon = Lexicon(name=name, language_code="eng")
-        lexicon.add(
+        lexicon = lexicon.with_item(
             LexicalItem(lemma="test", language_code="eng", features={"pos": "VERB"})
         )
         output = tmp_path / f"{name}.jsonl"

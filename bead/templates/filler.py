@@ -343,7 +343,7 @@ class CSPFiller(TemplateFiller):
 
         for slot_name, slot in template.slots.items():
             candidates: list[LexicalItem] = []
-            for item in self.lexicon.items.values():
+            for item in self.lexicon.items:
                 # Filter by language code if specified
                 if normalized_lang:
                     # Normalize item language code for comparison
@@ -496,11 +496,7 @@ class CSPFiller(TemplateFiller):
         filled_set = set(filled_slots)
 
         for constraint in template.constraints:
-            # Parse the constraint expression to AST
-            if constraint.compiled:
-                ast_node = constraint.compiled
-            else:
-                ast_node = parse(constraint.expression)
+            ast_node = parse(constraint.expression)
 
             # Extract all variable names referenced in the expression
             referenced_vars = self._extract_variables(ast_node)

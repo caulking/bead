@@ -53,7 +53,7 @@ def sample_lexicon() -> Lexicon:
         LexicalItem(lemma="sit", language_code="en", features={"pos": "VERB"}),
     ]
     for item in items:
-        lexicon.add(item)
+        lexicon = lexicon.with_item(item)
     return lexicon
 
 
@@ -156,7 +156,7 @@ def test_mlm_strategy_extensional_constraint(
     # Constraint: only allow "run" and "walk"
     constraint = Constraint(
         expression="self.id in allowed_verbs",
-        context={"allowed_verbs": {run_item.id, walk_item.id}},
+        context={"allowed_verbs": (str(run_item.id), str(walk_item.id))},
     )
 
     slot = Slot(name="verb", constraints=[constraint])

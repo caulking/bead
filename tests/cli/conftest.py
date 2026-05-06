@@ -173,14 +173,14 @@ def mock_lexicon_file(tmp_path: Path) -> Path:
     )
 
     # Add items using add() method since items is a dict
-    lexicon.add(
+    lexicon = lexicon.with_item(
         LexicalItem(
             lemma="run",
             language_code="eng",
             features={"pos": "VERB"},
         )
     )
-    lexicon.add(
+    lexicon = lexicon.with_item(
         LexicalItem(
             lemma="walk",
             language_code="eng",
@@ -223,7 +223,7 @@ def mock_template_file(tmp_path: Path) -> Path:
         name="test_templates",
         description="Test templates",
     )
-    collection.add(template)
+    collection = collection.with_template(template)
 
     template_file = tmp_path / "test_templates.jsonl"
     collection.to_jsonl(str(template_file))

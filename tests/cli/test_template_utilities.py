@@ -89,7 +89,7 @@ def sample_lexicon_file(tmp_path: Path) -> Path:
     ]
 
     for item in items:
-        lexicon.add(item)
+        lexicon = lexicon.with_item(item)
 
     file_path = tmp_path / "lexicon.jsonl"
     lexicon.to_jsonl(str(file_path))
@@ -106,7 +106,7 @@ def sample_template_file(tmp_path: Path) -> Path:
     )
 
     collection = TemplateCollection(name="test_templates")
-    collection.add(template)
+    collection = collection.with_template(template)
 
     file_path = tmp_path / "templates.jsonl"
     collection.to_jsonl(str(file_path))
