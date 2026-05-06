@@ -24,7 +24,13 @@ from bead.cli.deployment_trials import (
 )
 from bead.cli.deployment_ui import customize, generate_css
 from bead.items.item import Item
-from bead.items.item_template import ItemTemplate, PresentationSpec, TaskSpec
+from bead.items.item_template import (
+    ItemTemplate,
+    PresentationSpec,
+    ScaleBounds,
+    ScalePointLabel,
+    TaskSpec,
+)
 from bead.lists import ExperimentList
 
 
@@ -44,8 +50,11 @@ def sample_template() -> ItemTemplate:
         task_type="ordinal_scale",
         task_spec=TaskSpec(
             prompt="How natural is this sentence?",
-            scale_bounds=(1, 7),
-            scale_labels={1: "Very unnatural", 7: "Very natural"},
+            scale_bounds=ScaleBounds(min=1, max=7),
+            scale_labels=(
+                ScalePointLabel(point=1, label="Very unnatural"),
+                ScalePointLabel(point=7, label="Very natural"),
+            ),
         ),
         presentation_spec=PresentationSpec(mode="static"),
     )

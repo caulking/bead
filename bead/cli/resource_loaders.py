@@ -165,8 +165,7 @@ def import_verbnet(
         )
 
         for item in items:
-            lexicon.add(item)
-
+            lexicon = lexicon.with_item(item)
         # Save lexicon
         output_file.parent.mkdir(parents=True, exist_ok=True)
         lexicon.to_jsonl(str(output_file))
@@ -309,8 +308,7 @@ def import_unimorph(
         )
 
         for item in items:
-            lexicon.add(item)
-
+            lexicon = lexicon.with_item(item)
         # Save lexicon
         output_file.parent.mkdir(parents=True, exist_ok=True)
         lexicon.to_jsonl(str(output_file))
@@ -455,8 +453,7 @@ def import_propbank(
         )
 
         for item in items:
-            lexicon.add(item)
-
+            lexicon = lexicon.with_item(item)
         # Save lexicon
         output_file.parent.mkdir(parents=True, exist_ok=True)
         lexicon.to_jsonl(str(output_file))
@@ -598,8 +595,7 @@ def import_framenet(
         )
 
         for item in items:
-            lexicon.add(item)
-
+            lexicon = lexicon.with_item(item)
         # Save lexicon
         output_file.parent.mkdir(parents=True, exist_ok=True)
         lexicon.to_jsonl(str(output_file))

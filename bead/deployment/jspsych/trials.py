@@ -81,7 +81,7 @@ def _serialize_item_metadata(
         ],
         # constraint satisfaction
         "constraint_satisfaction": {
-            str(k): v for k, v in item.constraint_satisfaction.items()
+            str(cs.constraint_id): cs.satisfied for cs in item.constraint_satisfaction
         },
         # item-specific metadata
         "item_metadata": dict(item.item_metadata),
@@ -111,9 +111,19 @@ def _serialize_item_metadata(
         # task specification
         "task_spec": {
             "prompt": template.task_spec.prompt,
-            "scale_bounds": template.task_spec.scale_bounds,
-            "scale_labels": template.task_spec.scale_labels,
-            "options": template.task_spec.options,
+            "scale_bounds": (
+                [
+                    template.task_spec.scale_bounds.min,
+                    template.task_spec.scale_bounds.max,
+                ]
+                if template.task_spec.scale_bounds is not None
+                else None
+            ),
+            "scale_labels": {
+                str(label.point): label.label
+                for label in template.task_spec.scale_labels
+            },
+            "options": list(template.task_spec.options or ()),
             "min_selections": template.task_spec.min_selections,
             "max_selections": template.task_spec.max_selections,
             "text_validation_pattern": template.task_spec.text_validation_pattern,

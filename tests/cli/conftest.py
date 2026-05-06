@@ -76,19 +76,12 @@ paths:
   data_dir: .test_data
 
 resources:
-  auto_download: false
-  cache_resources: true
-  default_language: eng
+  cache_external: true
 
 templates:
   filling_strategy: random
   max_combinations: 100
   random_seed: 42
-
-models:
-  default_language_model: gpt2
-  use_gpu: false
-  cache_model_outputs: true
 """
     config_file.write_text(config_content)
     return config_file
