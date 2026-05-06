@@ -2,6 +2,18 @@
 
 from __future__ import annotations
 
+type MetadataValue = (
+    str
+    | int
+    | float
+    | bool
+    | None
+    | tuple[MetadataValue, ...]
+    | dict[str, MetadataValue]
+)
+
+
+
 from typing import Literal, Self
 from uuid import UUID
 
@@ -11,16 +23,6 @@ from bead.data.base import BeadBaseModel
 from bead.items.spans import SpanSpec
 from bead.tokenization.config import TokenizerConfig
 
-type MetadataValue = (
-    str
-    | int
-    | float
-    | bool
-    | None
-    | dict[str, MetadataValue]
-    | list[MetadataValue]
-    | tuple[MetadataValue, ...]
-)
 
 
 JudgmentType = Literal[

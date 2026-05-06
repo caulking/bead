@@ -33,7 +33,11 @@ from bead.resources.constraints import ContextValue
 # Type aliases for clarity
 type ItemMetadata = dict[str, Any]  # Arbitrary item properties
 type MetadataDict = dict[UUID, ItemMetadata]  # Metadata indexed by UUID
-type BalanceMetrics = dict[str, MetadataValue]
+# BalanceMetrics is the structural value type that
+# ``ExperimentList.balance_metrics`` accepts. The alias is the same shape as
+# the field declaration so that ``with_(balance_metrics=...)`` type-checks
+# without dict-invariance noise.
+type BalanceMetrics = dict[str, "MetadataValue"]
 
 
 class ListPartitioner:
@@ -153,7 +157,7 @@ class ListPartitioner:
             ExperimentList(
                 name=f"list_{i}",
                 list_number=i,
-                list_constraints=constraints,
+                list_constraints=tuple(constraints),
             )
             for i in range(n_lists)
         ]
@@ -207,7 +211,7 @@ class ListPartitioner:
             ExperimentList(
                 name=f"list_{i}",
                 list_number=i,
-                list_constraints=constraints,
+                list_constraints=tuple(constraints),
             )
             for i in range(n_lists)
         ]
@@ -296,7 +300,7 @@ class ListPartitioner:
             exp_list = ExperimentList(
                 name=f"list_{i}",
                 list_number=i,
-                list_constraints=constraints,
+                list_constraints=tuple(constraints),
                 item_refs=tuple(item_ids),
             )
             exp_list = exp_list.with_(

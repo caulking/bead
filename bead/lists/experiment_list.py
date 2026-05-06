@@ -7,6 +7,18 @@ against an ``ItemCollection`` or ``Repository``.
 
 from __future__ import annotations
 
+type MetadataValue = (
+    str
+    | int
+    | float
+    | bool
+    | None
+    | tuple[MetadataValue, ...]
+    | dict[str, MetadataValue]
+)
+
+
+
 import random
 from typing import Self
 from uuid import UUID
@@ -16,16 +28,6 @@ import didactic.api as dx
 from bead.data.base import BeadBaseModel
 from bead.lists.constraints import ListConstraint
 
-type MetadataValue = (
-    str
-    | int
-    | float
-    | bool
-    | None
-    | dict[str, MetadataValue]
-    | list[MetadataValue]
-    | tuple[MetadataValue, ...]
-)
 
 
 class ConstraintSatisfaction(BeadBaseModel):

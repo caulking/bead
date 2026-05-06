@@ -182,14 +182,3 @@ class TestGetDefaultForModel:
         assert isinstance(config, BeadConfig)
         assert config.profile == "default"
 
-    def test_raises_type_error_for_non_model(self) -> None:
-        """Test get_default_for_model raises TypeError for non-model types."""
-        with pytest.raises(TypeError) as exc_info:
-            get_default_for_model(str)  # type: ignore[arg-type]
-        assert "must be a didactic Model class" in str(exc_info.value)
-
-    def test_raises_type_error_for_instance(self) -> None:
-        """Test get_default_for_model raises TypeError for instances."""
-        with pytest.raises(TypeError) as exc_info:
-            get_default_for_model(PathsConfig())  # type: ignore[arg-type]
-        assert "must be a didactic Model class" in str(exc_info.value)

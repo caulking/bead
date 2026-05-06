@@ -8,6 +8,18 @@ and two label sources (fixed sets and Wikidata entity search).
 
 from __future__ import annotations
 
+type MetadataValue = (
+    str
+    | int
+    | float
+    | bool
+    | None
+    | tuple[MetadataValue, ...]
+    | dict[str, MetadataValue]
+)
+
+
+
 from typing import Literal
 
 import didactic.api as dx
@@ -16,16 +28,6 @@ from bead.data.base import BeadBaseModel
 
 # same recursive type as in item.py and item_template.py; duplicated here
 # to avoid circular imports.
-type MetadataValue = (
-    str
-    | int
-    | float
-    | bool
-    | None
-    | dict[str, MetadataValue]
-    | list[MetadataValue]
-    | tuple[MetadataValue, ...]
-)
 
 SpanIndexMode = Literal["token", "character"]
 SpanInteractionMode = Literal["static", "interactive"]

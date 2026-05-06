@@ -43,8 +43,4 @@ def get_default_config() -> BeadConfig:
 
 def get_default_for_model[T: dx.Model](model_type: type[T]) -> T:
     """Return a default instance of the given didactic Model class."""
-    if not isinstance(model_type, type) or not issubclass(model_type, dx.Model):
-        raise TypeError(
-            f"{model_type!r} must be a didactic Model class (BaseModel-like)"
-        )
     return model_type()

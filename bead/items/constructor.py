@@ -342,7 +342,7 @@ class ItemConstructor:
     def _extract_call_args(
         self,
         func_name: str,
-        args: list[ASTNode],
+        args: list[ASTNode] | tuple[ASTNode, ...],
         rendered_elements: dict[str, str],
     ) -> dict[str, str | int | float | bool | None] | None:
         """Extract arguments from a model function call.

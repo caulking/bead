@@ -296,10 +296,7 @@ def _create_temp_lexicon(items: list[LexicalItem]) -> Lexicon:
     Lexicon
         Temporary lexicon.
     """
-    lexicon = Lexicon(name="temp")
-    for item in items:
-        lexicon.add(item)
-    return lexicon
+    return Lexicon(name="temp", items=tuple(items))
 
 
 def create_stratified_cross_product_items(
