@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 
 from bead.items.item import Item, ModelOutput
-from bead.items.item_template import ItemTemplate, PresentationSpec, TaskSpec
+from bead.items.item_template import ItemTemplate, PresentationSpec, TaskSpec, ScaleBounds, ScalePointLabel
 from bead.simulation.strategies.ordinal_scale import OrdinalScaleStrategy
 
 
@@ -38,7 +38,7 @@ def test_validate_item_correct_task_type() -> None:
         name="test_ordinal",
         judgment_type="acceptability",
         task_type="ordinal_scale",
-        task_spec=TaskSpec(prompt="Rate naturalness", scale_bounds=(1, 7)),
+        task_spec=TaskSpec(prompt="Rate naturalness", scale_bounds=ScaleBounds(min=1, max=7)),
         presentation_spec=PresentationSpec(mode="static"),
     )
 
@@ -95,7 +95,7 @@ def test_validate_item_invalid_scale_bounds() -> None:
         name="test_invalid_bounds",
         judgment_type="acceptability",
         task_type="ordinal_scale",
-        task_spec=TaskSpec(prompt="Rate this", scale_bounds=(7, 1)),
+        task_spec=TaskSpec(prompt="Rate this", scale_bounds=ScaleBounds(min=7, max=1)),
         presentation_spec=PresentationSpec(mode="static"),
     )
 
@@ -113,7 +113,7 @@ def test_simulate_response_with_high_score() -> None:
         name="test_ordinal",
         judgment_type="acceptability",
         task_type="ordinal_scale",
-        task_spec=TaskSpec(prompt="Rate naturalness", scale_bounds=(1, 7)),
+        task_spec=TaskSpec(prompt="Rate naturalness", scale_bounds=ScaleBounds(min=1, max=7)),
         presentation_spec=PresentationSpec(mode="static"),
     )
 
@@ -143,7 +143,7 @@ def test_simulate_response_with_low_score() -> None:
         name="test_ordinal",
         judgment_type="acceptability",
         task_type="ordinal_scale",
-        task_spec=TaskSpec(prompt="Rate naturalness", scale_bounds=(1, 7)),
+        task_spec=TaskSpec(prompt="Rate naturalness", scale_bounds=ScaleBounds(min=1, max=7)),
         presentation_spec=PresentationSpec(mode="static"),
     )
 
@@ -173,7 +173,7 @@ def test_simulate_response_with_zero_score() -> None:
         name="test_ordinal",
         judgment_type="acceptability",
         task_type="ordinal_scale",
-        task_spec=TaskSpec(prompt="Rate naturalness", scale_bounds=(1, 7)),
+        task_spec=TaskSpec(prompt="Rate naturalness", scale_bounds=ScaleBounds(min=1, max=7)),
         presentation_spec=PresentationSpec(mode="static"),
     )
 
@@ -203,7 +203,7 @@ def test_simulate_response_without_model_outputs() -> None:
         name="test_ordinal",
         judgment_type="acceptability",
         task_type="ordinal_scale",
-        task_spec=TaskSpec(prompt="Rate naturalness", scale_bounds=(1, 7)),
+        task_spec=TaskSpec(prompt="Rate naturalness", scale_bounds=ScaleBounds(min=1, max=7)),
         presentation_spec=PresentationSpec(mode="static"),
     )
 
@@ -234,7 +234,7 @@ def test_simulate_response_respects_bounds() -> None:
         name="test_ordinal",
         judgment_type="acceptability",
         task_type="ordinal_scale",
-        task_spec=TaskSpec(prompt="Rate naturalness", scale_bounds=(1, 5)),
+        task_spec=TaskSpec(prompt="Rate naturalness", scale_bounds=ScaleBounds(min=1, max=5)),
         presentation_spec=PresentationSpec(mode="static"),
     )
 
@@ -263,7 +263,7 @@ def test_simulate_response_with_different_scale() -> None:
         name="test_ordinal",
         judgment_type="acceptability",
         task_type="ordinal_scale",
-        task_spec=TaskSpec(prompt="Rate quality", scale_bounds=(1, 10)),
+        task_spec=TaskSpec(prompt="Rate quality", scale_bounds=ScaleBounds(min=1, max=10)),
         presentation_spec=PresentationSpec(mode="static"),
     )
 
@@ -291,7 +291,7 @@ def test_simulate_response_with_item_metadata() -> None:
         name="test_ordinal",
         judgment_type="acceptability",
         task_type="ordinal_scale",
-        task_spec=TaskSpec(prompt="Rate naturalness", scale_bounds=(1, 7)),
+        task_spec=TaskSpec(prompt="Rate naturalness", scale_bounds=ScaleBounds(min=1, max=7)),
         presentation_spec=PresentationSpec(mode="static"),
     )
 
@@ -319,7 +319,7 @@ def test_simulate_response_deterministic_with_seed() -> None:
         name="test_ordinal",
         judgment_type="acceptability",
         task_type="ordinal_scale",
-        task_spec=TaskSpec(prompt="Rate naturalness", scale_bounds=(1, 7)),
+        task_spec=TaskSpec(prompt="Rate naturalness", scale_bounds=ScaleBounds(min=1, max=7)),
         presentation_spec=PresentationSpec(mode="static"),
     )
 
@@ -347,7 +347,7 @@ def test_simulate_response_returns_integer() -> None:
         name="test_ordinal",
         judgment_type="acceptability",
         task_type="ordinal_scale",
-        task_spec=TaskSpec(prompt="Rate naturalness", scale_bounds=(1, 7)),
+        task_spec=TaskSpec(prompt="Rate naturalness", scale_bounds=ScaleBounds(min=1, max=7)),
         presentation_spec=PresentationSpec(mode="static"),
     )
 
@@ -372,8 +372,8 @@ def test_simulate_response_with_scale_labels() -> None:
         task_type="ordinal_scale",
         task_spec=TaskSpec(
             prompt="Rate naturalness",
-            scale_bounds=(1, 7),
-            scale_labels={1: "Very unnatural", 7: "Very natural"},
+            scale_bounds=ScaleBounds(min=1, max=7),
+            scale_labels=(ScalePointLabel(point=1, label="Very unnatural"), ScalePointLabel(point=7, label="Very natural"),),
         ),
         presentation_spec=PresentationSpec(mode="static"),
     )
@@ -399,7 +399,7 @@ def test_simulate_response_with_negative_bounds() -> None:
         name="test_ordinal",
         judgment_type="similarity",
         task_type="ordinal_scale",
-        task_spec=TaskSpec(prompt="Rate difference", scale_bounds=(-3, 3)),
+        task_spec=TaskSpec(prompt="Rate difference", scale_bounds=ScaleBounds(min=-3, max=3)),
         presentation_spec=PresentationSpec(mode="static"),
     )
 

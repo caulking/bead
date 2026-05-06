@@ -13,12 +13,13 @@ from bead.deployment.distribution import (
     ListDistributionStrategy,
 )
 from bead.deployment.jspsych.config import (
+    InstructionsConfig,
     ChoiceConfig,
     ExperimentConfig,
     RatingScaleConfig,
 )
 from bead.items.item import Item
-from bead.items.item_template import ItemTemplate, PresentationSpec, TaskSpec
+from bead.items.item_template import ItemTemplate, PresentationSpec, TaskSpec, ScaleBounds, ScalePointLabel
 from bead.lists import ExperimentList
 from bead.lists.constraints import OrderingConstraint
 
@@ -58,7 +59,7 @@ def sample_experiment_config(
         experiment_type="likert_rating",
         title="Test Acceptability Study",
         description="Test experiment for rating sentence acceptability",
-        instructions="Please rate each sentence on a scale from 1 to 7.",
+        instructions=InstructionsConfig.from_text("Please rate each sentence on a scale from 1 to 7."),
         distribution_strategy=sample_distribution_strategy,
         randomize_trial_order=True,
         show_progress_bar=True,
@@ -116,8 +117,8 @@ def sample_item_template() -> ItemTemplate:
         task_type="ordinal_scale",
         task_spec=TaskSpec(
             prompt="How natural is this sentence?",
-            scale_bounds=(1, 7),
-            scale_labels={1: "Very unnatural", 7: "Very natural"},
+            scale_bounds=ScaleBounds(min=1, max=7),
+            scale_labels=(ScalePointLabel(point=1, label="Very unnatural"), ScalePointLabel(point=7, label="Very natural"),),
         ),
         presentation_spec=PresentationSpec(mode="static"),
     )
@@ -160,8 +161,8 @@ def sample_templates() -> dict[UUID, ItemTemplate]:
         task_type="ordinal_scale",
         task_spec=TaskSpec(
             prompt="How natural is this sentence?",
-            scale_bounds=(1, 7),
-            scale_labels={1: "Very unnatural", 7: "Very natural"},
+            scale_bounds=ScaleBounds(min=1, max=7),
+            scale_labels=(ScalePointLabel(point=1, label="Very unnatural"), ScalePointLabel(point=7, label="Very natural"),),
         ),
         presentation_spec=PresentationSpec(mode="static"),
     )
@@ -218,7 +219,7 @@ def sample_experiment_list(sample_items: dict[UUID, Item]) -> ExperimentList:
         Sample experiment list with ordering constraints.
     """
     # Create ordering constraint
-    constraint = OrderingConstraint(
+    constraint = OrderingConstraint(constraint_type="ordering", 
         practice_item_property="item_metadata.is_practice",
         no_adjacent_property="item_metadata.condition",
     )
@@ -244,7 +245,7 @@ def sample_precedence_constraint() -> OrderingConstraint:
     item1 = UUID("12345678-1234-5678-1234-567812345678")
     item2 = UUID("87654321-4321-8765-4321-876543218765")
 
-    return OrderingConstraint(
+    return OrderingConstraint(constraint_type="ordering", 
         precedence_pairs=(OrderingPair(before=item1, after=item2),),
     )
 
@@ -258,7 +259,7 @@ def sample_blocking_constraint() -> OrderingConstraint:
     OrderingConstraint
         Ordering constraint with blocking.
     """
-    return OrderingConstraint(
+    return OrderingConstraint(constraint_type="ordering", 
         block_by_property="item_metadata.block_type",
         randomize_within_blocks=True,
     )
@@ -273,7 +274,7 @@ def sample_distance_constraint() -> OrderingConstraint:
     OrderingConstraint
         Ordering constraint with distance specifications.
     """
-    return OrderingConstraint(
+    return OrderingConstraint(constraint_type="ordering", 
         no_adjacent_property="item_metadata.condition",
         min_distance=2,
         max_distance=10,

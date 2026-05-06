@@ -7,7 +7,7 @@ meet all requirements and contain complete, valid data.
 from __future__ import annotations
 
 from bead.items.item import Item, ModelOutput
-from bead.items.item_template import ItemTemplate, TaskType
+from bead.items.item_template import ItemTemplate, TaskType, ScaleBounds
 
 
 def validate_item(item: Item, item_template: ItemTemplate) -> list[str]:
@@ -481,7 +481,7 @@ def validate_item_for_task_type(item: Item, task_type: TaskType) -> bool:
     Examples
     --------
     >>> from bead.items.ordinal_scale import create_ordinal_scale_item
-    >>> item = create_ordinal_scale_item("How natural?", scale_bounds=(1, 7))
+    >>> item = create_ordinal_scale_item("How natural?", scale_bounds=ScaleBounds(min=1, max=7))
     >>> validate_item_for_task_type(item, "ordinal_scale")
     True
 

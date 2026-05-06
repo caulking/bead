@@ -35,7 +35,7 @@ from bead.deployment.jspsych.trials import (
     create_trial,
 )
 from bead.items.item import Item
-from bead.items.item_template import ItemTemplate, PresentationSpec, TaskSpec
+from bead.items.item_template import ItemTemplate, PresentationSpec, TaskSpec, ScaleBounds
 from bead.items.spans import Span, SpanLabel, SpanSegment
 
 
@@ -72,7 +72,7 @@ class TestCreateTrial:
             experiment_type="slider_rating",
             title="Test",
             description="Test",
-            instructions="Test instructions",
+            instructions=InstructionsConfig.from_text("Test instructions"),
             distribution_strategy=ListDistributionStrategy(
                 strategy_type=DistributionStrategyType.BALANCED
             ),
@@ -100,7 +100,7 @@ class TestCreateTrial:
             experiment_type="binary_choice",
             title="Test",
             description="Test",
-            instructions="Test instructions",
+            instructions=InstructionsConfig.from_text("Test instructions"),
             distribution_strategy=ListDistributionStrategy(
                 strategy_type=DistributionStrategyType.BALANCED
             ),
@@ -144,7 +144,7 @@ class TestCreateTrial:
             experiment_type="forced_choice",
             title="Test",
             description="Test",
-            instructions="Test instructions",
+            instructions=InstructionsConfig.from_text("Test instructions"),
             distribution_strategy=ListDistributionStrategy(
                 strategy_type=DistributionStrategyType.BALANCED
             ),
@@ -172,7 +172,7 @@ class TestCreateTrial:
             task_type="ordinal_scale",
             task_spec=TaskSpec(
                 prompt="How natural is this sentence?",
-                scale_bounds=(1, 7),
+                scale_bounds=ScaleBounds(min=1, max=7),
             ),
             presentation_spec=PresentationSpec(mode="static"),
         )
@@ -186,7 +186,7 @@ class TestCreateTrial:
             experiment_type="likert_rating",
             title="Test",
             description="Test",
-            instructions="Test instructions",
+            instructions=InstructionsConfig.from_text("Test instructions"),
             distribution_strategy=ListDistributionStrategy(
                 strategy_type=DistributionStrategyType.BALANCED
             ),
@@ -213,7 +213,7 @@ class TestCreateTrial:
                 experiment_type="invalid_type",  # type: ignore
                 title="Test",
                 description="Test",
-                instructions="Test instructions",
+                instructions=InstructionsConfig.from_text("Test instructions"),
                 distribution_strategy=ListDistributionStrategy(
                     strategy_type=DistributionStrategyType.BALANCED
                 ),
@@ -227,7 +227,7 @@ class TestCreateTrial:
             experiment_type="likert_rating",
             title="Test",
             description="Test",
-            instructions="Test instructions",
+            instructions=InstructionsConfig.from_text("Test instructions"),
             distribution_strategy=ListDistributionStrategy(
                 strategy_type=DistributionStrategyType.BALANCED
             ),
@@ -258,7 +258,7 @@ class TestLikertConfiguration:
             task_type="ordinal_scale",
             task_spec=TaskSpec(
                 prompt="How natural is this sentence?",
-                scale_bounds=(1, 5),
+                scale_bounds=ScaleBounds(min=1, max=5),
             ),
             presentation_spec=PresentationSpec(mode="static"),
         )
@@ -272,7 +272,7 @@ class TestLikertConfiguration:
             experiment_type="likert_rating",
             title="Test",
             description="Test",
-            instructions="Test instructions",
+            instructions=InstructionsConfig.from_text("Test instructions"),
             distribution_strategy=ListDistributionStrategy(
                 strategy_type=DistributionStrategyType.BALANCED
             ),
@@ -310,7 +310,7 @@ class TestSliderConfiguration:
             task_type="ordinal_scale",
             task_spec=TaskSpec(
                 prompt="How natural is this sentence?",
-                scale_bounds=(1, 7),
+                scale_bounds=ScaleBounds(min=1, max=7),
             ),
             presentation_spec=PresentationSpec(mode="static"),
         )
@@ -324,7 +324,7 @@ class TestSliderConfiguration:
             experiment_type="slider_rating",
             title="Test",
             description="Test",
-            instructions="Test instructions",
+            instructions=InstructionsConfig.from_text("Test instructions"),
             distribution_strategy=ListDistributionStrategy(
                 strategy_type=DistributionStrategyType.BALANCED
             ),

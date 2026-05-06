@@ -12,7 +12,7 @@ from bead.deployment.jspsych.randomizer import (
     _serialize_metadata,
     generate_randomizer_function,
 )
-from bead.lists.constraints import OrderingConstraint
+from bead.lists.constraints import OrderingConstraint, OrderingPair
 
 
 class TestGenerateRandomizerFunction:
@@ -41,7 +41,7 @@ class TestGenerateRandomizerFunction:
         item1 = uuid4()
         item2 = uuid4()
         item_ids = [item1, item2]
-        constraint = OrderingConstraint(
+        constraint = OrderingConstraint(constraint_type="ordering", 
             practice_item_property="item_metadata.is_practice"
         )
         metadata = {
@@ -60,7 +60,7 @@ class TestGenerateRandomizerFunction:
         item1 = UUID("12345678-1234-5678-1234-567812345678")
         item2 = UUID("87654321-4321-8765-4321-876543218765")
         item_ids = [item1, item2]
-        constraint = OrderingConstraint(precedence_pairs=(OrderingPair(before=item1, after=item2),))
+        constraint = OrderingConstraint(constraint_type="ordering", precedence_pairs=(OrderingPair(before=item1, after=item2),))
         metadata = {
             item1: {},
             item2: {},
@@ -77,7 +77,7 @@ class TestGenerateRandomizerFunction:
         item1 = uuid4()
         item2 = uuid4()
         item_ids = [item1, item2]
-        constraint = OrderingConstraint(no_adjacent_property="item_metadata.condition")
+        constraint = OrderingConstraint(constraint_type="ordering", no_adjacent_property="item_metadata.condition")
         metadata = {
             item1: {"condition": "A"},
             item2: {"condition": "B"},
@@ -93,7 +93,7 @@ class TestGenerateRandomizerFunction:
         item1 = uuid4()
         item2 = uuid4()
         item_ids = [item1, item2]
-        constraint = OrderingConstraint(
+        constraint = OrderingConstraint(constraint_type="ordering", 
             block_by_property="item_metadata.block_type", randomize_within_blocks=True
         )
         metadata = {
@@ -111,7 +111,7 @@ class TestGenerateRandomizerFunction:
         item2 = uuid4()
         item3 = uuid4()
         item_ids = [item1, item2, item3]
-        constraint = OrderingConstraint(
+        constraint = OrderingConstraint(constraint_type="ordering", 
             no_adjacent_property="item_metadata.condition",
             min_distance=2,
         )
@@ -191,7 +191,7 @@ class TestGenerateDistanceConstraints:
         item3 = uuid4()
         item_ids = [item1, item2, item3]
 
-        constraint = OrderingConstraint(
+        constraint = OrderingConstraint(constraint_type="ordering", 
             no_adjacent_property="item_metadata.condition",
             min_distance=2,
         )
@@ -219,7 +219,7 @@ class TestPrepareTemplateContext:
         """Test template context preparation with practice items."""
         item1 = uuid4()
         item2 = uuid4()
-        constraint = OrderingConstraint(
+        constraint = OrderingConstraint(constraint_type="ordering", 
             practice_item_property="item_metadata.is_practice"
         )
         metadata = {
@@ -236,7 +236,7 @@ class TestPrepareTemplateContext:
         """Test template context preparation with blocking."""
         item1 = uuid4()
         item2 = uuid4()
-        constraint = OrderingConstraint(
+        constraint = OrderingConstraint(constraint_type="ordering", 
             block_by_property="item_metadata.block_type", randomize_within_blocks=False
         )
         metadata = {
@@ -254,7 +254,7 @@ class TestPrepareTemplateContext:
         """Test template context preparation with precedence."""
         item1 = uuid4()
         item2 = uuid4()
-        constraint = OrderingConstraint(precedence_pairs=(OrderingPair(before=item1, after=item2),))
+        constraint = OrderingConstraint(constraint_type="ordering", precedence_pairs=(OrderingPair(before=item1, after=item2),))
         metadata = {item1: {}, item2: {}}
 
         context = _prepare_template_context([item1, item2], [constraint], metadata)
@@ -267,7 +267,7 @@ class TestPrepareTemplateContext:
         """Test template context preparation with no-adjacency."""
         item1 = uuid4()
         item2 = uuid4()
-        constraint = OrderingConstraint(no_adjacent_property="item_metadata.condition")
+        constraint = OrderingConstraint(constraint_type="ordering", no_adjacent_property="item_metadata.condition")
         metadata = {
             item1: {"condition": "A"},
             item2: {"condition": "B"},
@@ -285,10 +285,10 @@ class TestPrepareTemplateContext:
         item2 = uuid4()
         item3 = uuid4()
 
-        constraint1 = OrderingConstraint(
+        constraint1 = OrderingConstraint(constraint_type="ordering", 
             practice_item_property="item_metadata.is_practice"
         )
-        constraint2 = OrderingConstraint(no_adjacent_property="item_metadata.condition")
+        constraint2 = OrderingConstraint(constraint_type="ordering", no_adjacent_property="item_metadata.condition")
 
         metadata = {
             item1: {"is_practice": True, "condition": "A"},

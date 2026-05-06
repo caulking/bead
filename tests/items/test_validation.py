@@ -15,6 +15,7 @@ from bead.items.item_template import (
     ItemTemplate,
     PresentationSpec,
     TaskSpec,
+    ScaleBounds,
 )
 from bead.items.validation import (
     _check_option_keys,
@@ -553,7 +554,7 @@ class TestValidateItemForTaskType:
         """Test invalid structure for forced_choice raises ValueError."""
         from bead.items.ordinal_scale import create_ordinal_scale_item
 
-        item = create_ordinal_scale_item("Text", scale_bounds=(1, 5))
+        item = create_ordinal_scale_item("Text", scale_bounds=ScaleBounds(min=1, max=5))
         with pytest.raises((ValueError, dx.ValidationError), match="forced_choice items must have"):
             validate_item_for_task_type(item, "forced_choice")
 
@@ -580,7 +581,7 @@ class TestValidateItemForTaskType:
         """Test valid ordinal_scale item passes validation."""
         from bead.items.ordinal_scale import create_ordinal_scale_item
 
-        item = create_ordinal_scale_item("How natural?", scale_bounds=(1, 7))
+        item = create_ordinal_scale_item("How natural?", scale_bounds=ScaleBounds(min=1, max=7))
         assert validate_item_for_task_type(item, "ordinal_scale") is True
 
     def test_ordinal_scale_invalid_bounds(self) -> None:

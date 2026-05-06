@@ -18,7 +18,7 @@ from bead.deployment.distribution import (
     ListDistributionStrategy,
 )
 from bead.deployment.jatos.exporter import JATOSExporter
-from bead.deployment.jspsych.config import ExperimentConfig
+from bead.deployment.jspsych.config import ExperimentConfig, InstructionsConfig
 from bead.deployment.jspsych.generator import JsPsychExperimentGenerator
 from bead.items.binary import create_binary_item
 from bead.items.categorical import create_nli_item
@@ -26,7 +26,7 @@ from bead.items.cloze import create_simple_cloze_item
 from bead.items.forced_choice import create_forced_choice_item
 from bead.items.free_text import create_free_text_item
 from bead.items.item import Item
-from bead.items.item_template import ItemTemplate, PresentationSpec, TaskSpec
+from bead.items.item_template import ItemTemplate, PresentationSpec, TaskSpec, ScaleBounds
 from bead.items.magnitude import create_magnitude_item
 from bead.items.multi_select import create_multi_select_item
 from bead.items.ordinal_scale import create_likert_7_item
@@ -79,7 +79,7 @@ class TestForcedChoiceIntegration:
             experiment_type="forced_choice",
             title="Forced Choice Test",
             description="Test forced choice deployment",
-            instructions="Choose the best option",
+            instructions=InstructionsConfig.from_text("Choose the best option"),
             randomize_trial_order=False,
             distribution_strategy=ListDistributionStrategy(
                 strategy_type=DistributionStrategyType.BALANCED
@@ -166,7 +166,7 @@ class TestMultiSelectIntegration:
             experiment_type="forced_choice",
             title="Multi-Select Test",
             description="Test",
-            instructions="Select options",
+            instructions=InstructionsConfig.from_text("Select options"),
             distribution_strategy=ListDistributionStrategy(
                 strategy_type=DistributionStrategyType.BALANCED
             ),
@@ -221,7 +221,7 @@ class TestBinaryIntegration:
             experiment_type="binary_choice",
             title="Binary Test",
             description="Test",
-            instructions="Answer yes/no",
+            instructions=InstructionsConfig.from_text("Answer yes/no"),
             distribution_strategy=ListDistributionStrategy(
                 strategy_type=DistributionStrategyType.BALANCED
             ),
@@ -279,7 +279,7 @@ class TestCategoricalIntegration:
             experiment_type="likert_rating",
             title="NLI Test",
             description="Test",
-            instructions="Select relationship",
+            instructions=InstructionsConfig.from_text("Select relationship"),
             distribution_strategy=ListDistributionStrategy(
                 strategy_type=DistributionStrategyType.BALANCED
             ),
@@ -332,7 +332,7 @@ class TestOrdinalScaleIntegration:
             experiment_type="likert_rating",
             title="Likert Test",
             description="Test",
-            instructions="Rate sentences",
+            instructions=InstructionsConfig.from_text("Rate sentences"),
             distribution_strategy=ListDistributionStrategy(
                 strategy_type=DistributionStrategyType.BALANCED
             ),
@@ -347,7 +347,7 @@ class TestOrdinalScaleIntegration:
             name="test",
             judgment_type="acceptability",
             task_type="ordinal_scale",
-            task_spec=TaskSpec(prompt="Rate", scale_bounds=(1, 7)),
+            task_spec=TaskSpec(prompt="Rate", scale_bounds=ScaleBounds(min=1, max=7)),
             presentation_spec=PresentationSpec(mode="static"),
         )
         templates_dict = {dummy_template.id: dummy_template}
@@ -388,7 +388,7 @@ class TestMagnitudeIntegration:
             experiment_type="slider_rating",
             title="Magnitude Test",
             description="Test",
-            instructions="Enter numeric value",
+            instructions=InstructionsConfig.from_text("Enter numeric value"),
             distribution_strategy=ListDistributionStrategy(
                 strategy_type=DistributionStrategyType.BALANCED
             ),
@@ -443,7 +443,7 @@ class TestFreeTextIntegration:
             experiment_type="likert_rating",
             title="Free Text Test",
             description="Test",
-            instructions="Enter text",
+            instructions=InstructionsConfig.from_text("Enter text"),
             distribution_strategy=ListDistributionStrategy(
                 strategy_type=DistributionStrategyType.BALANCED
             ),
@@ -504,7 +504,7 @@ class TestClozeIntegration:
             experiment_type="likert_rating",
             title="Cloze Test",
             description="Test",
-            instructions="Fill in the blank",
+            instructions=InstructionsConfig.from_text("Fill in the blank"),
             distribution_strategy=ListDistributionStrategy(
                 strategy_type=DistributionStrategyType.BALANCED
             ),

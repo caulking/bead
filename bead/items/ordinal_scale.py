@@ -64,7 +64,7 @@ def create_ordinal_scale_item(
     --------
     >>> item = create_ordinal_scale_item(
     ...     text="The cat sat on the mat.",
-    ...     scale_bounds=(1, 7),
+    ...     scale_bounds=ScaleBounds(min=1, max=7),
     ...     prompt="How natural is this sentence?",
     ...     metadata={"task": "acceptability"}
     ... )
@@ -78,8 +78,8 @@ def create_ordinal_scale_item(
     >>> # 5-point Likert with labels
     >>> item = create_ordinal_scale_item(
     ...     text="I enjoy linguistics.",
-    ...     scale_bounds=(1, 5),
-    ...     scale_labels={1: "Strongly Disagree", 5: "Strongly Agree"}
+    ...     scale_bounds=ScaleBounds(min=1, max=5),
+    ...     scale_labels=(ScalePointLabel(point=1, label="Strongly Disagree"), ScalePointLabel(point=5, label="Strongly Agree"),)
     ... )
     >>> item.item_metadata["scale_labels"][1]
     'Strongly Disagree'
@@ -169,7 +169,7 @@ def create_ordinal_scale_items_from_texts(
     >>> texts = ["She walks.", "She walk.", "They walk."]
     >>> items = create_ordinal_scale_items_from_texts(
     ...     texts,
-    ...     scale_bounds=(1, 5),
+    ...     scale_bounds=ScaleBounds(min=1, max=5),
     ...     prompt="How acceptable is this sentence?",
     ...     metadata_fn=lambda t: {"text_length": len(t)}
     ... )
@@ -250,7 +250,7 @@ def create_ordinal_scale_items_from_groups(
     >>> ordinal_items = create_ordinal_scale_items_from_groups(
     ...     source_items,
     ...     group_by=lambda i: i.item_metadata["verb"],
-    ...     scale_bounds=(1, 7),
+    ...     scale_bounds=ScaleBounds(min=1, max=7),
     ...     prompt="Rate the acceptability:"
     ... )
     >>> len(ordinal_items)
@@ -331,7 +331,7 @@ def create_ordinal_scale_items_cross_product(
     >>> texts = ["The cat sat.", "The dog ran."]
     >>> prompts = ["How natural is this?", "How acceptable is this?"]
     >>> items = create_ordinal_scale_items_cross_product(
-    ...     texts, prompts, scale_bounds=(1, 5)
+    ...     texts, prompts, scale_bounds=ScaleBounds(min=1, max=5)
     ... )
     >>> len(items)
     4
@@ -394,7 +394,7 @@ def create_filtered_ordinal_scale_items(
     --------
     >>> ordinal_items = create_filtered_ordinal_scale_items(
     ...     items,
-    ...     scale_bounds=(1, 7),
+    ...     scale_bounds=ScaleBounds(min=1, max=7),
     ...     prompt="Rate the acceptability:",
     ...     item_filter=lambda i: i.item_metadata.get("valid", True)
     ... )  # doctest: +SKIP
@@ -471,15 +471,9 @@ def create_likert_5_item(
 
     return create_ordinal_scale_item(
         text,
-        scale_bounds=(1, 5),
+        scale_bounds=ScaleBounds(min=1, max=5),
         prompt=prompt,
-        scale_labels={
-            1: "Strongly Disagree",
-            2: "Disagree",
-            3: "Neutral",
-            4: "Agree",
-            5: "Strongly Agree",
-        },
+        scale_labels=(ScalePointLabel(point=1, label="Strongly Disagree"), ScalePointLabel(point=2, label="Disagree"), ScalePointLabel(point=3, label="Neutral"), ScalePointLabel(point=4, label="Agree"), ScalePointLabel(point=5, label="Strongly Agree"),),
         item_template_id=item_template_id,
         metadata=metadata,
     )
@@ -525,12 +519,9 @@ def create_likert_7_item(
 
     return create_ordinal_scale_item(
         text,
-        scale_bounds=(1, 7),
+        scale_bounds=ScaleBounds(min=1, max=7),
         prompt=prompt,
-        scale_labels={
-            1: "Strongly Disagree",
-            7: "Strongly Agree",
-        },
+        scale_labels=(ScalePointLabel(point=1, label="Strongly Disagree"), ScalePointLabel(point=7, label="Strongly Agree"),),
         item_template_id=item_template_id,
         metadata=metadata,
     )
