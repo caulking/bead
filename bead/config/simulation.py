@@ -101,9 +101,9 @@ class SimulationRunnerConfig(dx.Model):
         Path to save simulation results.
     """
 
-    annotator_configs: tuple[
-        dx.Embed[SimulatedAnnotatorConfig], ...
-    ] = dx.field(default_factory=_default_annotator_configs)
+    annotator_configs: tuple[dx.Embed[SimulatedAnnotatorConfig], ...] = dx.field(
+        default_factory=_default_annotator_configs
+    )
     n_annotators: int = 1
     inter_annotator_correlation: float | None = None
     output_format: Literal["dict", "dataframe", "jsonl"] = "dict"

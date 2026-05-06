@@ -53,12 +53,16 @@ class TestTemplateClassCreation:
 
     def test_validate_empty_name(self) -> None:
         """Test that empty name raises ValueError."""
-        with pytest.raises((ValueError, dx.ValidationError), match="name must be non-empty"):
+        with pytest.raises(
+            (ValueError, dx.ValidationError), match="name must be non-empty"
+        ):
             TemplateClass(name="", property_name="test")
 
     def test_validate_empty_property_name(self) -> None:
         """Test that empty property_name raises ValueError."""
-        with pytest.raises((ValueError, dx.ValidationError), match="property_name must be non-empty"):
+        with pytest.raises(
+            (ValueError, dx.ValidationError), match="property_name must be non-empty"
+        ):
             TemplateClass(name="test", property_name="")
 
     def test_has_id_and_timestamps(self) -> None:
@@ -236,8 +240,11 @@ class TestTemplateClassCRUDOperations:
             slots={"s": Slot(name="s"), "v": Slot(name="v"), "o": Slot(name="o")},
         )
         cls = cls.with_template(template)
-        with pytest.raises((ValueError, dx.ValidationError), match="already exists in class"):
+        with pytest.raises(
+            (ValueError, dx.ValidationError), match="already exists in class"
+        ):
             cls = cls.with_template(template)
+
     def test_remove_template(self) -> None:
         """Test removing a template from the class."""
         cls = TemplateClass(name="test", property_name="transitive")

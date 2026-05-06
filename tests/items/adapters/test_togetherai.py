@@ -106,7 +106,10 @@ class TestTogetherAIAdapterInitialization:
 
         cache = ModelOutputCache(backend="memory")
 
-        with pytest.raises((ValueError, dx.ValidationError), match="Together AI API key must be provided"):
+        with pytest.raises(
+            (ValueError, dx.ValidationError),
+            match="Together AI API key must be provided",
+        ):
             TogetherAIAdapter(model_name="meta-llama/Llama-3-70b-chat-hf", cache=cache)
 
 

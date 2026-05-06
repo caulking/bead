@@ -170,9 +170,7 @@ def test_validate_uuid_references_no_uuid_fields() -> None:
 # Provenance validation tests
 def test_validate_provenance_chain_valid() -> None:
     template = Template(name="template")
-    metadata = MetadataTracker().with_provenance(
-        template.id, "Template", "filled_from"
-    )
+    metadata = MetadataTracker().with_provenance(template.id, "Template", "filled_from")
     report = validate_provenance_chain(metadata, {template.id: template})
     assert report.valid is True
 

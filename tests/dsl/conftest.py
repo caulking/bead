@@ -30,7 +30,8 @@ def sample_binary_op(
     sample_variable: ast.Variable, sample_literal_string: ast.Literal
 ) -> ast.BinaryOp:
     """Provide sample binary operation node."""
-    return ast.BinaryOp(kind="binary_op", 
+    return ast.BinaryOp(
+        kind="binary_op",
         operator="==",
         left=sample_variable,
         right=sample_literal_string,

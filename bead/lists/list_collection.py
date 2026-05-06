@@ -27,6 +27,7 @@ type MetadataValue = (
     | dict[str, MetadataValue]
 )
 
+
 class CoverageValidationResult(TypedDict):
     """Outcome of a coverage check across a ``ListCollection``."""
 
@@ -76,9 +77,7 @@ class ListCollection(BeadBaseModel):
             return value
         list_numbers = [exp_list.list_number for exp_list in value]
         if len(list_numbers) != len(set(list_numbers)):
-            duplicates = {
-                num for num in list_numbers if list_numbers.count(num) > 1
-            }
+            duplicates = {num for num in list_numbers if list_numbers.count(num) > 1}
             raise ValueError(f"Duplicate list_numbers found: {duplicates}")
         return value
 
@@ -100,9 +99,7 @@ class ListCollection(BeadBaseModel):
             all_refs.update(exp_list.item_refs)
         return tuple(all_refs)
 
-    def validate_coverage(
-        self, all_item_ids: set[UUID]
-    ) -> CoverageValidationResult:
+    def validate_coverage(self, all_item_ids: set[UUID]) -> CoverageValidationResult:
         """Check that every item in *all_item_ids* is assigned exactly once.
 
         Returns a report with keys ``valid``, ``missing_items``,
@@ -115,9 +112,7 @@ class ListCollection(BeadBaseModel):
 
         assigned = set(item_counts.keys())
         missing = list(all_item_ids - assigned)
-        duplicates = [
-            item_id for item_id, count in item_counts.items() if count > 1
-        ]
+        duplicates = [item_id for item_id, count in item_counts.items() if count > 1]
 
         return {
             "valid": not missing and not duplicates,

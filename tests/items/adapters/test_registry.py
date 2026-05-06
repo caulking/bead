@@ -59,7 +59,9 @@ class TestModelAdapterRegistry:
         """Test that registering non-adapter class raises error."""
         registry = ModelAdapterRegistry()
 
-        with pytest.raises((ValueError, dx.ValidationError), match="must inherit from ModelAdapter"):
+        with pytest.raises(
+            (ValueError, dx.ValidationError), match="must inherit from ModelAdapter"
+        ):
             registry.register("invalid", NotAnAdapter)  # type: ignore[arg-type]
 
     def test_get_adapter_creates_instance(self) -> None:
@@ -103,7 +105,9 @@ class TestModelAdapterRegistry:
         """Test that unknown adapter type raises error."""
         registry = ModelAdapterRegistry()
 
-        with pytest.raises((ValueError, dx.ValidationError), match="Unknown adapter type"):
+        with pytest.raises(
+            (ValueError, dx.ValidationError), match="Unknown adapter type"
+        ):
             registry.get_adapter("unknown", "test-model")
 
     def test_clear_cache(self) -> None:

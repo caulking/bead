@@ -200,17 +200,11 @@ class AnalyticsCollection(BeadBaseModel):
         analytics_list: tuple[JudgmentAnalytics, ...] | list[JudgmentAnalytics],
     ) -> Self:
         """Return a new collection with each record appended."""
-        return self.with_(
-            analytics=(*self.analytics, *analytics_list)
-        ).touched()
+        return self.with_(analytics=(*self.analytics, *analytics_list)).touched()
 
-    def get_by_participant(
-        self, participant_id: str
-    ) -> tuple[JudgmentAnalytics, ...]:
+    def get_by_participant(self, participant_id: str) -> tuple[JudgmentAnalytics, ...]:
         """Return analytics belonging to *participant_id*."""
-        return tuple(
-            a for a in self.analytics if a.participant_id == participant_id
-        )
+        return tuple(a for a in self.analytics if a.participant_id == participant_id)
 
     def get_by_item(self, item_id: UUID) -> tuple[JudgmentAnalytics, ...]:
         """Return analytics for *item_id*."""
@@ -247,9 +241,7 @@ class AnalyticsCollection(BeadBaseModel):
             )
 
         filtered = tuple(a for a in self.analytics if meets_criteria(a))
-        return AnalyticsCollection(
-            name=f"{self.name}_filtered", analytics=filtered
-        )
+        return AnalyticsCollection(name=f"{self.name}_filtered", analytics=filtered)
 
     def get_participant_ids(self) -> tuple[str, ...]:
         """Return the unique participant identifiers in the collection."""
@@ -289,9 +281,7 @@ class AnalyticsCollection(BeadBaseModel):
             blur_duration = 0.0
             for r in records:
                 if r.focus_metrics is not None:
-                    blur_events += int(
-                        r.focus_metrics.get("blur_count", 0) or 0
-                    )
+                    blur_events += int(r.focus_metrics.get("blur_count", 0) or 0)
                     duration = r.focus_metrics.get("total_blur_duration", 0.0)
                     if isinstance(duration, (int, float)):
                         blur_duration += float(duration)
@@ -381,15 +371,9 @@ class AnalyticsCollection(BeadBaseModel):
                     record["keystroke_total"] = a.keystroke_metrics.get(
                         "total_keystrokes"
                     )
-                    record["keystroke_mean_iki"] = a.keystroke_metrics.get(
-                        "mean_iki"
-                    )
-                    record["keystroke_std_iki"] = a.keystroke_metrics.get(
-                        "std_iki"
-                    )
-                    record["keystroke_deletions"] = a.keystroke_metrics.get(
-                        "deletions"
-                    )
+                    record["keystroke_mean_iki"] = a.keystroke_metrics.get("mean_iki")
+                    record["keystroke_std_iki"] = a.keystroke_metrics.get("std_iki")
+                    record["keystroke_deletions"] = a.keystroke_metrics.get("deletions")
                 else:
                     record["keystroke_total"] = None
                     record["keystroke_mean_iki"] = None
@@ -420,9 +404,7 @@ class AnalyticsCollection(BeadBaseModel):
                 record["is_flagged"] = a.is_flagged
                 record["flag_count"] = len(a.flags)
                 record["max_severity"] = a.max_severity
-                record["flag_types"] = (
-                    ",".join(a.get_flag_types()) if a.flags else None
-                )
+                record["flag_types"] = ",".join(a.get_flag_types()) if a.flags else None
 
             records.append(record)
 

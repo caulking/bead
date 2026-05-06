@@ -33,7 +33,11 @@ class TestCreateCategoricalItem:
         assert isinstance(item, Item)
         assert item.rendered_elements["text"] == "The cat sat on the mat."
         assert item.rendered_elements["prompt"] == "What is the tense?"
-        assert item.item_metadata["categories"] == ("past", "present", "future",)
+        assert item.item_metadata["categories"] == (
+            "past",
+            "present",
+            "future",
+        )
 
     def test_default_prompt(self) -> None:
         """Test default prompt."""
@@ -43,10 +47,14 @@ class TestCreateCategoricalItem:
 
     def test_empty_text_raises_error(self) -> None:
         """Test that empty text raises error."""
-        with pytest.raises((ValueError, dx.ValidationError), match="text cannot be empty"):
+        with pytest.raises(
+            (ValueError, dx.ValidationError), match="text cannot be empty"
+        ):
             create_categorical_item("", categories=["A", "B"])
 
-        with pytest.raises((ValueError, dx.ValidationError), match="text cannot be empty"):
+        with pytest.raises(
+            (ValueError, dx.ValidationError), match="text cannot be empty"
+        ):
             create_categorical_item("   ", categories=["A", "B"])
 
     def test_too_few_categories_raises_error(self) -> None:
@@ -75,7 +83,11 @@ class TestCreateCategoricalItem:
 
         assert item.item_metadata["task"] == "classification"
         assert item.item_metadata["language"] == "en"
-        assert item.item_metadata["categories"] == ("A", "B", "C",)
+        assert item.item_metadata["categories"] == (
+            "A",
+            "B",
+            "C",
+        )
 
     def test_nli_example(self) -> None:
         """Test NLI classification example."""
@@ -157,7 +169,9 @@ class TestCreateCategoricalItemsFromTexts:
         assert len(items) == 3
         assert all(isinstance(item, Item) for item in items)
         assert items[0].rendered_elements["text"] == "The cat sat."
-        assert all(item.item_metadata["categories"] == tuple(categories) for item in items)
+        assert all(
+            item.item_metadata["categories"] == tuple(categories) for item in items
+        )
 
     def test_with_metadata_function(self) -> None:
         """Test with metadata function."""
@@ -255,7 +269,9 @@ class TestCreateCategoricalItemsCrossProduct:
         assert len(items) == 4
         assert items[0].rendered_elements["text"] == "The cat sat."
         assert items[0].rendered_elements["prompt"] == "What is the tense?"
-        assert all(item.item_metadata["categories"] == tuple(categories) for item in items)
+        assert all(
+            item.item_metadata["categories"] == tuple(categories) for item in items
+        )
 
 
 class TestCreateFilteredCategoricalItems:

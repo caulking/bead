@@ -53,12 +53,16 @@ class TestLexicalItemClassCreation:
 
     def test_validate_empty_name(self) -> None:
         """Test that empty name raises ValueError."""
-        with pytest.raises((ValueError, dx.ValidationError), match="name must be non-empty"):
+        with pytest.raises(
+            (ValueError, dx.ValidationError), match="name must be non-empty"
+        ):
             LexicalItemClass(name="", property_name="test")
 
     def test_validate_empty_property_name(self) -> None:
         """Test that empty property_name raises ValueError."""
-        with pytest.raises((ValueError, dx.ValidationError), match="property_name must be non-empty"):
+        with pytest.raises(
+            (ValueError, dx.ValidationError), match="property_name must be non-empty"
+        ):
             LexicalItemClass(name="test", property_name="")
 
     def test_has_id_and_timestamps(self) -> None:
@@ -98,7 +102,9 @@ class TestLexicalItemClassLanguageMethods:
         """Test that items without language_code are excluded from languages()."""
         cls = LexicalItemClass(name="test", property_name="causative")
         cls = cls.with_item(LexicalItem(lemma="walk", language_code="en"))
-        cls = cls.with_item(LexicalItem(lemma="run", language_code="eng"))  # No language_code
+        cls = cls.with_item(
+            LexicalItem(lemma="run", language_code="eng")
+        )  # No language_code
         # Language codes are normalized to ISO 639-3 (3-letter codes)
         assert cls.languages() == {"eng"}
 
@@ -211,8 +217,11 @@ class TestLexicalItemClassCRUDOperations:
         cls = LexicalItemClass(name="test", property_name="causative")
         item = LexicalItem(lemma="break", language_code="eng")
         cls = cls.with_item(item)
-        with pytest.raises((ValueError, dx.ValidationError), match="already exists in class"):
+        with pytest.raises(
+            (ValueError, dx.ValidationError), match="already exists in class"
+        ):
             cls = cls.with_item(item)
+
     def test_remove_item(self) -> None:
         """Test removing an item from the class."""
         cls = LexicalItemClass(name="test", property_name="causative")

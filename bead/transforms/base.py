@@ -145,8 +145,7 @@ class TransformRegistry:
         except KeyError:
             available = sorted(self._transforms)
             raise KeyError(
-                f"No transform registered as '{name}'. "
-                f"Available: {available}"
+                f"No transform registered as '{name}'. Available: {available}"
             ) from None
 
     def resolve_pipeline(self, names: list[str]) -> TransformPipeline:

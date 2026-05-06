@@ -101,6 +101,8 @@ def test_add_raises_error_on_duplicate_id() -> None:
     collection = collection.with_template(template)
     with pytest.raises((ValueError, dx.ValidationError), match="already exists"):
         collection = collection.with_template(template)
+
+
 def test_add_many_adds_multiple_templates() -> None:
     """Test that add_many() adds multiple templates."""
     collection = TemplateCollection(name="test")
@@ -283,9 +285,13 @@ def test_search_invalid_field_raises_error() -> None:
 def test_merge_with_no_overlapping_ids() -> None:
     """Test merge() with no overlapping IDs."""
     c1 = TemplateCollection(name="c1")
-    c1 = c1.with_template(Template(name="t1", template_string="{x}.", slots={"x": Slot(name="x")}))
+    c1 = c1.with_template(
+        Template(name="t1", template_string="{x}.", slots={"x": Slot(name="x")})
+    )
     c2 = TemplateCollection(name="c2")
-    c2 = c2.with_template(Template(name="t2", template_string="{y}.", slots={"y": Slot(name="y")}))
+    c2 = c2.with_template(
+        Template(name="t2", template_string="{y}.", slots={"y": Slot(name="y")})
+    )
     merged = c1.merge(c2)
     assert len(merged.templates) == 2
 
@@ -299,7 +305,9 @@ def test_merge_with_error_strategy_raises_on_duplicates() -> None:
     # Add same template to c2
     c2 = c2.with_(templates=(template,))
 
-    with pytest.raises((ValueError, dx.ValidationError), match="Duplicate template IDs found"):
+    with pytest.raises(
+        (ValueError, dx.ValidationError), match="Duplicate template IDs found"
+    ):
         c1.merge(c2, strategy="error")
 
 

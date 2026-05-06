@@ -1090,9 +1090,7 @@ def _generate_span_stimulus_html(
 
 # prompt span reference resolution
 
-_SPAN_REF_PATTERN = re.compile(
-    r"\[\[([^\]:|]+?)(?::([^\]|]+?))?(?:\|([^\]]+?))?\]\]"
-)
+_SPAN_REF_PATTERN = re.compile(r"\[\[([^\]:|]+?)(?::([^\]|]+?))?(?:\|([^\]]+?))?\]\]")
 
 
 @dataclass(frozen=True)
@@ -1265,7 +1263,6 @@ def _resolve_prompt_references(
 
         # apply transforms if requested and a registry is available
         if ref.transforms and transform_registry is not None:
-
             context = _build_transform_context(ref.label, item)
             pipeline = transform_registry.resolve_pipeline(ref.transforms)
             display = pipeline(display, context)

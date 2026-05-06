@@ -65,7 +65,11 @@ def test_partition_stratified_basic(
     partitioner = ListPartitioner(random_seed=42)
     items = list(sample_quantile_metadata.keys())
 
-    constraint = QuantileConstraint(constraint_type="quantile", property_expression="item['lm_prob']", n_quantiles=5, items_per_quantile=2
+    constraint = QuantileConstraint(
+        constraint_type="quantile",
+        property_expression="item['lm_prob']",
+        n_quantiles=5,
+        items_per_quantile=2,
     )
 
     lists = partitioner.partition(
@@ -185,7 +189,10 @@ def test_partition_with_uniqueness_constraint(
     partitioner = ListPartitioner(random_seed=42)
     items = list(sample_item_metadata.keys())
 
-    constraint = UniquenessConstraint(constraint_type="uniqueness", property_expression="item['category']", allow_null=False
+    constraint = UniquenessConstraint(
+        constraint_type="uniqueness",
+        property_expression="item['category']",
+        allow_null=False,
     )
 
     lists = partitioner.partition(
@@ -209,7 +216,8 @@ def test_partition_with_balance_constraint(sample_item_metadata: MetadataDict) -
     partitioner = ListPartitioner(random_seed=42)
     items = list(sample_item_metadata.keys())
 
-    constraint = BalanceConstraint(constraint_type="balance", property_expression="item['category']", tolerance=0.3
+    constraint = BalanceConstraint(
+        constraint_type="balance", property_expression="item['category']", tolerance=0.3
     )
 
     lists = partitioner.partition(
@@ -261,7 +269,11 @@ def test_partition_with_quantile_constraint(
     partitioner = ListPartitioner(random_seed=42)
     items = list(sample_quantile_metadata.keys())
 
-    constraint = QuantileConstraint(constraint_type="quantile", property_expression="item['lm_prob']", n_quantiles=5, items_per_quantile=2
+    constraint = QuantileConstraint(
+        constraint_type="quantile",
+        property_expression="item['lm_prob']",
+        n_quantiles=5,
+        items_per_quantile=2,
     )
 
     lists = partitioner.partition(
@@ -287,7 +299,11 @@ def test_partition_balance_metrics_computed(sample_item_metadata: MetadataDict) 
     partitioner = ListPartitioner(random_seed=42)
     items = list(sample_item_metadata.keys())
 
-    constraint = QuantileConstraint(constraint_type="quantile", property_expression="item['value']", n_quantiles=5, items_per_quantile=2
+    constraint = QuantileConstraint(
+        constraint_type="quantile",
+        property_expression="item['value']",
+        n_quantiles=5,
+        items_per_quantile=2,
     )
 
     lists = partitioner.partition(
@@ -309,7 +325,9 @@ def test_partition_constraints_attached(sample_item_metadata: MetadataDict) -> N
     partitioner = ListPartitioner(random_seed=42)
     items = list(sample_item_metadata.keys())
 
-    constraint = UniquenessConstraint(constraint_type="uniqueness", property_expression="item['category']")
+    constraint = UniquenessConstraint(
+        constraint_type="uniqueness", property_expression="item['category']"
+    )
 
     lists = partitioner.partition(
         items,
@@ -382,7 +400,9 @@ def test_check_uniqueness_satisfied() -> None:
     exp_list = ExperimentList(name="test", list_number=0)
     for item_id in items:
         exp_list = exp_list.with_item(item_id)
-    constraint = UniquenessConstraint(constraint_type="uniqueness", property_expression="item['prop']")
+    constraint = UniquenessConstraint(
+        constraint_type="uniqueness", property_expression="item['prop']"
+    )
     assert partitioner._check_uniqueness(exp_list, constraint, metadata)
 
 
@@ -395,7 +415,9 @@ def test_check_uniqueness_violated() -> None:
     exp_list = ExperimentList(name="test", list_number=0)
     for item_id in items:
         exp_list = exp_list.with_item(item_id)
-    constraint = UniquenessConstraint(constraint_type="uniqueness", property_expression="item['prop']")
+    constraint = UniquenessConstraint(
+        constraint_type="uniqueness", property_expression="item['prop']"
+    )
     assert not partitioner._check_uniqueness(exp_list, constraint, metadata)
 
 
@@ -494,7 +516,9 @@ def test_compute_balance_metrics_empty_list() -> None:
     partitioner = ListPartitioner()
 
     exp_list = ExperimentList(name="test", list_number=0)
-    constraint = QuantileConstraint(constraint_type="quantile", property_expression="item['value']", n_quantiles=5)
+    constraint = QuantileConstraint(
+        constraint_type="quantile", property_expression="item['value']", n_quantiles=5
+    )
 
     metrics = partitioner._compute_balance_metrics(exp_list, [constraint], {})
 
@@ -513,7 +537,8 @@ def test_constraint_priority_weighting() -> None:
     # High priority size constraint (priority=10)
     size_constraint = SizeConstraint(constraint_type="size", exact_size=5, priority=10)
     # Low priority uniqueness constraint (priority=1)
-    uniqueness_constraint = UniquenessConstraint(constraint_type="uniqueness", property_expression="item['value']", priority=1
+    uniqueness_constraint = UniquenessConstraint(
+        constraint_type="uniqueness", property_expression="item['value']", priority=1
     )
 
     lists = partitioner.partition(
@@ -534,11 +559,17 @@ def test_constraint_priority_default() -> None:
     constraint = SizeConstraint(constraint_type="size", exact_size=40)
     assert constraint.priority == 1
 
-    constraint2 = UniquenessConstraint(constraint_type="uniqueness", property_expression="item['value']")
+    constraint2 = UniquenessConstraint(
+        constraint_type="uniqueness", property_expression="item['value']"
+    )
     assert constraint2.priority == 1
 
-    constraint3 = BalanceConstraint(constraint_type="balance", property_expression="item['category']")
+    constraint3 = BalanceConstraint(
+        constraint_type="balance", property_expression="item['category']"
+    )
     assert constraint3.priority == 1
 
-    constraint4 = QuantileConstraint(constraint_type="quantile", property_expression="item['score']")
+    constraint4 = QuantileConstraint(
+        constraint_type="quantile", property_expression="item['score']"
+    )
     assert constraint4.priority == 1

@@ -80,7 +80,9 @@ class TestAgreementConstraintBuilder:
         """Test that agreement requires at least 2 slots."""
         builder = AgreementConstraintBuilder("case")
 
-        with pytest.raises((ValueError, dx.ValidationError), match="at least 2 slot names"):
+        with pytest.raises(
+            (ValueError, dx.ValidationError), match="at least 2 slot names"
+        ):
             builder.build("noun")
 
     def test_feature_name_preserved(self) -> None:

@@ -97,9 +97,7 @@ class Template(BeadBaseModel):
         return value
 
     @dx.validates("language_code")
-    def _check_language_code(
-        self, value: LanguageCode | None
-    ) -> LanguageCode | None:
+    def _check_language_code(self, value: LanguageCode | None) -> LanguageCode | None:
         from bead.data.language_codes import validate_iso639_code  # noqa: PLC0415
 
         return validate_iso639_code(value)
@@ -170,9 +168,7 @@ def slots_match_template(template: Template) -> None:
 
     for key, slot in template.slots.items():
         if slot.name != key:
-            raise ValueError(
-                f"Slot key '{key}' does not match slot name '{slot.name}'"
-            )
+            raise ValueError(f"Slot key '{key}' does not match slot name '{slot.name}'")
 
 
 class TemplateSequence(BeadBaseModel):

@@ -111,12 +111,8 @@ class SlopitIntegrationConfig(dx.Model):
     keystroke: dx.Embed[SlopitKeystrokeConfig] = dx.field(
         default_factory=_default_keystroke_config
     )
-    focus: dx.Embed[SlopitFocusConfig] = dx.field(
-        default_factory=_default_focus_config
-    )
-    paste: dx.Embed[SlopitPasteConfig] = dx.field(
-        default_factory=_default_paste_config
-    )
+    focus: dx.Embed[SlopitFocusConfig] = dx.field(default_factory=_default_focus_config)
+    paste: dx.Embed[SlopitPasteConfig] = dx.field(default_factory=_default_paste_config)
     target_selectors: dict[str, str] = dx.field(
         default_factory=_default_target_selectors
     )
@@ -141,9 +137,7 @@ def validate_slopit_integration(config: SlopitIntegrationConfig) -> None:
 
 
 def _default_distribution_strategy() -> ListDistributionStrategy:
-    return ListDistributionStrategy(
-        strategy_type=DistributionStrategyType.BALANCED
-    )
+    return ListDistributionStrategy(strategy_type=DistributionStrategyType.BALANCED)
 
 
 class DeploymentConfig(dx.Model):

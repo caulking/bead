@@ -69,12 +69,14 @@ def test_binary_op_creation() -> None:
 def test_binary_op_nested() -> None:
     """Test BinaryOp with nested operands."""
     # (a == b) and (c == d)
-    left_op = ast.BinaryOp(kind="binary_op", 
+    left_op = ast.BinaryOp(
+        kind="binary_op",
         operator="==",
         left=ast.Variable(kind="variable", name="a"),
         right=ast.Variable(kind="variable", name="b"),
     )
-    right_op = ast.BinaryOp(kind="binary_op", 
+    right_op = ast.BinaryOp(
+        kind="binary_op",
         operator="==",
         left=ast.Variable(kind="variable", name="c"),
         right=ast.Variable(kind="variable", name="d"),
@@ -163,11 +165,14 @@ def test_attribute_access_creation() -> None:
 def test_attribute_access_nested() -> None:
     """Test AttributeAccess with nested object."""
     # obj.attr1.attr2
-    inner = ast.AttributeAccess(kind="attribute_access", 
+    inner = ast.AttributeAccess(
+        kind="attribute_access",
         object=ast.Variable(kind="variable", name="obj"),
         attribute="attr1",
     )
-    outer = ast.AttributeAccess(kind="attribute_access", object=inner, attribute="attr2")
+    outer = ast.AttributeAccess(
+        kind="attribute_access", object=inner, attribute="attr2"
+    )
     assert outer.attribute == "attr2"
     assert isinstance(outer.object, ast.AttributeAccess)
 
@@ -196,22 +201,28 @@ def test_ast_node_validation_error() -> None:
 def test_nested_ast_structure() -> None:
     """Test complex nested AST structure."""
     # (pos == "VERB" and len(lemma) > 3) or transitive == true
-    left_left = ast.BinaryOp(kind="binary_op", 
+    left_left = ast.BinaryOp(
+        kind="binary_op",
         operator="==",
         left=ast.Variable(kind="variable", name="pos"),
         right=ast.Literal(kind="literal", value="VERB"),
     )
-    left_right = ast.BinaryOp(kind="binary_op", 
+    left_right = ast.BinaryOp(
+        kind="binary_op",
         operator=">",
-        left=ast.FunctionCall(kind="function_call", 
+        left=ast.FunctionCall(
+            kind="function_call",
             function=ast.Variable(kind="variable", name="len"),
             arguments=[ast.Variable(kind="variable", name="lemma")],
         ),
         right=ast.Literal(kind="literal", value=3),
     )
-    left = ast.BinaryOp(kind="binary_op", operator="and", left=left_left, right=left_right)
+    left = ast.BinaryOp(
+        kind="binary_op", operator="and", left=left_left, right=left_right
+    )
 
-    right = ast.BinaryOp(kind="binary_op", 
+    right = ast.BinaryOp(
+        kind="binary_op",
         operator="==",
         left=ast.Variable(kind="variable", name="transitive"),
         right=ast.Literal(kind="literal", value=True),

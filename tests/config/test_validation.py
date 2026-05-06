@@ -29,7 +29,9 @@ class TestCheckPathsExist:
     ) -> None:
         """Test path checking with nonexistent absolute path."""
         config = get_default_config()
-        config = config.with_(paths=config.paths.with_(data_dir=tmp_path / "nonexistent"))
+        config = config.with_(
+            paths=config.paths.with_(data_dir=tmp_path / "nonexistent")
+        )
         errors = check_paths_exist(config)
         assert len(errors) > 0
         assert any("data_dir does not exist" in e for e in errors)
@@ -49,7 +51,9 @@ class TestCheckPathsExist:
     def test_check_paths_exist_with_missing_resource_path(self, tmp_path: Path) -> None:
         """Test path checking with missing resource path."""
         config = get_default_config()
-        config = config.with_(resources=config.resources.with_(lexicon_path=tmp_path / "nonexistent.json"))
+        config = config.with_(
+            resources=config.resources.with_(lexicon_path=tmp_path / "nonexistent.json")
+        )
         errors = check_paths_exist(config)
         assert len(errors) > 0
         assert any("lexicon_path does not exist" in e for e in errors)
@@ -57,7 +61,13 @@ class TestCheckPathsExist:
     def test_check_paths_exist_with_missing_logging_dir(self, tmp_path: Path) -> None:
         """Test path checking with missing logging directory."""
         config = get_default_config()
-        config = config.with_(active_learning=config.active_learning.with_(trainer=config.active_learning.trainer.with_(logging_dir=tmp_path / "nonexistent")))
+        config = config.with_(
+            active_learning=config.active_learning.with_(
+                trainer=config.active_learning.trainer.with_(
+                    logging_dir=tmp_path / "nonexistent"
+                )
+            )
+        )
         errors = check_paths_exist(config)
         assert len(errors) > 0
         assert any("logging_dir does not exist" in e for e in errors)
@@ -75,7 +85,9 @@ class TestCheckResourceCompatibility:
     def test_check_resource_compatibility_templates_without_lexicon(self) -> None:
         """Test that templates_path without lexicon_path raises error."""
         config = get_default_config()
-        config = config.with_(resources=config.resources.with_(templates_path=Path("templates.json")))
+        config = config.with_(
+            resources=config.resources.with_(templates_path=Path("templates.json"))
+        )
         config = config.with_(resources=config.resources.with_(lexicon_path=None))
         errors = check_resource_compatibility(config)
         assert len(errors) > 0
@@ -84,8 +96,12 @@ class TestCheckResourceCompatibility:
     def test_check_resource_compatibility_both_specified(self) -> None:
         """Test that both templates_path and lexicon_path work together."""
         config = get_default_config()
-        config = config.with_(resources=config.resources.with_(templates_path=Path("templates.json")))
-        config = config.with_(resources=config.resources.with_(lexicon_path=Path("lexicon.json")))
+        config = config.with_(
+            resources=config.resources.with_(templates_path=Path("templates.json"))
+        )
+        config = config.with_(
+            resources=config.resources.with_(lexicon_path=Path("lexicon.json"))
+        )
         errors = check_resource_compatibility(config)
         # Should not error about missing lexicon
         assert not any("lexicon" in e.lower() and "not" in e.lower() for e in errors)
@@ -97,7 +113,9 @@ class TestCheckModelConfiguration:
     def test_check_model_configuration_cpu(self) -> None:
         """Test model configuration with CPU device."""
         config = get_default_config()
-        config = config.with_(items=config.items.with_(model=config.items.model.with_(device="cpu")))
+        config = config.with_(
+            items=config.items.with_(model=config.items.model.with_(device="cpu"))
+        )
         errors = check_model_configuration(config)
         # CPU should always work
         assert len(errors) == 0
@@ -105,7 +123,9 @@ class TestCheckModelConfiguration:
     def test_check_model_configuration_cuda_without_torch(self) -> None:
         """Test model configuration with CUDA device."""
         config = get_default_config()
-        config = config.with_(items=config.items.with_(model=config.items.model.with_(device="cuda")))
+        config = config.with_(
+            items=config.items.with_(model=config.items.model.with_(device="cuda"))
+        )
         errors = check_model_configuration(config)
         # Will error if torch not installed or CUDA not available
         # We don't know the test environment, so just check it returns a list
@@ -114,7 +134,9 @@ class TestCheckModelConfiguration:
     def test_check_model_configuration_mps(self) -> None:
         """Test model configuration with MPS device."""
         config = get_default_config()
-        config = config.with_(items=config.items.with_(model=config.items.model.with_(device="mps")))
+        config = config.with_(
+            items=config.items.with_(model=config.items.model.with_(device="mps"))
+        )
         errors = check_model_configuration(config)
         # Will error if torch not installed or MPS not available
         # We don't know the test environment, so just check it returns a list
@@ -133,7 +155,13 @@ class TestCheckTrainingConfiguration:
     def test_check_training_configuration_negative_batch_size(self) -> None:
         """Test training configuration with negative batch size."""
         config = get_default_config()
-        config = config.with_(active_learning=config.active_learning.with_(forced_choice_model=config.active_learning.forced_choice_model.with_(batch_size=-1)))
+        config = config.with_(
+            active_learning=config.active_learning.with_(
+                forced_choice_model=config.active_learning.forced_choice_model.with_(
+                    batch_size=-1
+                )
+            )
+        )
         errors = check_training_configuration(config)
         assert len(errors) > 0
         assert any("batch size" in e.lower() for e in errors)
@@ -141,7 +169,13 @@ class TestCheckTrainingConfiguration:
     def test_check_training_configuration_zero_batch_size(self) -> None:
         """Test training configuration with zero batch size."""
         config = get_default_config()
-        config = config.with_(active_learning=config.active_learning.with_(forced_choice_model=config.active_learning.forced_choice_model.with_(batch_size=0)))
+        config = config.with_(
+            active_learning=config.active_learning.with_(
+                forced_choice_model=config.active_learning.forced_choice_model.with_(
+                    batch_size=0
+                )
+            )
+        )
         errors = check_training_configuration(config)
         assert len(errors) > 0
         assert any("batch size" in e.lower() for e in errors)
@@ -149,7 +183,11 @@ class TestCheckTrainingConfiguration:
     def test_check_training_configuration_negative_epochs(self) -> None:
         """Test training configuration with negative epochs."""
         config = get_default_config()
-        config = config.with_(active_learning=config.active_learning.with_(trainer=config.active_learning.trainer.with_(epochs=-5)))
+        config = config.with_(
+            active_learning=config.active_learning.with_(
+                trainer=config.active_learning.trainer.with_(epochs=-5)
+            )
+        )
         errors = check_training_configuration(config)
         assert len(errors) > 0
         assert any("epochs" in e.lower() for e in errors)
@@ -157,7 +195,11 @@ class TestCheckTrainingConfiguration:
     def test_check_training_configuration_zero_epochs(self) -> None:
         """Test training configuration with zero epochs."""
         config = get_default_config()
-        config = config.with_(active_learning=config.active_learning.with_(trainer=config.active_learning.trainer.with_(epochs=0)))
+        config = config.with_(
+            active_learning=config.active_learning.with_(
+                trainer=config.active_learning.trainer.with_(epochs=0)
+            )
+        )
         errors = check_training_configuration(config)
         assert len(errors) > 0
         assert any("epochs" in e.lower() for e in errors)
@@ -165,7 +207,13 @@ class TestCheckTrainingConfiguration:
     def test_check_training_configuration_negative_learning_rate(self) -> None:
         """Test training configuration with negative learning rate."""
         config = get_default_config()
-        config = config.with_(active_learning=config.active_learning.with_(forced_choice_model=config.active_learning.forced_choice_model.with_(learning_rate=-0.001)))
+        config = config.with_(
+            active_learning=config.active_learning.with_(
+                forced_choice_model=config.active_learning.forced_choice_model.with_(
+                    learning_rate=-0.001
+                )
+            )
+        )
         errors = check_training_configuration(config)
         assert len(errors) > 0
         assert any("learning rate" in e.lower() for e in errors)
@@ -173,7 +221,13 @@ class TestCheckTrainingConfiguration:
     def test_check_training_configuration_zero_learning_rate(self) -> None:
         """Test training configuration with zero learning rate."""
         config = get_default_config()
-        config = config.with_(active_learning=config.active_learning.with_(forced_choice_model=config.active_learning.forced_choice_model.with_(learning_rate=0.0)))
+        config = config.with_(
+            active_learning=config.active_learning.with_(
+                forced_choice_model=config.active_learning.forced_choice_model.with_(
+                    learning_rate=0.0
+                )
+            )
+        )
         errors = check_training_configuration(config)
         assert len(errors) > 0
         assert any("learning rate" in e.lower() for e in errors)
@@ -186,7 +240,9 @@ class TestCheckDeploymentConfiguration:
         """Test deployment configuration for jsPsych with version."""
         config = get_default_config()
         config = config.with_(deployment=config.deployment.with_(platform="jspsych"))
-        config = config.with_(deployment=config.deployment.with_(jspsych_version="7.3.0"))
+        config = config.with_(
+            deployment=config.deployment.with_(jspsych_version="7.3.0")
+        )
         errors = check_deployment_configuration(config)
         assert len(errors) == 0
 
@@ -240,9 +296,21 @@ class TestValidateConfig:
         """Test validation with multiple errors."""
         config = get_default_config()
         # Create multiple errors
-        config = config.with_(paths=config.paths.with_(data_dir=tmp_path / "nonexistent"))
-        config = config.with_(active_learning=config.active_learning.with_(forced_choice_model=config.active_learning.forced_choice_model.with_(batch_size=-1)))
-        config = config.with_(active_learning=config.active_learning.with_(trainer=config.active_learning.trainer.with_(epochs=0)))
+        config = config.with_(
+            paths=config.paths.with_(data_dir=tmp_path / "nonexistent")
+        )
+        config = config.with_(
+            active_learning=config.active_learning.with_(
+                forced_choice_model=config.active_learning.forced_choice_model.with_(
+                    batch_size=-1
+                )
+            )
+        )
+        config = config.with_(
+            active_learning=config.active_learning.with_(
+                trainer=config.active_learning.trainer.with_(epochs=0)
+            )
+        )
         errors = validate_config(config)
         # Should have multiple errors
         assert len(errors) >= 3

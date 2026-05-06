@@ -109,7 +109,9 @@ def test_annotate_ordinal_scale_custom_range() -> None:
         name="test_ordinal",
         judgment_type="plausibility",
         task_type="ordinal_scale",
-        task_spec=TaskSpec(prompt="Rate 0-10:", scale_bounds=ScaleBounds(min=0, max=10)),
+        task_spec=TaskSpec(
+            prompt="Rate 0-10:", scale_bounds=ScaleBounds(min=0, max=10)
+        ),
         presentation_spec=PresentationSpec(mode="static"),
     )
 

@@ -78,9 +78,7 @@ class UniquenessConstraint(ListConstraint):
     allow_null: bool = False
     priority: int = 1
 
-    __axioms__ = (
-        dx.axiom("priority >= 1", message="priority must be >= 1"),
-    )
+    __axioms__ = (dx.axiom("priority >= 1", message="priority must be >= 1"),)
 
     @dx.validates("property_expression")
     def _check_property_expression(self, value: str) -> str:
@@ -485,9 +483,7 @@ class BatchBalanceConstraint(BatchConstraint):
         return _check_non_empty(type(self), value)
 
     @dx.validates("target_distribution")
-    def _check_distribution(
-        self, value: dict[str, float]
-    ) -> dict[str, float]:
+    def _check_distribution(self, value: dict[str, float]) -> dict[str, float]:
         if not value:
             raise ValueError("target_distribution must not be empty")
         for category, prob in value.items():

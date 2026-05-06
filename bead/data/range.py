@@ -44,9 +44,7 @@ class Range(dx.Model, Generic[T]):
 
     min: T
     max: T
-    __axioms__ = (
-        dx.axiom("max > min", message="min must be strictly less than max"),
-    )
+    __axioms__ = (dx.axiom("max > min", message="min must be strictly less than max"),)
 
     def contains(self, value: T) -> bool:
         """Return whether *value* lies in ``[min, max]``."""

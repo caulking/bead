@@ -179,4 +179,3 @@ class TestGetDefaultForModel:
         config = get_default_for_model(BeadConfig)
         assert isinstance(config, BeadConfig)
         assert config.profile == "default"
-

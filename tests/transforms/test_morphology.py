@@ -46,9 +46,9 @@ class TestFeaturePredicates:
         assert _is_present_3sg({"tense": "PRS", "person": "3", "number": "SG"})
 
     def test_present_3sg_rejects_participle(self) -> None:
-        assert not _is_present_3sg({
-            "tense": "PRS", "person": "3", "number": "SG", "verb_form": "V.PTCP"
-        })
+        assert not _is_present_3sg(
+            {"tense": "PRS", "person": "3", "number": "SG", "verb_form": "V.PTCP"}
+        )
 
     def test_infinitive(self) -> None:
         assert _is_infinitive({"pos": "V"})
@@ -104,8 +104,10 @@ class TestMorphologicalTransform:
                     MagicMock(
                         form="runs",
                         features={
-                            "pos": "V", "tense": "PRS",
-                            "person": "3", "number": "SG",
+                            "pos": "V",
+                            "tense": "PRS",
+                            "person": "3",
+                            "number": "SG",
                         },
                     ),
                     MagicMock(
@@ -250,7 +252,13 @@ class TestRegisterMorphologicalTransforms:
         reg = TransformRegistry()
         register_morphological_transforms(reg, "eng")
 
-        expected = {"gerund", "past_tense", "past_participle", "present_3sg", "infinitive"}
+        expected = {
+            "gerund",
+            "past_tense",
+            "past_participle",
+            "present_3sg",
+            "infinitive",
+        }
 
         assert set(reg.available()) == expected
 

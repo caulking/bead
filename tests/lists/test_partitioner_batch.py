@@ -41,7 +41,9 @@ class TestPartitionWithBatchConstraints:
         # Create items with template_ids 0-9, but sparse coverage
         metadata = {uid: {"template_id": i % 10} for i, uid in enumerate(items)}
 
-        constraint = BatchCoverageConstraint(constraint_type="coverage", property_expression="item['template_id']",
+        constraint = BatchCoverageConstraint(
+            constraint_type="coverage",
+            property_expression="item['template_id']",
             target_values=list(range(10)),
             min_coverage=1.0,
         )
@@ -71,7 +73,9 @@ class TestPartitionWithBatchConstraints:
             for i, uid in enumerate(items)
         }
 
-        constraint = BatchBalanceConstraint(constraint_type="balance", property_expression="item['pair_type']",
+        constraint = BatchBalanceConstraint(
+            constraint_type="balance",
+            property_expression="item['pair_type']",
             target_distribution={"same": 0.5, "different": 0.5},
             tolerance=0.05,
         )
@@ -101,7 +105,9 @@ class TestPartitionWithBatchConstraints:
         # Create 8 verbs, each appearing 10 times
         metadata = {uid: {"verb": f"verb_{i % 8}"} for i, uid in enumerate(items)}
 
-        constraint = BatchDiversityConstraint(constraint_type="diversity", property_expression="item['verb']",
+        constraint = BatchDiversityConstraint(
+            constraint_type="diversity",
+            property_expression="item['verb']",
             max_lists_per_value=4,  # Max half the lists
         )
 
@@ -129,7 +135,9 @@ class TestPartitionWithBatchConstraints:
         # Create 3 quantiles, 40 items each
         metadata = {uid: {"quantile": i % 3} for i, uid in enumerate(items)}
 
-        constraint = BatchMinOccurrenceConstraint(constraint_type="min_occurrence", property_expression="item['quantile']",
+        constraint = BatchMinOccurrenceConstraint(
+            constraint_type="min_occurrence",
+            property_expression="item['quantile']",
             min_occurrences=30,  # At least 30 of each quantile
         )
 
@@ -161,11 +169,15 @@ class TestPartitionWithBatchConstraints:
             for i, uid in enumerate(items)
         }
 
-        coverage = BatchCoverageConstraint(constraint_type="coverage", property_expression="item['template_id']",
+        coverage = BatchCoverageConstraint(
+            constraint_type="coverage",
+            property_expression="item['template_id']",
             target_values=list(range(10)),
             min_coverage=1.0,
         )
-        balance = BatchBalanceConstraint(constraint_type="balance", property_expression="item['pair_type']",
+        balance = BatchBalanceConstraint(
+            constraint_type="balance",
+            property_expression="item['pair_type']",
             target_distribution={"same": 0.5, "different": 0.5},
             tolerance=0.1,
         )
@@ -199,7 +211,9 @@ class TestPartitionWithBatchConstraints:
         items = [uuid4() for _ in range(100)]
         metadata = {uid: {"template_id": i % 10} for i, uid in enumerate(items)}
 
-        constraint = BatchCoverageConstraint(constraint_type="coverage", property_expression="item['template_id']",
+        constraint = BatchCoverageConstraint(
+            constraint_type="coverage",
+            property_expression="item['template_id']",
             target_values=list(range(10)),
             min_coverage=1.0,
         )
@@ -226,7 +240,9 @@ class TestPartitionWithBatchConstraints:
             for i, uid in enumerate(items)
         }
 
-        constraint = BatchBalanceConstraint(constraint_type="balance", property_expression="item['pair_type']",
+        constraint = BatchBalanceConstraint(
+            constraint_type="balance",
+            property_expression="item['pair_type']",
             target_distribution={"same": 0.5, "different": 0.5},
             tolerance=0.1,
         )
@@ -247,7 +263,9 @@ class TestPartitionWithBatchConstraints:
         items: list = []
         metadata: dict = {}
 
-        constraint = BatchCoverageConstraint(constraint_type="coverage", property_expression="item['template_id']",
+        constraint = BatchCoverageConstraint(
+            constraint_type="coverage",
+            property_expression="item['template_id']",
             target_values=list(range(10)),
         )
 
@@ -268,7 +286,9 @@ class TestPartitionWithBatchConstraints:
         items = [uuid4() for _ in range(50)]
         metadata = {uid: {"template_id": i % 5} for i, uid in enumerate(items)}
 
-        constraint = BatchCoverageConstraint(constraint_type="coverage", property_expression="item['template_id']",
+        constraint = BatchCoverageConstraint(
+            constraint_type="coverage",
+            property_expression="item['template_id']",
             target_values=list(range(5)),
         )
 
@@ -288,7 +308,9 @@ class TestPartitionWithBatchConstraints:
         items = [uuid4() for _ in range(100)]
         metadata = {uid: {"template_id": i % 10} for i, uid in enumerate(items)}
 
-        constraint = BatchCoverageConstraint(constraint_type="coverage", property_expression="item['template_id']",
+        constraint = BatchCoverageConstraint(
+            constraint_type="coverage",
+            property_expression="item['template_id']",
             target_values=list(range(10)),
         )
 
@@ -316,7 +338,9 @@ class TestComputeBatchConstraintScore:
             items=items, n_lists=4, constraints=[], metadata=metadata
         )
 
-        constraint = BatchCoverageConstraint(constraint_type="coverage", property_expression="item['template_id']",
+        constraint = BatchCoverageConstraint(
+            constraint_type="coverage",
+            property_expression="item['template_id']",
             target_values=list(range(10)),
         )
 
@@ -334,7 +358,9 @@ class TestComputeBatchConstraintScore:
             items=items, n_lists=4, constraints=[], metadata=metadata
         )
 
-        constraint = BatchCoverageConstraint(constraint_type="coverage", property_expression="item['template_id']",
+        constraint = BatchCoverageConstraint(
+            constraint_type="coverage",
+            property_expression="item['template_id']",
             target_values=list(range(10)),
         )
 
@@ -354,7 +380,9 @@ class TestComputeBatchConstraintScore:
             items=items, n_lists=4, constraints=[], metadata=metadata
         )
 
-        constraint = BatchBalanceConstraint(constraint_type="balance", property_expression="item['pair_type']",
+        constraint = BatchBalanceConstraint(
+            constraint_type="balance",
+            property_expression="item['pair_type']",
             target_distribution={"same": 0.5, "different": 0.5},
         )
 
@@ -372,7 +400,9 @@ class TestComputeBatchConstraintScore:
             items=items, n_lists=4, constraints=[], metadata=metadata
         )
 
-        constraint = BatchDiversityConstraint(constraint_type="diversity", property_expression="item['verb']",
+        constraint = BatchDiversityConstraint(
+            constraint_type="diversity",
+            property_expression="item['verb']",
             max_lists_per_value=3,
         )
 
@@ -391,7 +421,9 @@ class TestComputeBatchConstraintScore:
             items=items, n_lists=4, constraints=[], metadata=metadata
         )
 
-        constraint = BatchMinOccurrenceConstraint(constraint_type="min_occurrence", property_expression="item['quantile']",
+        constraint = BatchMinOccurrenceConstraint(
+            constraint_type="min_occurrence",
+            property_expression="item['quantile']",
             min_occurrences=30,
         )
 
@@ -412,7 +444,9 @@ class TestComputeBatchConstraintScore:
             items=items, n_lists=4, constraints=[], metadata=metadata
         )
 
-        constraint = BatchMinOccurrenceConstraint(constraint_type="min_occurrence", property_expression="item['quantile']",
+        constraint = BatchMinOccurrenceConstraint(
+            constraint_type="min_occurrence",
+            property_expression="item['quantile']",
             min_occurrences=30,
         )
 
@@ -437,7 +471,9 @@ class TestImproveBatchConstraint:
             items=items, n_lists=4, constraints=[], metadata=metadata
         )
 
-        constraint = BatchCoverageConstraint(constraint_type="coverage", property_expression="item['template_id']",
+        constraint = BatchCoverageConstraint(
+            constraint_type="coverage",
+            property_expression="item['template_id']",
             target_values=list(range(10)),
         )
 
@@ -464,7 +500,9 @@ class TestImproveBatchConstraint:
             items=items, n_lists=1, constraints=[], metadata=metadata
         )
 
-        constraint = BatchCoverageConstraint(constraint_type="coverage", property_expression="item['template_id']",
+        constraint = BatchCoverageConstraint(
+            constraint_type="coverage",
+            property_expression="item['template_id']",
             target_values=list(range(10)),
         )
 

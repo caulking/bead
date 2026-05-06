@@ -84,7 +84,10 @@ def uniqueness_constraint() -> UniquenessConstraint:
     UniquenessConstraint
         Constraint requiring unique target verbs.
     """
-    return UniquenessConstraint(constraint_type="uniqueness", property_expression="item['target_verb']", allow_null=False
+    return UniquenessConstraint(
+        constraint_type="uniqueness",
+        property_expression="item['target_verb']",
+        allow_null=False,
     )
 
 
@@ -97,7 +100,11 @@ def balance_constraint() -> BalanceConstraint:
     BalanceConstraint
         Constraint for balanced transitivity.
     """
-    return BalanceConstraint(constraint_type="balance", property_expression="item['transitivity']", tolerance=0.1)
+    return BalanceConstraint(
+        constraint_type="balance",
+        property_expression="item['transitivity']",
+        tolerance=0.1,
+    )
 
 
 @pytest.fixture
@@ -109,7 +116,9 @@ def quantile_constraint() -> QuantileConstraint:
     QuantileConstraint
         Constraint for LM probability quantiles.
     """
-    return QuantileConstraint(constraint_type="quantile", property_expression="item['lm_prob']",
+    return QuantileConstraint(
+        constraint_type="quantile",
+        property_expression="item['lm_prob']",
         n_quantiles=5,
         items_per_quantile=2,
     )
@@ -217,7 +226,10 @@ def ordering_constraint_no_adjacent() -> OrderingConstraint:
     OrderingConstraint
         Constraint preventing adjacent items with same condition.
     """
-    return OrderingConstraint(constraint_type="ordering", no_adjacent_property="item_metadata.condition", min_distance=2
+    return OrderingConstraint(
+        constraint_type="ordering",
+        no_adjacent_property="item_metadata.condition",
+        min_distance=2,
     )
 
 
@@ -230,7 +242,10 @@ def ordering_constraint_blocking() -> OrderingConstraint:
     OrderingConstraint
         Constraint that groups items by block type.
     """
-    return OrderingConstraint(constraint_type="ordering", block_by_property="item_metadata.block_type", randomize_within_blocks=True
+    return OrderingConstraint(
+        constraint_type="ordering",
+        block_by_property="item_metadata.block_type",
+        randomize_within_blocks=True,
     )
 
 
@@ -243,7 +258,9 @@ def ordering_constraint_practice() -> OrderingConstraint:
     OrderingConstraint
         Constraint ensuring practice items appear first.
     """
-    return OrderingConstraint(constraint_type="ordering", practice_item_property="item_metadata.is_practice")
+    return OrderingConstraint(
+        constraint_type="ordering", practice_item_property="item_metadata.is_practice"
+    )
 
 
 @pytest.fixture

@@ -54,17 +54,13 @@ class ParticipantCollection(BeadBaseModel):
 
     def with_participant(self, participant: Participant) -> Self:
         """Return a new collection with *participant* appended."""
-        return self.with_(
-            participants=(*self.participants, participant)
-        ).touched()
+        return self.with_(participants=(*self.participants, participant)).touched()
 
     def with_participants(
         self, participants: tuple[Participant, ...] | list[Participant]
     ) -> Self:
         """Return a new collection with each participant appended."""
-        return self.with_(
-            participants=(*self.participants, *participants)
-        ).touched()
+        return self.with_(participants=(*self.participants, *participants)).touched()
 
     def get_by_id(self, participant_id: UUID) -> Participant | None:
         """Return the participant whose id matches, or ``None``."""
@@ -73,19 +69,13 @@ class ParticipantCollection(BeadBaseModel):
                 return p
         return None
 
-    def get_by_attribute(
-        self, key: str, value: JsonValue
-    ) -> tuple[Participant, ...]:
+    def get_by_attribute(self, key: str, value: JsonValue) -> tuple[Participant, ...]:
         """Return participants whose ``participant_metadata[key] == value``."""
         return tuple(
-            p
-            for p in self.participants
-            if p.participant_metadata.get(key) == value
+            p for p in self.participants if p.participant_metadata.get(key) == value
         )
 
-    def validate_all(
-        self, spec: ParticipantMetadataSpec
-    ) -> dict[UUID, list[str]]:
+    def validate_all(self, spec: ParticipantMetadataSpec) -> dict[UUID, list[str]]:
         """Validate every participant against *spec*.
 
         Returns a mapping from offending participant id to error messages.
@@ -256,9 +246,7 @@ class IDMappingCollection(BeadBaseModel):
             external_source=external_source or self.source,
             participant_id=participant_id,
         )
-        new_self = self.with_(
-            mappings=(*self.mappings, mapping)
-        ).touched()
+        new_self = self.with_(mappings=(*self.mappings, mapping)).touched()
         return new_self, mapping
 
     def get_participant_id(self, external_id: str) -> UUID | None:

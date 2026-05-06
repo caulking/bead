@@ -165,7 +165,9 @@ class TestItemConstructor:
             ],
         )
 
-        with pytest.raises((ValueError, dx.ValidationError), match="references missing"):
+        with pytest.raises(
+            (ValueError, dx.ValidationError), match="references missing"
+        ):
             constructor._render_elements(template, {})
 
     def test_render_elements_multiple(self, constructor) -> None:
@@ -588,7 +590,9 @@ class TestIntegration:
             name="acceptability_test",
             judgment_type="acceptability",
             task_type="ordinal_scale",
-            task_spec=TaskSpec(prompt="How natural?", scale_bounds=ScaleBounds(min=1, max=7)),
+            task_spec=TaskSpec(
+                prompt="How natural?", scale_bounds=ScaleBounds(min=1, max=7)
+            ),
             presentation_spec=PresentationSpec(mode="static"),
             elements=[
                 ItemElement(
@@ -610,7 +614,9 @@ class TestIntegration:
         item = items[0]
         assert item.rendered_elements["sentence"] == "The cat sat on the mat"
         assert len(item.model_outputs) > 0
-        assert {cs.constraint_id: cs.satisfied for cs in item.constraint_satisfaction}[constraint_id] is True
+        assert {cs.constraint_id: cs.satisfied for cs in item.constraint_satisfaction}[
+            constraint_id
+        ] is True
 
     def test_multiple_constraints(self, constructor) -> None:
         """Test item construction with multiple constraints."""
@@ -637,6 +643,8 @@ class TestIntegration:
         items = list(constructor.construct_items(template, {}, {c1_id: c1, c2_id: c2}))
 
         assert len(items) == 1
-        cs_map = {cs.constraint_id: cs.satisfied for cs in items[0].constraint_satisfaction}
+        cs_map = {
+            cs.constraint_id: cs.satisfied for cs in items[0].constraint_satisfaction
+        }
         assert cs_map[c1_id] is True
         assert cs_map[c2_id] is True

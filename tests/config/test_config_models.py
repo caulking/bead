@@ -117,9 +117,7 @@ class TestTemplateConfig:
         """Test filling strategy validation with invalid value."""
         with pytest.raises(ValidationError) as exc_info:
             TemplateConfig(filling_strategy="invalid")  # type: ignore[arg-type]
-        assert (
-            "is not in Literal" in str(exc_info.value)
-        )
+        assert "is not in Literal" in str(exc_info.value)
 
     def test_batch_size_validation_positive(self) -> None:
         """Test batch size must be positive."""
@@ -183,9 +181,7 @@ class TestModelConfig:
         """Test provider validation with invalid value."""
         with pytest.raises(ValidationError) as exc_info:
             ModelConfig(provider="invalid")  # type: ignore[arg-type]
-        assert "is not in Literal" in str(
-            exc_info.value
-        )
+        assert "is not in Literal" in str(exc_info.value)
 
     def test_valid_device(self) -> None:
         """Test device validation with valid values."""
@@ -299,7 +295,10 @@ class TestListConfig:
     def test_balance_by_list_handling(self) -> None:
         """Test balance_by list handling."""
         config = ListConfig(balance_by=["field1", "field2"])
-        assert config.balance_by == ("field1", "field2",)
+        assert config.balance_by == (
+            "field1",
+            "field2",
+        )
 
     def test_num_lists_and_items_per_list(self) -> None:
         """Test num_lists and items_per_list."""

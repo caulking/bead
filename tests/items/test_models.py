@@ -327,9 +327,7 @@ def test_unfilled_slot_basic() -> None:
 
 def test_unfilled_slot_with_constraints() -> None:
     constraint_id = uuid4()
-    slot = UnfilledSlot(
-        slot_name="verb", position=2, constraint_ids=(constraint_id,)
-    )
+    slot = UnfilledSlot(slot_name="verb", position=2, constraint_ids=(constraint_id,))
     assert slot.slot_name == "verb"
     assert len(slot.constraint_ids) == 1
     assert slot.constraint_ids[0] == constraint_id
@@ -349,9 +347,7 @@ def test_unfilled_slot_name_validation_whitespace() -> None:
 
 def test_unfilled_slot_serialization() -> None:
     constraint_id = uuid4()
-    slot = UnfilledSlot(
-        slot_name="verb", position=2, constraint_ids=(constraint_id,)
-    )
+    slot = UnfilledSlot(slot_name="verb", position=2, constraint_ids=(constraint_id,))
     restored = UnfilledSlot(**slot.model_dump())
     assert restored.slot_name == slot.slot_name
     assert restored.position == slot.position
@@ -393,12 +389,8 @@ def test_item_template_unique_element_names() -> None:
             judgment_type="acceptability",
             task_type="binary",
             elements=(
-                ItemElement(
-                    element_type="text", element_name="duplicate", content="1"
-                ),
-                ItemElement(
-                    element_type="text", element_name="duplicate", content="2"
-                ),
+                ItemElement(element_type="text", element_name="duplicate", content="1"),
+                ItemElement(element_type="text", element_name="duplicate", content="2"),
             ),
             task_spec=TaskSpec(prompt="Test"),
             presentation_spec=PresentationSpec(mode="static"),

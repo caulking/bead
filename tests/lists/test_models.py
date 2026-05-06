@@ -157,7 +157,9 @@ class TestExperimentList:
         self, experiment_list_with_items: ExperimentList
     ) -> None:
         """Test get_presentation_order returns custom order when set."""
-        experiment_list_with_items = experiment_list_with_items.with_shuffled_order(seed=42)
+        experiment_list_with_items = experiment_list_with_items.with_shuffled_order(
+            seed=42
+        )
         custom_order = experiment_list_with_items.presentation_order
 
         order = experiment_list_with_items.get_presentation_order()
@@ -348,7 +350,9 @@ class TestListCollection:
         )
 
         for i in range(5):
-            collection = collection.with_list(ExperimentList(name=f"list_{i}", list_number=i))
+            collection = collection.with_list(
+                ExperimentList(name=f"list_{i}", list_number=i)
+            )
         found = collection.get_list_by_number(3)
 
         assert found is not None

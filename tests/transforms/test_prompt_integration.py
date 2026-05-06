@@ -69,10 +69,7 @@ class TestParsePromptReferencesWithTransforms:
 
     def test_mixed_references(self) -> None:
         """Various syntax forms in one prompt are parsed correctly."""
-        prompt = (
-            "Did [[agent]] do [[event|gerund]] "
-            "to [[patient:the vase|upper]]?"
-        )
+        prompt = "Did [[agent]] do [[event|gerund]] to [[patient:the vase|upper]]?"
         refs = _parse_prompt_references(prompt)
 
         assert len(refs) == 3
@@ -137,7 +134,9 @@ class TestResolvePromptReferencesWithTransforms:
         return reg
 
     def test_no_transforms_no_registry(
-        self, span_item: Item, color_map: SpanColorMap,
+        self,
+        span_item: Item,
+        color_map: SpanColorMap,
     ) -> None:
         """Without transforms, works exactly as before."""
         result = _resolve_prompt_references(
@@ -148,7 +147,10 @@ class TestResolvePromptReferencesWithTransforms:
         assert "bead-q-highlight" in result
 
     def test_transform_applied(
-        self, span_item: Item, color_map: SpanColorMap, registry: TransformRegistry,
+        self,
+        span_item: Item,
+        color_map: SpanColorMap,
+        registry: TransformRegistry,
     ) -> None:
         """Transform modifies the display text."""
         result = _resolve_prompt_references(
@@ -162,7 +164,10 @@ class TestResolvePromptReferencesWithTransforms:
         assert "bead-q-highlight" in result
 
     def test_chained_transforms(
-        self, span_item: Item, color_map: SpanColorMap, registry: TransformRegistry,
+        self,
+        span_item: Item,
+        color_map: SpanColorMap,
+        registry: TransformRegistry,
     ) -> None:
         """Multiple transforms are applied in order."""
         result = _resolve_prompt_references(
@@ -175,7 +180,10 @@ class TestResolvePromptReferencesWithTransforms:
         assert "THE BOY!" in result
 
     def test_explicit_text_with_transform(
-        self, span_item: Item, color_map: SpanColorMap, registry: TransformRegistry,
+        self,
+        span_item: Item,
+        color_map: SpanColorMap,
+        registry: TransformRegistry,
     ) -> None:
         """Explicit text is transformed."""
         result = _resolve_prompt_references(
@@ -188,7 +196,9 @@ class TestResolvePromptReferencesWithTransforms:
         assert "THE BREAKING" in result
 
     def test_transforms_ignored_without_registry(
-        self, span_item: Item, color_map: SpanColorMap,
+        self,
+        span_item: Item,
+        color_map: SpanColorMap,
     ) -> None:
         """When no registry is provided, transforms are silently ignored."""
         result = _resolve_prompt_references(
@@ -202,7 +212,10 @@ class TestResolvePromptReferencesWithTransforms:
         assert "The boy" in result
 
     def test_unknown_transform_raises(
-        self, span_item: Item, color_map: SpanColorMap, registry: TransformRegistry,
+        self,
+        span_item: Item,
+        color_map: SpanColorMap,
+        registry: TransformRegistry,
     ) -> None:
         """Unknown transform name raises KeyError."""
         with pytest.raises(KeyError, match="nonexistent"):

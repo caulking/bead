@@ -196,9 +196,7 @@ def _coerce_to_metadata(value: object) -> MetadataValue:
     if isinstance(value, list):
         return tuple(_coerce_to_metadata(elem) for elem in value)
     if isinstance(value, dict):
-        return {
-            str(k): _coerce_to_metadata(v) for k, v in value.items()
-        }
+        return {str(k): _coerce_to_metadata(v) for k, v in value.items()}
     if isinstance(value, str | int | float | bool | type(None)):
         return value
     raise TypeError(f"Unsupported metadata value type: {type(value).__name__}")

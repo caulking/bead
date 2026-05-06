@@ -25,7 +25,9 @@ class TestCreateOrdinalScaleItem:
 
     def test_create_basic_ordinal_item(self) -> None:
         """Test creating a basic ordinal scale item."""
-        item = create_ordinal_scale_item("The cat sat on the mat.", scale_bounds=ScaleBounds(min=1, max=7))
+        item = create_ordinal_scale_item(
+            "The cat sat on the mat.", scale_bounds=ScaleBounds(min=1, max=7)
+        )
 
         assert isinstance(item, Item)
         assert item.rendered_elements["text"] == "The cat sat on the mat."
@@ -35,7 +37,9 @@ class TestCreateOrdinalScaleItem:
 
     def test_default_prompt(self) -> None:
         """Test default prompt."""
-        item = create_ordinal_scale_item("The cat sat.", scale_bounds=ScaleBounds(min=1, max=5))
+        item = create_ordinal_scale_item(
+            "The cat sat.", scale_bounds=ScaleBounds(min=1, max=5)
+        )
 
         assert item.rendered_elements["prompt"] == "Rate this item:"
 
@@ -54,7 +58,10 @@ class TestCreateOrdinalScaleItem:
         item = create_ordinal_scale_item(
             "The sky is blue.",
             scale_bounds=ScaleBounds(min=1, max=5),
-            scale_labels=(ScalePointLabel(point=1, label="Very Bad"), ScalePointLabel(point=5, label="Very Good"),),
+            scale_labels=(
+                ScalePointLabel(point=1, label="Very Bad"),
+                ScalePointLabel(point=5, label="Very Good"),
+            ),
         )
 
         assert item.item_metadata["scale_labels"]["1"] == "Very Bad"
@@ -62,31 +69,55 @@ class TestCreateOrdinalScaleItem:
 
     def test_empty_text_raises_error(self) -> None:
         """Test that empty text raises error."""
-        with pytest.raises((ValueError, dx.ValidationError), match="text cannot be empty"):
+        with pytest.raises(
+            (ValueError, dx.ValidationError), match="text cannot be empty"
+        ):
             create_ordinal_scale_item("", scale_bounds=ScaleBounds(min=1, max=7))
 
-        with pytest.raises((ValueError, dx.ValidationError), match="text cannot be empty"):
+        with pytest.raises(
+            (ValueError, dx.ValidationError), match="text cannot be empty"
+        ):
             create_ordinal_scale_item("   ", scale_bounds=ScaleBounds(min=1, max=7))
 
     def test_invalid_scale_bounds_raises_error(self) -> None:
         """Test that invalid scale bounds raise error."""
         # min >= max
-        with pytest.raises((ValueError, dx.ValidationError), match="scale_min.*must be less than"):
+        with pytest.raises(
+            (ValueError, dx.ValidationError), match="scale_min.*must be less than"
+        ):
             create_ordinal_scale_item("Text", scale_bounds=ScaleBounds(min=5, max=5))
 
-        with pytest.raises((ValueError, dx.ValidationError), match="scale_min.*must be less than"):
+        with pytest.raises(
+            (ValueError, dx.ValidationError), match="scale_min.*must be less than"
+        ):
             create_ordinal_scale_item("Text", scale_bounds=ScaleBounds(min=7, max=3))
 
     def test_scale_labels_outside_bounds_raises_error(self) -> None:
         """Test that scale labels outside bounds raise error."""
-        with pytest.raises((ValueError, dx.ValidationError), match="scale_labels key.*outside scale bounds"):
+        with pytest.raises(
+            (ValueError, dx.ValidationError),
+            match="scale_labels key.*outside scale bounds",
+        ):
             create_ordinal_scale_item(
-                "Text", scale_bounds=ScaleBounds(min=1, max=5), scale_labels=(ScalePointLabel(point=0, label="Too Low"), ScalePointLabel(point=5, label="Good"),)
+                "Text",
+                scale_bounds=ScaleBounds(min=1, max=5),
+                scale_labels=(
+                    ScalePointLabel(point=0, label="Too Low"),
+                    ScalePointLabel(point=5, label="Good"),
+                ),
             )
 
-        with pytest.raises((ValueError, dx.ValidationError), match="scale_labels key.*outside scale bounds"):
+        with pytest.raises(
+            (ValueError, dx.ValidationError),
+            match="scale_labels key.*outside scale bounds",
+        ):
             create_ordinal_scale_item(
-                "Text", scale_bounds=ScaleBounds(min=1, max=5), scale_labels=(ScalePointLabel(point=1, label="Low"), ScalePointLabel(point=6, label="Too High"),)
+                "Text",
+                scale_bounds=ScaleBounds(min=1, max=5),
+                scale_labels=(
+                    ScalePointLabel(point=1, label="Low"),
+                    ScalePointLabel(point=6, label="Too High"),
+                ),
             )
 
     def test_with_custom_template_id(self) -> None:
@@ -119,7 +150,9 @@ class TestCreateOrdinalScaleItemsFromTexts:
         texts = ["She walks.", "She walk.", "They walk.", "They walks."]
 
         items = create_ordinal_scale_items_from_texts(
-            texts, scale_bounds=ScaleBounds(min=1, max=5), prompt="Rate the acceptability:"
+            texts,
+            scale_bounds=ScaleBounds(min=1, max=5),
+            prompt="Rate the acceptability:",
         )
 
         assert len(items) == 4

@@ -26,6 +26,7 @@ type MetadataValue = (
     | dict[str, MetadataValue]
 )
 
+
 class ConstraintSatisfaction(BeadBaseModel):
     """Whether a single constraint is satisfied for the list.
 
@@ -103,12 +104,8 @@ class ExperimentList(BeadBaseModel):
         new_refs = tuple(ref for ref in self.item_refs if ref != item_id)
         new_order: tuple[UUID, ...] | None = None
         if self.presentation_order is not None:
-            new_order = tuple(
-                ref for ref in self.presentation_order if ref != item_id
-            )
-        return self.with_(
-            item_refs=new_refs, presentation_order=new_order
-        ).touched()
+            new_order = tuple(ref for ref in self.presentation_order if ref != item_id)
+        return self.with_(item_refs=new_refs, presentation_order=new_order).touched()
 
     def with_shuffled_order(self, seed: int | None = None) -> Self:
         """Return a new list whose ``presentation_order`` is a shuffle of items."""

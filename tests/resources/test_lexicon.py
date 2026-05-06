@@ -107,6 +107,8 @@ def test_add_raises_error_on_duplicate_id() -> None:
     # Try to add the same item again
     with pytest.raises((ValueError, dx.ValidationError), match="already exists"):
         lexicon = lexicon.with_item(item)
+
+
 def test_add_many_adds_multiple_items() -> None:
     """Test that add_many() adds multiple items."""
     lexicon = Lexicon(name="test")
@@ -159,6 +161,8 @@ def test_adding_same_item_twice_fails() -> None:
     lexicon = lexicon.with_item(item)
     with pytest.raises((ValueError, dx.ValidationError), match="already exists"):
         lexicon = lexicon.with_item(item)
+
+
 # ============================================================================
 # Filtering Operations (8 tests)
 # ============================================================================
@@ -341,7 +345,9 @@ def test_merge_with_error_strategy_raises_on_duplicates() -> None:
     # Add same item to lex2
     lex2 = lex2.with_(items=(item1,))
 
-    with pytest.raises((ValueError, dx.ValidationError), match="Duplicate item IDs found"):
+    with pytest.raises(
+        (ValueError, dx.ValidationError), match="Duplicate item IDs found"
+    ):
         lex1.merge(lex2, strategy="error")
 
 
@@ -501,7 +507,9 @@ def test_from_dataframe_raises_on_missing_lemma() -> None:
     """Test that from_dataframe() raises error if no lemma column."""
     df = pd.DataFrame({"pos": ["VERB", "NOUN"]})
 
-    with pytest.raises((ValueError, dx.ValidationError), match="must have a 'lemma' column"):
+    with pytest.raises(
+        (ValueError, dx.ValidationError), match="must have a 'lemma' column"
+    ):
         Lexicon.from_dataframe(df, "test")
 
 
@@ -538,7 +546,9 @@ def test_from_jsonl_reads_file_correctly(tmp_path: Path) -> None:
     lexicon = lexicon.with_item(
         LexicalItem(lemma="walk", language_code="eng", features={"pos": "VERB"})
     )
-    lexicon = lexicon.with_item(LexicalItem(lemma="run", language_code="eng", features={"pos": "VERB"}))
+    lexicon = lexicon.with_item(
+        LexicalItem(lemma="run", language_code="eng", features={"pos": "VERB"})
+    )
     file_path = tmp_path / "test.jsonl"
     lexicon.to_jsonl(str(file_path))
 

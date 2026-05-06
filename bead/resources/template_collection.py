@@ -74,9 +74,7 @@ class TemplateCollection(BeadBaseModel):
             )
         return self.with_(templates=(*self.templates, template)).touched()
 
-    def with_templates(
-        self, templates: tuple[Template, ...] | list[Template]
-    ) -> Self:
+    def with_templates(self, templates: tuple[Template, ...] | list[Template]) -> Self:
         """Return a new collection with each template appended."""
         existing_ids = {template.id for template in self.templates}
         for template in templates:
@@ -239,9 +237,7 @@ class TemplateCollection(BeadBaseModel):
             columns_list = list(df.columns)
 
         if "name" not in columns_list or "template_string" not in columns_list:
-            raise ValueError(
-                "DataFrame must have 'name' and 'template_string' columns"
-            )
+            raise ValueError("DataFrame must have 'name' and 'template_string' columns")
         return cls(name=name)
 
     def to_jsonl(self, path: str) -> None:

@@ -128,9 +128,7 @@ class MorphologicalTransform:
 
         try:
             adapter = self._get_adapter()
-            items = adapter.fetch_items(
-                query=lemma, language_code=self._language_code
-            )
+            items = adapter.fetch_items(query=lemma, language_code=self._language_code)
 
         except Exception:
             logger.debug(
@@ -143,9 +141,7 @@ class MorphologicalTransform:
             return None
 
         for item in items:
-            features = {
-                str(k): str(v) for k, v in (item.features or {}).items()
-            }
+            features = {str(k): str(v) for k, v in (item.features or {}).items()}
             if self._spec.predicate(features):
                 self._cache[lemma] = item.form
                 return item.form
@@ -170,9 +166,7 @@ class MorphologicalTransform:
         tuple[int, list[str]]
             Head index and token list.
         """
-        tokens: list[str] = (
-            list(context.tokens) if context.tokens else text.split()
-        )
+        tokens: list[str] = list(context.tokens) if context.tokens else text.split()
         head_index = context.head_index if context.head_index is not None else 0
         head_index = max(0, min(head_index, len(tokens) - 1))
         return head_index, tokens
@@ -225,26 +219,19 @@ class MorphologicalTransform:
 
 def _is_present_participle(features: dict[str, str]) -> bool:
     """Match present participle / gerund (V;V.PTCP;PRS)."""
-    return (
-        features.get("verb_form") == "V.PTCP"
-        and features.get("tense") == "PRS"
-    )
+    return features.get("verb_form") == "V.PTCP" and features.get("tense") == "PRS"
 
 
 def _is_past_tense(features: dict[str, str]) -> bool:
     """Match simple past (V;PST) — exclude participles."""
-    return (
-        features.get("tense") == "PST"
-        and features.get("verb_form") not in ("V.PTCP",)
+    return features.get("tense") == "PST" and features.get("verb_form") not in (
+        "V.PTCP",
     )
 
 
 def _is_past_participle(features: dict[str, str]) -> bool:
     """Match past participle (V;V.PTCP;PST)."""
-    return (
-        features.get("verb_form") == "V.PTCP"
-        and features.get("tense") == "PST"
-    )
+    return features.get("verb_form") == "V.PTCP" and features.get("tense") == "PST"
 
 
 def _is_present_3sg(features: dict[str, str]) -> bool:

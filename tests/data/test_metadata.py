@@ -159,9 +159,7 @@ def test_get_recent_processing() -> None:
 
 def test_get_recent_processing_fewer_than_n() -> None:
     tracker = (
-        MetadataTracker()
-        .with_processing("operation1")
-        .with_processing("operation2")
+        MetadataTracker().with_processing("operation1").with_processing("operation2")
     )
     recent = tracker.get_recent_processing(n=5)
     assert len(recent) == 2

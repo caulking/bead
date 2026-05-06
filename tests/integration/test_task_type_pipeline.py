@@ -106,7 +106,9 @@ class TestForcedChoiceIntegration:
         )
         templates_dict = {dummy_template.id: dummy_template}
 
-        items_list = [item.with_(item_template_id=dummy_template.id) for item in items_list]
+        items_list = [
+            item.with_(item_template_id=dummy_template.id) for item in items_list
+        ]
         items_dict = {item.id: item for item in items_list}
 
         output_dir = generator.generate(lists, items_dict, templates_dict)
@@ -190,7 +192,9 @@ class TestMultiSelectIntegration:
         )
         templates_dict = {dummy_template.id: dummy_template}
 
-        items_list = [item.with_(item_template_id=dummy_template.id) for item in items_list]
+        items_list = [
+            item.with_(item_template_id=dummy_template.id) for item in items_list
+        ]
         items_dict = {item.id: item for item in items_list}
 
         output_dir = generator.generate(lists, items_dict, templates_dict)
@@ -245,7 +249,9 @@ class TestBinaryIntegration:
         )
         templates_dict = {dummy_template.id: dummy_template}
 
-        items_list = [item.with_(item_template_id=dummy_template.id) for item in items_list]
+        items_list = [
+            item.with_(item_template_id=dummy_template.id) for item in items_list
+        ]
         items_dict = {item.id: item for item in items_list}
 
         output_dir = generator.generate(lists, items_dict, templates_dict)
@@ -303,7 +309,9 @@ class TestCategoricalIntegration:
         )
         templates_dict = {dummy_template.id: dummy_template}
 
-        items_list = [item.with_(item_template_id=dummy_template.id) for item in items_list]
+        items_list = [
+            item.with_(item_template_id=dummy_template.id) for item in items_list
+        ]
         items_dict = {item.id: item for item in items_list}
 
         output_dir = generator.generate(lists, items_dict, templates_dict)
@@ -356,7 +364,9 @@ class TestOrdinalScaleIntegration:
         )
         templates_dict = {dummy_template.id: dummy_template}
 
-        items_list = [item.with_(item_template_id=dummy_template.id) for item in items_list]
+        items_list = [
+            item.with_(item_template_id=dummy_template.id) for item in items_list
+        ]
         items_dict = {item.id: item for item in items_list}
 
         output_dir = generator.generate(lists, items_dict, templates_dict)
@@ -412,7 +422,9 @@ class TestMagnitudeIntegration:
         )
         templates_dict = {dummy_template.id: dummy_template}
 
-        items_list = [item.with_(item_template_id=dummy_template.id) for item in items_list]
+        items_list = [
+            item.with_(item_template_id=dummy_template.id) for item in items_list
+        ]
         items_dict = {item.id: item for item in items_list}
 
         output_dir = generator.generate(lists, items_dict, templates_dict)
@@ -467,7 +479,9 @@ class TestFreeTextIntegration:
         )
         templates_dict = {dummy_template.id: dummy_template}
 
-        items_list = [item.with_(item_template_id=dummy_template.id) for item in items_list]
+        items_list = [
+            item.with_(item_template_id=dummy_template.id) for item in items_list
+        ]
         items_dict = {item.id: item for item in items_list}
 
         output_dir = generator.generate(lists, items_dict, templates_dict)
@@ -528,7 +542,9 @@ class TestClozeIntegration:
         )
         templates_dict = {dummy_template.id: dummy_template}
 
-        items_list = [item.with_(item_template_id=dummy_template.id) for item in items_list]
+        items_list = [
+            item.with_(item_template_id=dummy_template.id) for item in items_list
+        ]
         items_dict = {item.id: item for item in items_list}
 
         output_dir = generator.generate(lists, items_dict, templates_dict)

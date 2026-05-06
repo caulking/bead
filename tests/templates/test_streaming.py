@@ -18,15 +18,23 @@ def sample_lexicon() -> Lexicon:
     lexicon = Lexicon(name="test_lexicon")
 
     # Add nouns
-    lexicon = lexicon.with_item(LexicalItem(lemma="cat", language_code="en", features={"pos": "NOUN"}))
-    lexicon = lexicon.with_item(LexicalItem(lemma="dog", language_code="en", features={"pos": "NOUN"}))
-    lexicon = lexicon.with_item(LexicalItem(lemma="bird", language_code="en", features={"pos": "NOUN"}))
+    lexicon = lexicon.with_item(
+        LexicalItem(lemma="cat", language_code="en", features={"pos": "NOUN"})
+    )
+    lexicon = lexicon.with_item(
+        LexicalItem(lemma="dog", language_code="en", features={"pos": "NOUN"})
+    )
+    lexicon = lexicon.with_item(
+        LexicalItem(lemma="bird", language_code="en", features={"pos": "NOUN"})
+    )
 
     # Add verbs
     lexicon = lexicon.with_item(
         LexicalItem(lemma="broke", language_code="en", features={"pos": "VERB"})
     )
-    lexicon = lexicon.with_item(LexicalItem(lemma="ate", language_code="en", features={"pos": "VERB"}))
+    lexicon = lexicon.with_item(
+        LexicalItem(lemma="ate", language_code="en", features={"pos": "VERB"})
+    )
     lexicon = lexicon.with_item(
         LexicalItem(lemma="found", language_code="en", features={"pos": "VERB"})
     )

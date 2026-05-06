@@ -71,10 +71,12 @@ class TestTransformPipeline:
 
     def test_chained_transforms(self) -> None:
         """Pipeline applies transforms left to right."""
-        pipe = TransformPipeline([
-            lambda t, c: t.upper(),
-            lambda t, c: t + "!",
-        ])
+        pipe = TransformPipeline(
+            [
+                lambda t, c: t.upper(),
+                lambda t, c: t + "!",
+            ]
+        )
         ctx = TransformContext()
 
         assert pipe("hello", ctx) == "HELLO!"

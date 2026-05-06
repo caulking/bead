@@ -141,7 +141,9 @@ class TestCreateClozeItem:
             slots={"a": Slot(name="a"), "b": Slot(name="b")},
         )
 
-        with pytest.raises((ValueError, dx.ValidationError), match="not found in template"):
+        with pytest.raises(
+            (ValueError, dx.ValidationError), match="not found in template"
+        ):
             create_cloze_item(template, unfilled_slot_names=["invalid_slot"])
 
     def test_filled_slot_not_in_template_raises_error(self) -> None:
@@ -152,7 +154,9 @@ class TestCreateClozeItem:
             slots={"a": Slot(name="a"), "b": Slot(name="b")},
         )
 
-        with pytest.raises((ValueError, dx.ValidationError), match="not found in template"):
+        with pytest.raises(
+            (ValueError, dx.ValidationError), match="not found in template"
+        ):
             create_cloze_item(
                 template, unfilled_slot_names=["a"], filled_slots={"invalid": "value"}
             )
@@ -178,7 +182,9 @@ class TestCreateClozeItem:
             slots={"a": Slot(name="a"), "b": Slot(name="b")},
         )
 
-        with pytest.raises((ValueError, dx.ValidationError), match="at least 1 unfilled slot"):
+        with pytest.raises(
+            (ValueError, dx.ValidationError), match="at least 1 unfilled slot"
+        ):
             create_cloze_item(template, unfilled_slot_names=[])
 
     def test_with_instructions(self) -> None:
@@ -312,7 +318,9 @@ class TestCreateClozeItemsFromTemplate:
             slots={"a": Slot(name="a"), "b": Slot(name="b")},
         )
 
-        with pytest.raises((ValueError, dx.ValidationError), match="must be less than total slots"):
+        with pytest.raises(
+            (ValueError, dx.ValidationError), match="must be less than total slots"
+        ):
             create_cloze_items_from_template(template, n_unfilled=2)
 
     def test_n_unfilled_zero_raises_error(self) -> None:
@@ -323,7 +331,9 @@ class TestCreateClozeItemsFromTemplate:
             slots={"a": Slot(name="a"), "b": Slot(name="b")},
         )
 
-        with pytest.raises((ValueError, dx.ValidationError), match="must be at least 1"):
+        with pytest.raises(
+            (ValueError, dx.ValidationError), match="must be at least 1"
+        ):
             create_cloze_items_from_template(template, n_unfilled=0)
 
     def test_with_metadata_function(self) -> None:
@@ -396,7 +406,9 @@ class TestCreateSimpleClozeItem:
 
     def test_blank_labels_length_mismatch_raises_error(self) -> None:
         """Test that mismatched labels raise error."""
-        with pytest.raises((ValueError, dx.ValidationError), match="blank_labels length"):
+        with pytest.raises(
+            (ValueError, dx.ValidationError), match="blank_labels length"
+        ):
             create_simple_cloze_item(
                 text="The cat runs",
                 blank_positions=[1, 2],
@@ -405,12 +417,16 @@ class TestCreateSimpleClozeItem:
 
     def test_empty_text_raises_error(self) -> None:
         """Test that empty text raises error."""
-        with pytest.raises((ValueError, dx.ValidationError), match="text cannot be empty"):
+        with pytest.raises(
+            (ValueError, dx.ValidationError), match="text cannot be empty"
+        ):
             create_simple_cloze_item(text="", blank_positions=[0])
 
     def test_empty_blank_positions_raises_error(self) -> None:
         """Test that empty blank_positions raises error."""
-        with pytest.raises((ValueError, dx.ValidationError), match="blank_positions cannot be empty"):
+        with pytest.raises(
+            (ValueError, dx.ValidationError), match="blank_positions cannot be empty"
+        ):
             create_simple_cloze_item(text="Some text", blank_positions=[])
 
     def test_with_instructions(self) -> None:

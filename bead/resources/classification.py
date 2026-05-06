@@ -119,8 +119,7 @@ class LexicalItemClass(BeadBaseModel):
         return tuple(
             item
             for item in self.items
-            if item.language_code is not None
-            and item.language_code.lower() == target
+            if item.language_code is not None and item.language_code.lower() == target
         )
 
     def is_monolingual(self) -> bool:
@@ -195,9 +194,7 @@ class TemplateClass(BeadBaseModel):
     def with_template(self, template: Template) -> Self:
         """Return a new class with *template* appended."""
         if any(existing.id == template.id for existing in self.templates):
-            raise ValueError(
-                f"Template with ID {template.id} already exists in class"
-            )
+            raise ValueError(f"Template with ID {template.id} already exists in class")
         return self.with_(templates=(*self.templates, template)).touched()
 
     def without_template(self, template_id: UUID) -> tuple[Self, Template]:

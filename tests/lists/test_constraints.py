@@ -22,7 +22,9 @@ class TestUniquenessConstraint:
 
     def test_create_basic(self) -> None:
         """Test creating basic uniqueness constraint."""
-        constraint = UniquenessConstraint(constraint_type="uniqueness", property_expression="item_metadata.target_verb"
+        constraint = UniquenessConstraint(
+            constraint_type="uniqueness",
+            property_expression="item_metadata.target_verb",
         )
 
         assert constraint.constraint_type == "uniqueness"
@@ -31,7 +33,10 @@ class TestUniquenessConstraint:
 
     def test_create_with_allow_null(self) -> None:
         """Test creating with allow_null=True."""
-        constraint = UniquenessConstraint(constraint_type="uniqueness", property_expression="item_metadata.target_verb", allow_null=True
+        constraint = UniquenessConstraint(
+            constraint_type="uniqueness",
+            property_expression="item_metadata.target_verb",
+            allow_null=True,
         )
 
         assert constraint.allow_null is True
@@ -45,22 +50,31 @@ class TestUniquenessConstraint:
     def test_property_path_validation_whitespace(self) -> None:
         """Test whitespace-only property_path raises ValidationError."""
         with pytest.raises(ValidationError) as exc_info:
-            UniquenessConstraint(constraint_type="uniqueness", property_expression="   ")
+            UniquenessConstraint(
+                constraint_type="uniqueness", property_expression="   "
+            )
         assert "must be non-empty" in str(exc_info.value)
 
     def test_property_path_strips_whitespace(self) -> None:
         """Test property_path whitespace is stripped."""
-        constraint = UniquenessConstraint(constraint_type="uniqueness", property_expression="  test.path  ")
+        constraint = UniquenessConstraint(
+            constraint_type="uniqueness", property_expression="  test.path  "
+        )
         assert constraint.property_expression == "test.path"
 
     def test_constraint_type_is_uniqueness(self) -> None:
         """Test discriminator is correct."""
-        constraint = UniquenessConstraint(constraint_type="uniqueness", property_expression="test")
+        constraint = UniquenessConstraint(
+            constraint_type="uniqueness", property_expression="test"
+        )
         assert constraint.constraint_type == "uniqueness"
 
     def test_serialization_roundtrip(self) -> None:
         """Test serialization roundtrip works."""
-        constraint = UniquenessConstraint(constraint_type="uniqueness", property_expression="item_metadata.target_verb", allow_null=True
+        constraint = UniquenessConstraint(
+            constraint_type="uniqueness",
+            property_expression="item_metadata.target_verb",
+            allow_null=True,
         )
 
         data = constraint.model_dump()
@@ -71,7 +85,9 @@ class TestUniquenessConstraint:
 
     def test_inherits_beadbasemodel(self) -> None:
         """Test has BeadBaseModel fields."""
-        constraint = UniquenessConstraint(constraint_type="uniqueness", property_expression="test")
+        constraint = UniquenessConstraint(
+            constraint_type="uniqueness", property_expression="test"
+        )
 
         assert hasattr(constraint, "id")
         assert hasattr(constraint, "created_at")
@@ -83,7 +99,9 @@ class TestBalanceConstraint:
 
     def test_create_basic(self) -> None:
         """Test creating basic balance constraint."""
-        constraint = BalanceConstraint(constraint_type="balance", property_expression="item_metadata.transitivity")
+        constraint = BalanceConstraint(
+            constraint_type="balance", property_expression="item_metadata.transitivity"
+        )
 
         assert constraint.constraint_type == "balance"
         assert constraint.property_expression == "item_metadata.transitivity"
@@ -92,7 +110,9 @@ class TestBalanceConstraint:
 
     def test_create_with_target_counts(self) -> None:
         """Test creating with target_counts."""
-        constraint = BalanceConstraint(constraint_type="balance", property_expression="item_metadata.grammatical",
+        constraint = BalanceConstraint(
+            constraint_type="balance",
+            property_expression="item_metadata.grammatical",
             target_counts={"true": 20, "false": 10},
         )
 
@@ -100,7 +120,10 @@ class TestBalanceConstraint:
 
     def test_create_with_tolerance(self) -> None:
         """Test creating with custom tolerance."""
-        constraint = BalanceConstraint(constraint_type="balance", property_expression="item_metadata.transitivity", tolerance=0.05
+        constraint = BalanceConstraint(
+            constraint_type="balance",
+            property_expression="item_metadata.transitivity",
+            tolerance=0.05,
         )
 
         assert constraint.tolerance == 0.05
@@ -120,46 +143,64 @@ class TestBalanceConstraint:
     def test_tolerance_validation_negative(self) -> None:
         """Test negative tolerance raises ValidationError."""
         with pytest.raises(ValidationError) as exc_info:
-            BalanceConstraint(constraint_type="balance", property_expression="test", tolerance=-0.1)
+            BalanceConstraint(
+                constraint_type="balance", property_expression="test", tolerance=-0.1
+            )
         assert "non-negative" in str(exc_info.value) or "must be" in str(exc_info.value)
 
     def test_tolerance_validation_too_large(self) -> None:
         """Test tolerance > 1.0 raises ValidationError."""
         with pytest.raises(ValidationError) as exc_info:
-            BalanceConstraint(constraint_type="balance", property_expression="test", tolerance=1.5)
+            BalanceConstraint(
+                constraint_type="balance", property_expression="test", tolerance=1.5
+            )
         assert "between 0 and 1" in str(exc_info.value)
 
     def test_tolerance_validation_zero(self) -> None:
         """Test tolerance=0.0 is valid."""
-        constraint = BalanceConstraint(constraint_type="balance", property_expression="test", tolerance=0.0)
+        constraint = BalanceConstraint(
+            constraint_type="balance", property_expression="test", tolerance=0.0
+        )
         assert constraint.tolerance == 0.0
 
     def test_tolerance_validation_one(self) -> None:
         """Test tolerance=1.0 is valid."""
-        constraint = BalanceConstraint(constraint_type="balance", property_expression="test", tolerance=1.0)
+        constraint = BalanceConstraint(
+            constraint_type="balance", property_expression="test", tolerance=1.0
+        )
         assert constraint.tolerance == 1.0
 
     def test_target_counts_validation_negative_values(self) -> None:
         """Test negative target_counts values raise ValidationError."""
         with pytest.raises(ValidationError) as exc_info:
-            BalanceConstraint(constraint_type="balance", property_expression="test", target_counts={"cat1": 10, "cat2": -5}
+            BalanceConstraint(
+                constraint_type="balance",
+                property_expression="test",
+                target_counts={"cat1": 10, "cat2": -5},
             )
         assert "non-negative" in str(exc_info.value)
 
     def test_target_counts_validation_zero_values(self) -> None:
         """Test zero target_counts values are valid."""
-        constraint = BalanceConstraint(constraint_type="balance", property_expression="test", target_counts={"cat1": 0, "cat2": 10}
+        constraint = BalanceConstraint(
+            constraint_type="balance",
+            property_expression="test",
+            target_counts={"cat1": 0, "cat2": 10},
         )
         assert constraint.target_counts["cat1"] == 0
 
     def test_constraint_type_is_balance(self) -> None:
         """Test discriminator is correct."""
-        constraint = BalanceConstraint(constraint_type="balance", property_expression="test")
+        constraint = BalanceConstraint(
+            constraint_type="balance", property_expression="test"
+        )
         assert constraint.constraint_type == "balance"
 
     def test_serialization_roundtrip(self) -> None:
         """Test serialization roundtrip works."""
-        constraint = BalanceConstraint(constraint_type="balance", property_expression="test",
+        constraint = BalanceConstraint(
+            constraint_type="balance",
+            property_expression="test",
             target_counts={"a": 5, "b": 10},
             tolerance=0.15,
         )
@@ -177,7 +218,9 @@ class TestQuantileConstraint:
 
     def test_create_basic(self) -> None:
         """Test creating basic quantile constraint."""
-        constraint = QuantileConstraint(constraint_type="quantile", property_expression="item_metadata.lm_prob")
+        constraint = QuantileConstraint(
+            constraint_type="quantile", property_expression="item_metadata.lm_prob"
+        )
 
         assert constraint.constraint_type == "quantile"
         assert constraint.property_expression == "item_metadata.lm_prob"
@@ -186,14 +229,20 @@ class TestQuantileConstraint:
 
     def test_create_with_custom_quantiles(self) -> None:
         """Test creating with custom n_quantiles."""
-        constraint = QuantileConstraint(constraint_type="quantile", property_expression="item_metadata.frequency", n_quantiles=10
+        constraint = QuantileConstraint(
+            constraint_type="quantile",
+            property_expression="item_metadata.frequency",
+            n_quantiles=10,
         )
 
         assert constraint.n_quantiles == 10
 
     def test_create_with_custom_items_per_quantile(self) -> None:
         """Test creating with custom items_per_quantile."""
-        constraint = QuantileConstraint(constraint_type="quantile", property_expression="item_metadata.frequency", items_per_quantile=5
+        constraint = QuantileConstraint(
+            constraint_type="quantile",
+            property_expression="item_metadata.frequency",
+            items_per_quantile=5,
         )
 
         assert constraint.items_per_quantile == 5
@@ -213,46 +262,67 @@ class TestQuantileConstraint:
     def test_n_quantiles_validation_too_small(self) -> None:
         """Test n_quantiles < 2 raises ValidationError."""
         with pytest.raises(ValidationError) as exc_info:
-            QuantileConstraint(constraint_type="quantile", property_expression="test", n_quantiles=0)
+            QuantileConstraint(
+                constraint_type="quantile", property_expression="test", n_quantiles=0
+            )
         assert "must be" in str(exc_info.value)
 
     def test_n_quantiles_validation_one(self) -> None:
         """Test n_quantiles = 1 raises ValidationError."""
         with pytest.raises(ValidationError) as exc_info:
-            QuantileConstraint(constraint_type="quantile", property_expression="test", n_quantiles=1)
+            QuantileConstraint(
+                constraint_type="quantile", property_expression="test", n_quantiles=1
+            )
         assert "must be" in str(exc_info.value)
 
     def test_n_quantiles_validation_two(self) -> None:
         """Test n_quantiles = 2 is valid."""
-        constraint = QuantileConstraint(constraint_type="quantile", property_expression="test", n_quantiles=2)
+        constraint = QuantileConstraint(
+            constraint_type="quantile", property_expression="test", n_quantiles=2
+        )
         assert constraint.n_quantiles == 2
 
     def test_items_per_quantile_validation_zero(self) -> None:
         """Test items_per_quantile = 0 raises ValidationError."""
         with pytest.raises(ValidationError) as exc_info:
-            QuantileConstraint(constraint_type="quantile", property_expression="test", items_per_quantile=0)
+            QuantileConstraint(
+                constraint_type="quantile",
+                property_expression="test",
+                items_per_quantile=0,
+            )
         assert "must be" in str(exc_info.value)
 
     def test_items_per_quantile_validation_negative(self) -> None:
         """Test items_per_quantile < 0 raises ValidationError."""
         with pytest.raises(ValidationError) as exc_info:
-            QuantileConstraint(constraint_type="quantile", property_expression="test", items_per_quantile=-1)
+            QuantileConstraint(
+                constraint_type="quantile",
+                property_expression="test",
+                items_per_quantile=-1,
+            )
         assert "must be" in str(exc_info.value)
 
     def test_items_per_quantile_validation_one(self) -> None:
         """Test items_per_quantile = 1 is valid."""
-        constraint = QuantileConstraint(constraint_type="quantile", property_expression="test", items_per_quantile=1
+        constraint = QuantileConstraint(
+            constraint_type="quantile", property_expression="test", items_per_quantile=1
         )
         assert constraint.items_per_quantile == 1
 
     def test_constraint_type_is_quantile(self) -> None:
         """Test discriminator is correct."""
-        constraint = QuantileConstraint(constraint_type="quantile", property_expression="test")
+        constraint = QuantileConstraint(
+            constraint_type="quantile", property_expression="test"
+        )
         assert constraint.constraint_type == "quantile"
 
     def test_serialization_roundtrip(self) -> None:
         """Test serialization roundtrip works."""
-        constraint = QuantileConstraint(constraint_type="quantile", property_expression="test", n_quantiles=10, items_per_quantile=3
+        constraint = QuantileConstraint(
+            constraint_type="quantile",
+            property_expression="test",
+            n_quantiles=10,
+            items_per_quantile=3,
         )
 
         data = constraint.model_dump()
@@ -320,7 +390,9 @@ class TestSizeConstraint:
     def test_validation_exact_with_both(self) -> None:
         """Test exact_size with both min and max raises ValidationError."""
         with pytest.raises(ValidationError) as exc_info:
-            SizeConstraint(constraint_type="size", exact_size=40, min_size=30, max_size=50)
+            SizeConstraint(
+                constraint_type="size", exact_size=40, min_size=30, max_size=50
+            )
         assert "exact_size cannot be used with" in str(exc_info.value)
 
     def test_validation_min_greater_than_max(self) -> None:
@@ -399,20 +471,30 @@ class TestOrderingConstraint:
     def test_create_with_precedence(self) -> None:
         """Test creating with precedence pairs."""
         item_a, item_b = uuid4(), uuid4()
-        constraint = OrderingConstraint(constraint_type="ordering", precedence_pairs=(OrderingPair(before=item_a, after=item_b),))
+        constraint = OrderingConstraint(
+            constraint_type="ordering",
+            precedence_pairs=(OrderingPair(before=item_a, after=item_b),),
+        )
 
         assert len(constraint.precedence_pairs) == 1
-        assert (constraint.precedence_pairs[0].before, constraint.precedence_pairs[0].after) == (item_a, item_b)
+        assert (
+            constraint.precedence_pairs[0].before,
+            constraint.precedence_pairs[0].after,
+        ) == (item_a, item_b)
 
     def test_create_with_no_adjacent(self) -> None:
         """Test creating with no_adjacent_property."""
-        constraint = OrderingConstraint(constraint_type="ordering", no_adjacent_property="item_metadata.condition")
+        constraint = OrderingConstraint(
+            constraint_type="ordering", no_adjacent_property="item_metadata.condition"
+        )
 
         assert constraint.no_adjacent_property == "item_metadata.condition"
 
     def test_create_with_blocking(self) -> None:
         """Test creating with block_by_property."""
-        constraint = OrderingConstraint(constraint_type="ordering", block_by_property="item_metadata.block_type",
+        constraint = OrderingConstraint(
+            constraint_type="ordering",
+            block_by_property="item_metadata.block_type",
             randomize_within_blocks=False,
         )
 
@@ -421,21 +503,29 @@ class TestOrderingConstraint:
 
     def test_create_with_min_distance(self) -> None:
         """Test creating with min_distance."""
-        constraint = OrderingConstraint(constraint_type="ordering", no_adjacent_property="item_metadata.condition", min_distance=3
+        constraint = OrderingConstraint(
+            constraint_type="ordering",
+            no_adjacent_property="item_metadata.condition",
+            min_distance=3,
         )
 
         assert constraint.min_distance == 3
 
     def test_create_with_max_distance(self) -> None:
         """Test creating with max_distance."""
-        constraint = OrderingConstraint(constraint_type="ordering", block_by_property="item_metadata.block_type", max_distance=5
+        constraint = OrderingConstraint(
+            constraint_type="ordering",
+            block_by_property="item_metadata.block_type",
+            max_distance=5,
         )
 
         assert constraint.max_distance == 5
 
     def test_create_with_practice_items(self) -> None:
         """Test creating with practice_item_property."""
-        constraint = OrderingConstraint(constraint_type="ordering", practice_item_property="item_metadata.is_practice"
+        constraint = OrderingConstraint(
+            constraint_type="ordering",
+            practice_item_property="item_metadata.is_practice",
         )
 
         assert constraint.practice_item_property == "item_metadata.is_practice"
@@ -455,7 +545,9 @@ class TestOrderingConstraint:
     def test_validation_min_greater_than_max_distance(self) -> None:
         """Test min_distance > max_distance raises ValidationError."""
         with pytest.raises(ValidationError) as exc_info:
-            OrderingConstraint(constraint_type="ordering", no_adjacent_property="item_metadata.condition",
+            OrderingConstraint(
+                constraint_type="ordering",
+                no_adjacent_property="item_metadata.condition",
                 block_by_property="item_metadata.block_type",
                 min_distance=10,
                 max_distance=5,
@@ -465,27 +557,38 @@ class TestOrderingConstraint:
     def test_validation_min_distance_negative(self) -> None:
         """Test negative min_distance raises ValidationError."""
         with pytest.raises(ValidationError) as exc_info:
-            OrderingConstraint(constraint_type="ordering", no_adjacent_property="item_metadata.condition", min_distance=-1
+            OrderingConstraint(
+                constraint_type="ordering",
+                no_adjacent_property="item_metadata.condition",
+                min_distance=-1,
             )
         assert "must be" in str(exc_info.value)
 
     def test_validation_max_distance_negative(self) -> None:
         """Test negative max_distance raises ValidationError."""
         with pytest.raises(ValidationError) as exc_info:
-            OrderingConstraint(constraint_type="ordering", block_by_property="item_metadata.block_type", max_distance=-1
+            OrderingConstraint(
+                constraint_type="ordering",
+                block_by_property="item_metadata.block_type",
+                max_distance=-1,
             )
         assert "must be" in str(exc_info.value)
 
     def test_validation_min_distance_zero(self) -> None:
         """Test zero min_distance raises ValidationError."""
         with pytest.raises(ValidationError) as exc_info:
-            OrderingConstraint(constraint_type="ordering", no_adjacent_property="item_metadata.condition", min_distance=0
+            OrderingConstraint(
+                constraint_type="ordering",
+                no_adjacent_property="item_metadata.condition",
+                min_distance=0,
             )
         assert "must be" in str(exc_info.value)
 
     def test_validation_min_equals_max_distance(self) -> None:
         """Test min_distance == max_distance is valid."""
-        constraint = OrderingConstraint(constraint_type="ordering", no_adjacent_property="item_metadata.condition",
+        constraint = OrderingConstraint(
+            constraint_type="ordering",
+            no_adjacent_property="item_metadata.condition",
             block_by_property="item_metadata.block_type",
             min_distance=5,
             max_distance=5,
@@ -502,7 +605,9 @@ class TestOrderingConstraint:
     def test_serialization_roundtrip(self) -> None:
         """Test serialization roundtrip works."""
         item_a, item_b = uuid4(), uuid4()
-        constraint = OrderingConstraint(constraint_type="ordering", precedence_pairs=(OrderingPair(before=item_a, after=item_b),),
+        constraint = OrderingConstraint(
+            constraint_type="ordering",
+            precedence_pairs=(OrderingPair(before=item_a, after=item_b),),
             no_adjacent_property="item_metadata.condition",
             min_distance=2,
         )
@@ -511,7 +616,10 @@ class TestOrderingConstraint:
         restored = OrderingConstraint(**data)
 
         assert len(restored.precedence_pairs) == 1
-        assert (restored.precedence_pairs[0].before, restored.precedence_pairs[0].after) == (item_a, item_b)
+        assert (
+            restored.precedence_pairs[0].before,
+            restored.precedence_pairs[0].after,
+        ) == (item_a, item_b)
         assert restored.no_adjacent_property == constraint.no_adjacent_property
         assert restored.min_distance == constraint.min_distance
 
@@ -583,7 +691,9 @@ class TestListConstraintUnion:
     def test_all_constraints_have_discriminator(self) -> None:
         """Test all constraint types have constraint_type field."""
         constraints = [
-            UniquenessConstraint(constraint_type="uniqueness", property_expression="test"),
+            UniquenessConstraint(
+                constraint_type="uniqueness", property_expression="test"
+            ),
             BalanceConstraint(constraint_type="balance", property_expression="test"),
             QuantileConstraint(constraint_type="quantile", property_expression="test"),
             SizeConstraint(constraint_type="size", exact_size=40),
@@ -603,7 +713,9 @@ class TestListConstraintUnion:
     def test_serialization_preserves_type(self) -> None:
         """Test serialization preserves constraint_type."""
         constraints = [
-            UniquenessConstraint(constraint_type="uniqueness", property_expression="test"),
+            UniquenessConstraint(
+                constraint_type="uniqueness", property_expression="test"
+            ),
             BalanceConstraint(constraint_type="balance", property_expression="test"),
             QuantileConstraint(constraint_type="quantile", property_expression="test"),
             SizeConstraint(constraint_type="size", exact_size=40),

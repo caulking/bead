@@ -57,9 +57,7 @@ class FieldSpec(BeadBaseModel):
             raise ValueError("Field name cannot be empty")
         stripped = value.strip()
         if not stripped.isidentifier():
-            raise ValueError(
-                f"Field name must be valid Python identifier: {stripped}"
-            )
+            raise ValueError(f"Field name must be valid Python identifier: {stripped}")
         return stripped
 
     def validate_value(self, value: str | int | float | bool | None) -> bool:
@@ -104,8 +102,7 @@ def validate_field_spec(spec: FieldSpec) -> None:
     """
     if spec.range is not None and spec.field_type not in ("int", "float"):
         raise ValueError(
-            f"range constraint only valid for numeric types, "
-            f"not {spec.field_type}"
+            f"range constraint only valid for numeric types, not {spec.field_type}"
         )
 
     if spec.allowed_values is None:
@@ -215,9 +212,7 @@ class ParticipantMetadataSpec(BeadBaseModel):
 
         fields: list[DemographicsFieldConfig] = []
         for field in self.fields:
-            form_field_type: Literal[
-                "text", "number", "dropdown", "radio", "checkbox"
-            ]
+            form_field_type: Literal["text", "number", "dropdown", "radio", "checkbox"]
             if field.field_type in ("int", "float"):
                 form_field_type = "number"
             elif field.field_type == "bool":

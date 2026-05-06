@@ -102,7 +102,9 @@ class TestJavaScriptExecution:
     def test_no_adjacent_constraint(self, tmp_path: Path) -> None:
         """Test no-adjacent constraint enforcement."""
         item_ids = [uuid4() for _ in range(6)]
-        constraint = OrderingConstraint(constraint_type="ordering", no_adjacent_property="condition")
+        constraint = OrderingConstraint(
+            constraint_type="ordering", no_adjacent_property="condition"
+        )
         metadata = {
             item_ids[0]: {"condition": "A"},
             item_ids[1]: {"condition": "B"},
@@ -147,7 +149,9 @@ class TestJavaScriptExecution:
     def test_practice_items_first(self, tmp_path: Path) -> None:
         """Test practice items appear first."""
         item_ids = [uuid4() for _ in range(5)]
-        constraint = OrderingConstraint(constraint_type="ordering", practice_item_property="is_practice")
+        constraint = OrderingConstraint(
+            constraint_type="ordering", practice_item_property="is_practice"
+        )
         metadata = {
             item_ids[0]: {"is_practice": False},
             item_ids[1]: {"is_practice": True},
@@ -196,8 +200,10 @@ class TestJavaScriptExecution:
     def test_blocking_constraint(self, tmp_path: Path) -> None:
         """Test blocking creates contiguous blocks."""
         item_ids = [uuid4() for _ in range(6)]
-        constraint = OrderingConstraint(constraint_type="ordering", 
-            block_by_property="block_type", randomize_within_blocks=False
+        constraint = OrderingConstraint(
+            constraint_type="ordering",
+            block_by_property="block_type",
+            randomize_within_blocks=False,
         )
         metadata = {
             item_ids[0]: {"block_type": "A"},
@@ -240,8 +246,8 @@ class TestJavaScriptExecution:
     def test_min_distance_constraint(self, tmp_path: Path) -> None:
         """Test minimum distance constraint enforcement."""
         item_ids = [uuid4() for _ in range(8)]
-        constraint = OrderingConstraint(constraint_type="ordering", 
-            no_adjacent_property="condition", min_distance=2
+        constraint = OrderingConstraint(
+            constraint_type="ordering", no_adjacent_property="condition", min_distance=2
         )
         metadata = {
             item_ids[0]: {"condition": "A"},

@@ -107,8 +107,7 @@ def _convert_paths_to_strings(data: dict[str, Any]) -> dict[str, Any]:
             result[key] = str(value)
         elif isinstance(value, list):
             converted_list: list[Any] = [
-                str(item) if isinstance(item, Path) else item
-                for item in value
+                str(item) if isinstance(item, Path) else item for item in value
             ]
             result[key] = converted_list
         else:

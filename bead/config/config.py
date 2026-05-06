@@ -128,10 +128,7 @@ class BeadConfig(dx.Model):
         if not logging_dir.exists() and logging_dir.is_absolute():
             errors.append(f"logging_dir does not exist: {logging_dir}")
 
-        if (
-            self.logging.file is not None
-            and not self.logging.file.parent.exists()
-        ):
+        if self.logging.file is not None and not self.logging.file.parent.exists():
             errors.append(
                 f"logging file parent directory does not exist: "
                 f"{self.logging.file.parent}"

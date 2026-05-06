@@ -66,9 +66,9 @@ class TemplateConfig(dx.Model):
         Per-slot strategy configuration for mixed filling.
     """
 
-    filling_strategy: Literal[
-        "exhaustive", "random", "stratified", "mlm", "mixed"
-    ] = "exhaustive"
+    filling_strategy: Literal["exhaustive", "random", "stratified", "mlm", "mixed"] = (
+        "exhaustive"
+    )
     batch_size: int = 1000
     max_combinations: int | None = None
     random_seed: int | None = None
@@ -119,6 +119,5 @@ def validate_template_config(config: TemplateConfig) -> None:
         for slot_name, slot_config in config.slot_strategies.items():
             if slot_config.strategy == "mlm" and config.mlm_model_name is None:
                 raise ValueError(
-                    f"mlm_model_name must be specified when slot "
-                    f"'{slot_name}' uses MLM"
+                    f"mlm_model_name must be specified when slot '{slot_name}' uses MLM"
                 )

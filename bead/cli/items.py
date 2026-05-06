@@ -229,10 +229,7 @@ def _display_construction_stats(
     # Constraint satisfaction
     if items and items[0].constraint_satisfaction:
         satisfied_count = sum(
-            1
-            for item in items
-            for cs in item.constraint_satisfaction
-            if cs.satisfied
+            1 for item in items for cs in item.constraint_satisfaction if cs.satisfied
         )
         total_constraints = sum(len(item.constraint_satisfaction) for item in items)
         if total_constraints > 0:

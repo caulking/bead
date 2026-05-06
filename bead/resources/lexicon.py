@@ -51,9 +51,7 @@ class Lexicon(BeadBaseModel):
     tags: tuple[str, ...] = ()
 
     @dx.validates("language_code")
-    def _check_language_code(
-        self, value: LanguageCode | None
-    ) -> LanguageCode | None:
+    def _check_language_code(self, value: LanguageCode | None) -> LanguageCode | None:
         from bead.data.language_codes import validate_iso639_code  # noqa: PLC0415
 
         return validate_iso639_code(value)

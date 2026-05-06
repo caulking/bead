@@ -72,9 +72,7 @@ class ASTBuilder(Transformer):  # type: ignore[type-arg]
             operator = str(operator_token.value)
         else:
             operator = str(operator_token)
-        return ast.BinaryOp(
-            kind="binary_op", operator=operator, left=left, right=right
-        )
+        return ast.BinaryOp(kind="binary_op", operator=operator, left=left, right=right)
 
     def binary_op_not_in(self, items: list[Token | ast.ASTNode]) -> ast.BinaryOp:
         """Transform 'not in' binary operation."""
@@ -83,9 +81,7 @@ class ASTBuilder(Transformer):  # type: ignore[type-arg]
         nodes = [item for item in items if not isinstance(item, Token)]
         left = nodes[0]
         right = nodes[1]
-        return ast.BinaryOp(
-            kind="binary_op", operator="not in", left=left, right=right
-        )
+        return ast.BinaryOp(kind="binary_op", operator="not in", left=left, right=right)
 
     def unary_op(self, items: list[Token | ast.ASTNode]) -> ast.UnaryOp:
         """Transform unary operation."""

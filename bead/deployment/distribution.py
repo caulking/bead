@@ -198,9 +198,7 @@ def validate_list_distribution_strategy(
             )
     elif strategy.strategy_type == DistributionStrategyType.STRATIFIED:
         if "factors" not in config:
-            raise ValueError(
-                f"StratifiedConfig requires 'factors'. Got keys: {keys}."
-            )
+            raise ValueError(f"StratifiedConfig requires 'factors'. Got keys: {keys}.")
         factors = config["factors"]
         if not isinstance(factors, (list, tuple)) or not factors:
             raise ValueError(

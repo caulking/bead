@@ -222,9 +222,7 @@ class ListPartitioner:
 
         # For each item, assign to list that best maintains balance
         for item_id in items_shuffled:
-            best_idx = self._find_best_list_index(
-                item_id, lists, constraints, metadata
-            )
+            best_idx = self._find_best_list_index(item_id, lists, constraints, metadata)
             lists[best_idx] = lists[best_idx].with_item(item_id)
 
         return [

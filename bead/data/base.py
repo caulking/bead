@@ -20,13 +20,7 @@ from bead.data.identifiers import generate_uuid
 from bead.data.timestamps import now_iso8601
 
 type JsonValue = (
-    str
-    | int
-    | float
-    | bool
-    | None
-    | tuple["JsonValue", ...]
-    | dict[str, "JsonValue"]
+    str | int | float | bool | None | tuple["JsonValue", ...] | dict[str, "JsonValue"]
 )
 
 

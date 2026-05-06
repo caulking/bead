@@ -68,9 +68,7 @@ class Constraint(BeadBaseModel):
         if not constraints:
             raise ValueError("Must provide at least one constraint")
         if logic not in ("and", "or"):
-            raise ValueError(
-                f"Invalid logic operator '{logic}'. Must be 'and' or 'or'"
-            )
+            raise ValueError(f"Invalid logic operator '{logic}'. Must be 'and' or 'or'")
         if len(constraints) == 1:
             return constraints[0]
 

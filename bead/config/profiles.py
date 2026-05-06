@@ -198,9 +198,7 @@ def get_profile(name: str) -> BeadConfig:
     """
     if name not in PROFILES:
         available = ", ".join(sorted(PROFILES.keys()))
-        raise ValueError(
-            f"Profile {name!r} not found. Available profiles: {available}"
-        )
+        raise ValueError(f"Profile {name!r} not found. Available profiles: {available}")
     return PROFILES[name].with_()
 
 
