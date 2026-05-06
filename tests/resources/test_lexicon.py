@@ -568,7 +568,7 @@ def test_jsonl_roundtrip(tmp_path: Path) -> None:
     orig_item = list(original.items)[0]
     loaded_item = list(loaded.items)[0]
     assert loaded_item.lemma == orig_item.lemma
-    assert loaded_item.features.by_id("pos") == orig_item.features.by_id("pos")
+    assert loaded_item.features.get("pos") == orig_item.features.get("pos")
 
 
 def test_serialization_preserves_all_data(tmp_path: Path) -> None:

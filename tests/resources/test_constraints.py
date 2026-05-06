@@ -20,7 +20,7 @@ class TestConstraint:
 
     def test_create_with_context(self) -> None:
         """Test creating constraint with context."""
-        context = {"allowed_verbs": {"break", "shatter"}}
+        context = {"allowed_verbs": ("break", "shatter")}
         constraint = Constraint(
             expression="self.lemma in allowed_verbs", context=context
         )
@@ -70,7 +70,7 @@ class TestConstraint:
                 "float_val": 3.14,
                 "bool_val": True,
                 "list_val": ["a", "b"],
-                "set_val": {"x", "y"},
+                "set_val": ("x", "y"),
             },
         )
         data = constraint.model_dump()
@@ -115,17 +115,17 @@ class TestConstraintCombine:
     def test_combine_merges_context(self) -> None:
         """Test that combine merges context from all constraints."""
         c1 = Constraint(
-            expression="self.pos in allowed_pos", context={"allowed_pos": {"VERB"}}
+            expression="self.pos in allowed_pos", context={"allowed_pos": ("VERB",)}
         )
         c2 = Constraint(
             expression="self.lemma in allowed_verbs",
-            context={"allowed_verbs": {"break"}},
+            context={"allowed_verbs": ("break",)},
         )
 
         combined = Constraint.combine(c1, c2, logic="and")
 
-        assert combined.context["allowed_pos"] == {"VERB"}
-        assert combined.context["allowed_verbs"] == {"break"}
+        assert combined.context["allowed_pos"] == ("VERB",)
+        assert combined.context["allowed_verbs"] == ("break",)
 
     def test_combine_context_key_collision_last_wins(self) -> None:
         """Test that conflicting context keys use last value (dict.update behavior)."""

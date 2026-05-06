@@ -118,7 +118,7 @@ class TestConditionalConstraintBuilder:
     def test_with_context(self) -> None:
         """Test conditional with context variables."""
         builder = ConditionalConstraintBuilder()
-        context = {"allowed_nouns": {"cat", "dog"}}
+        context = {"allowed_nouns": ("cat", "dog")}
 
         constraint = builder.build(
             condition="det.lemma == 'a'",
@@ -126,7 +126,7 @@ class TestConditionalConstraintBuilder:
             context=context,
         )
 
-        assert constraint.context == context
+        assert dict(constraint.context) == context
 
     def test_without_description(self) -> None:
         """Test conditional without description."""
@@ -156,7 +156,7 @@ class TestSetMembershipConstraintBuilder:
 
         assert isinstance(constraint, Constraint)
         assert "verb.lemma in allowed_values" in constraint.expression
-        assert constraint.context["allowed_values"] == allowed
+        assert set(constraint.context["allowed_values"]) == allowed
         assert constraint.description == "Motion verbs"
 
     def test_blacklist(self) -> None:
@@ -171,7 +171,7 @@ class TestSetMembershipConstraintBuilder:
         )
 
         assert "verb.lemma not in forbidden_values" in constraint.expression
-        assert constraint.context["forbidden_values"] == forbidden
+        assert set(constraint.context["forbidden_values"]) == forbidden
 
     def test_nested_property_path(self) -> None:
         """Test constraint with nested property path."""

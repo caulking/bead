@@ -359,7 +359,7 @@ class TestCreateSimpleClozeItem:
         assert len(item.unfilled_slots) == 1
         assert item.unfilled_slots[0].position == 1
         assert item.unfilled_slots[0].slot_name == "blank_0"
-        assert item.unfilled_slots[0].constraint_ids == []
+        assert item.unfilled_slots[0].constraint_ids == ()
         assert item.item_metadata["n_unfilled_slots"] == 1
 
     def test_multiple_blanks(self) -> None:
