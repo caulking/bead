@@ -181,6 +181,18 @@ class TestLMRealization:
         with pytest.raises(ValueError, match="positive"):
             LMRealization(_StubLMClient("x"), max_cache_size=0)
 
+    def test_empty_response_raises(self) -> None:
+        client = _StubLMClient("   ")
+        lm = LMRealization(client)
+        with pytest.raises(RuntimeError, match="empty response"):
+            lm.realize(_build_anchor(), ProtocolContext())
+
+    def test_quoted_empty_response_raises(self) -> None:
+        client = _StubLMClient('  ""  ')
+        lm = LMRealization(client)
+        with pytest.raises(RuntimeError, match="empty response"):
+            lm.realize(_build_anchor(), ProtocolContext())
+
     def test_cache_eviction_at_capacity(self) -> None:
         client = _StubLMClient("Did it end?")
         lm = LMRealization(client, cache=True, max_cache_size=2)

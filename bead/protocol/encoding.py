@@ -27,6 +27,7 @@ class based on the scale type.
 from __future__ import annotations
 
 from enum import StrEnum
+from typing import Self
 
 import didactic.api as dx
 
@@ -106,6 +107,27 @@ class ResponseEncoding(BeadBaseModel):
     scale_type: ScaleType
     labels: tuple[str, ...]
     semantic_poles: dx.Embed[SemanticPoles] | None = None
+
+    @dx.model_validator(mode="after")
+    def _check_levels_match_labels(self) -> Self:
+        """Enforce ``n_levels == len(labels)`` and label uniqueness."""
+        if self.n_levels != len(self.labels):
+            raise ValueError(
+                f"n_levels ({self.n_levels}) does not match "
+                f"len(labels) ({len(self.labels)}) for encoding "
+                f"{self.name!r}"
+            )
+        if len(set(self.labels)) != len(self.labels):
+            raise ValueError(
+                f"Duplicate labels in encoding {self.name!r}: "
+                f"{self.labels}"
+            )
+        if self.scale_type == ScaleType.BINARY and self.n_levels != 2:
+            raise ValueError(
+                f"BINARY scale must have exactly 2 levels, got "
+                f"{self.n_levels} in encoding {self.name!r}"
+            )
+        return self
 
     @property
     def is_ordinal(self) -> bool:
@@ -232,13 +254,10 @@ def encode_response_space(
     True
     """
     scale_type = _classify_scale(response_space)
-    labels = tuple(response_space.options)
-    n_levels = len(labels)
-
     return ResponseEncoding(
         name=name,
-        n_levels=n_levels,
+        n_levels=len(response_space.options),
         scale_type=scale_type,
-        labels=labels,
+        labels=response_space.options,
         semantic_poles=response_space.semantic_poles,
     )

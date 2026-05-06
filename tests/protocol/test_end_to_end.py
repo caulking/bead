@@ -59,10 +59,13 @@ class _StubLMClient:
 
 class _StubAdapter:
     def get_embedding(self, text: str) -> Sequence[float]:
-        # Deterministic embedding: weight 1.0 if "endpoint" appears,
-        # otherwise (1, 0, 0). Both realizations contain "endpoint" so
-        # cosine distance should be 0.
-        if "endpoint" in text:
+        # Two-cluster deterministic embedding: texts containing
+        # "endpoint" map to one direction, everything else to the
+        # orthogonal direction. The change anchor uses "changing", so
+        # its canonical and realizations share the (0, 1, 0) cluster;
+        # the completion and uniformity anchors share the (1, 0, 0)
+        # cluster via "endpoint" / "moments".
+        if "endpoint" in text or "moments" in text:
             return (1.0, 0.0, 0.0)
         return (0.0, 1.0, 0.0)
 

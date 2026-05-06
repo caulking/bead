@@ -65,6 +65,33 @@ class TestResponseEncoding:
         assert enc.is_binary is False
         assert enc.is_nominal is False
 
+    def test_n_levels_must_match_labels(self) -> None:
+        with pytest.raises(Exception, match="n_levels"):
+            ResponseEncoding(
+                name="bad",
+                n_levels=3,
+                scale_type=ScaleType.NOMINAL,
+                labels=("a", "b"),
+            )
+
+    def test_duplicate_labels_rejected(self) -> None:
+        with pytest.raises(Exception, match="Duplicate"):
+            ResponseEncoding(
+                name="dup",
+                n_levels=3,
+                scale_type=ScaleType.NOMINAL,
+                labels=("a", "b", "a"),
+            )
+
+    def test_binary_must_have_two_levels(self) -> None:
+        with pytest.raises(Exception, match="BINARY"):
+            ResponseEncoding(
+                name="b",
+                n_levels=3,
+                scale_type=ScaleType.BINARY,
+                labels=("a", "b", "c"),
+            )
+
 
 class TestEncodeResponseSpace:
     """Tests for :func:`encode_response_space`."""

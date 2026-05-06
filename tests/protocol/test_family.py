@@ -148,3 +148,56 @@ class TestAnnotationProtocol:
         )
         with pytest.raises(ValueError, match="unknown anchors"):
             proto.realize_all(ProtocolContext(), responses={"missing": "yes"})
+
+    def test_self_dependency_rejected_at_construction(self) -> None:
+        with pytest.raises(ValueError, match="depends on itself"):
+            AnnotationProtocol(
+                families=[
+                    QuestionFamily(
+                        anchor=_anchor("a"), depends_on=("a",),
+                    ),
+                ],
+            )
+
+    def test_forward_dependency_rejected_at_construction(self) -> None:
+        with pytest.raises(ValueError, match="not earlier"):
+            AnnotationProtocol(
+                families=[
+                    QuestionFamily(
+                        anchor=_anchor("a"), depends_on=("b",),
+                    ),
+                    QuestionFamily(anchor=_anchor("b")),
+                ],
+            )
+
+    def test_unknown_dependency_rejected_at_construction(self) -> None:
+        with pytest.raises(ValueError, match="not earlier"):
+            AnnotationProtocol(
+                families=[
+                    QuestionFamily(
+                        anchor=_anchor("a"), depends_on=("ghost",),
+                    ),
+                ],
+            )
+
+    def test_append_rejects_unknown_dependency(self) -> None:
+        proto = AnnotationProtocol(
+            families=[QuestionFamily(anchor=_anchor("first"))],
+        )
+        with pytest.raises(ValueError, match="not in the protocol"):
+            proto.append(
+                QuestionFamily(
+                    anchor=_anchor("second"), depends_on=("ghost",),
+                ),
+            )
+
+    def test_append_rejects_self_dependency(self) -> None:
+        proto = AnnotationProtocol(
+            families=[QuestionFamily(anchor=_anchor("first"))],
+        )
+        with pytest.raises(ValueError, match="depends on itself"):
+            proto.append(
+                QuestionFamily(
+                    anchor=_anchor("second"), depends_on=("second",),
+                ),
+            )

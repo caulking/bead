@@ -91,6 +91,7 @@ class PerplexityAdapter(Protocol):
         """
         ...
 
+
 _LABEL_PATTERN = re.compile(r"\[\[([^\]:|]+?)(?:[:|][^\]]*?)?\]\]")
 """Compiled regex matching ``[[label]]``, ``[[label|x]]``, ``[[label:x]]``.
 
@@ -314,9 +315,9 @@ class EmbeddingDriftValidator:
     maximum (or the anchor's :attr:`~SemanticAnchor.max_drift`, if no
     explicit maximum is set).
 
-    Embeddings are obtained from a bead
-    :class:`~bead.items.adapters.ModelAdapter`. Any object exposing a
-    ``get_embedding(text) -> array-like`` method conforms.
+    Embeddings are obtained from any object conforming to the
+    :class:`EmbeddingAdapter` Protocol, which includes the bead
+    :class:`~bead.items.adapters.ModelAdapter` family.
 
     Parameters
     ----------
@@ -407,11 +408,11 @@ class EmbeddingDriftValidator:
 class PerplexityDriftValidator:
     """Validate that a realization has acceptable language-model perplexity.
 
-    Wraps a bead
-    :class:`~bead.items.adapters.ModelAdapter`'s
-    :meth:`~bead.items.adapters.ModelAdapter.compute_perplexity`. The
-    realization passes when its perplexity is at most the configured
-    ceiling. Useful for catching ungrammatical or otherwise unnatural
+    Wraps any object conforming to the :class:`PerplexityAdapter`
+    Protocol (which includes the bead
+    :class:`~bead.items.adapters.ModelAdapter` family). The realization
+    passes when its perplexity is at most the configured ceiling.
+    Useful for catching ungrammatical or otherwise unnatural
     LM-generated paraphrases that might still pass structural and
     embedding checks.
 
@@ -490,16 +491,12 @@ class DriftGuard:
     collected in order. ``embedding_distance`` and ``perplexity`` are
     populated from the last validator that set them.
 
-    Parameters
-    ----------
-    validators : list[DriftValidator] | None, optional
-        Initial list of validators to run. Defaults to ``None`` (no
-        validators; calls to :meth:`check` always pass).
-
     Attributes
     ----------
     validators : list[DriftValidator]
-        Mutable list of configured validators.
+        Mutable list of configured validators. Defaults to the empty
+        list; calls to :meth:`check` on a guard with no validators
+        always pass.
     """
 
     validators: list[DriftValidator] = field(default_factory=list)

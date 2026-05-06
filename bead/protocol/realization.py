@@ -19,8 +19,8 @@ Three strategies are provided:
 
 These classes carry callable fields (predicates, LM clients) so they
 are plain frozen Python classes rather than
-:class:`~bead.data.base.BeadBaseModel` subclasses (didactic Models do
-not yet support :class:`~collections.abc.Callable` field types).
+:class:`~bead.data.base.BeadBaseModel` subclasses; didactic Models do
+not accept :class:`~collections.abc.Callable` field types.
 """
 
 from __future__ import annotations
@@ -29,7 +29,7 @@ from dataclasses import dataclass, field
 from typing import Protocol, runtime_checkable
 
 from bead.protocol.anchor import SemanticAnchor
-from bead.protocol.context import ContextPredicate, ProtocolContext
+from bead.protocol.context import ContextPredicate, ProtocolContext, always
 
 
 @runtime_checkable
@@ -74,14 +74,6 @@ class RealizationStrategy(Protocol):
             ``[[label|transform]]`` references.
         """
         ...
-
-
-def always(_ctx: ProtocolContext) -> bool:
-    """Predicate that matches any context.
-
-    Used as the fallback condition for catch-all template variants.
-    """
-    return True
 
 
 @dataclass(frozen=True)
@@ -479,8 +471,13 @@ class LMRealization:
                 f"LM realization failed for anchor {anchor.name!r}: {exc}"
             ) from exc
 
-        cleaned = raw.strip().strip('"\'')
-        if cleaned and not cleaned.endswith("?"):
+        cleaned = raw.strip().strip('"\'').strip()
+        if not cleaned:
+            raise RuntimeError(
+                f"LM realization returned an empty response for anchor "
+                f"{anchor.name!r}"
+            )
+        if not cleaned.endswith("?"):
             cleaned = f"{cleaned}?"
 
         if self._cache_enabled:

@@ -34,7 +34,9 @@ from __future__ import annotations
 from bead.protocol.anchor import ResponseSpace, SemanticAnchor
 from bead.protocol.context import (
     ContextItem,
+    ContextPredicate,
     ProtocolContext,
+    always,
     get_context_predicate,
     list_context_predicates,
     register_context_predicate,
@@ -64,14 +66,12 @@ from bead.protocol.family import (
     QuestionRealization,
 )
 from bead.protocol.realization import (
-    ContextPredicate,
     ContextualTemplateRealization,
     LMClient,
     LMRealization,
     RealizationStrategy,
     TemplateRealization,
     TemplateVariant,
-    always,
 )
 
 __all__ = [

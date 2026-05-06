@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from bead.protocol.anchor import ResponseSpace, SemanticAnchor
 from bead.protocol.diagnostics import (
     ConditionalObservationValidator,
@@ -170,8 +168,3 @@ def test_dataset_report_round_trip_through_with() -> None:
     assert r0.n_records_input == 5
     assert r1.n_records_input == 10
     assert r0.id == r1.id
-
-
-# pytest needs a marker to keep the import-only Protocol used in static
-# checks visible at runtime in the test module.
-_ = pytest

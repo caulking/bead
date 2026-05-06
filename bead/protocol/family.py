@@ -243,20 +243,33 @@ class AnnotationProtocol:
     ------
     ValueError
         If two families share the same anchor name (anchor names must
-        be unique within a protocol).
+        be unique within a protocol), or if any family's
+        :attr:`~QuestionFamily.depends_on` references a family that
+        does not appear earlier in the sequence.
     """
 
     families: list[QuestionFamily]
     name: str = ""
 
     def __post_init__(self) -> None:
-        """Validate that anchor names are unique across the protocol."""
+        """Validate uniqueness and forward-only ``depends_on`` edges."""
         seen: set[str] = set()
         for family in self.families:
             if family.name in seen:
                 raise ValueError(
                     f"Duplicate anchor name in protocol: {family.name!r}"
                 )
+            for dep in family.depends_on:
+                if dep == family.name:
+                    raise ValueError(
+                        f"Family {family.name!r} depends on itself"
+                    )
+                if dep not in seen:
+                    raise ValueError(
+                        f"Family {family.name!r} depends on {dep!r}, "
+                        f"which is not earlier in the protocol "
+                        f"(known so far: {sorted(seen)})"
+                    )
             seen.add(family.name)
 
     def append(self, family: QuestionFamily) -> None:
@@ -270,12 +283,26 @@ class AnnotationProtocol:
         Raises
         ------
         ValueError
-            If a family with the same anchor name is already present.
+            If a family with the same anchor name is already present,
+            or if any of its :attr:`~QuestionFamily.depends_on`
+            references a family not already in the protocol.
         """
-        if any(f.name == family.name for f in self.families):
+        existing = {f.name for f in self.families}
+        if family.name in existing:
             raise ValueError(
                 f"Duplicate anchor name in protocol: {family.name!r}"
             )
+        if family.name in family.depends_on:
+            raise ValueError(
+                f"Family {family.name!r} depends on itself"
+            )
+        for dep in family.depends_on:
+            if dep not in existing:
+                raise ValueError(
+                    f"Family {family.name!r} depends on {dep!r}, "
+                    f"which is not in the protocol (known: "
+                    f"{sorted(existing)})"
+                )
         self.families.append(family)
 
     def family_by_name(self, name: str) -> QuestionFamily:

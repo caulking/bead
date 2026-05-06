@@ -250,9 +250,9 @@ _PREDICATES: dict[str, ContextPredicate] = {}
 def register_context_predicate(name: str, predicate: ContextPredicate) -> None:
     """Register a named predicate over :class:`ProtocolContext`.
 
-    Downstream packages register their domain-specific predicates at
-    import time. The registered predicates are then available by name
-    to :class:`~bead.protocol.realization.ContextualTemplateRealization`
+    Callers register their domain-specific predicates at import time.
+    The registered predicates are then available by name to
+    :class:`~bead.protocol.realization.ContextualTemplateRealization`
     and other realization strategies that select among variants.
 
     Parameters
@@ -314,9 +314,23 @@ def list_context_predicates() -> tuple[str, ...]:
     return tuple(sorted(_PREDICATES))
 
 
-def _always(_ctx: ProtocolContext) -> bool:
-    """Predicate that matches every context."""
+def always(_ctx: ProtocolContext) -> bool:
+    """Predicate that matches every context.
+
+    Used as the catch-all condition for fallback template variants and
+    the default applicability predicate for question families.
+
+    Parameters
+    ----------
+    _ctx : ProtocolContext
+        Ignored.
+
+    Returns
+    -------
+    bool
+        Always ``True``.
+    """
     return True
 
 
-register_context_predicate("always", _always)
+register_context_predicate("always", always)
