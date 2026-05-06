@@ -95,7 +95,7 @@ class MorphologicalTransform:
         self._lemmatize = lemmatize
 
         # lazily initialised adapter (avoid import cost until first use)
-        self._adapter: object | None = None
+        self._adapter: UniMorphAdapter | None = None
         # cache: lemma → inflected form string
         self._cache: dict[str, str | None] = {}
 
@@ -143,8 +143,9 @@ class MorphologicalTransform:
             return None
 
         for item in items:
-            features = item.features or {}
-
+            features = {
+                str(k): str(v) for k, v in (item.features or {}).items()
+            }
             if self._spec.predicate(features):
                 self._cache[lemma] = item.form
                 return item.form
@@ -169,12 +170,11 @@ class MorphologicalTransform:
         tuple[int, list[str]]
             Head index and token list.
         """
-        tokens = context.tokens if context.tokens else text.split()
+        tokens: list[str] = (
+            list(context.tokens) if context.tokens else text.split()
+        )
         head_index = context.head_index if context.head_index is not None else 0
-
-        # clamp to valid range
         head_index = max(0, min(head_index, len(tokens) - 1))
-
         return head_index, tokens
 
     def __call__(self, text: str, context: TransformContext) -> str:

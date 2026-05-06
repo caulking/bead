@@ -372,9 +372,10 @@ class ListPartitioner:
                 if not self._check_size(exp_list, constraint):
                     is_violated = True
 
-            # Add constraint priority if violated
             if is_violated:
-                violations += constraint.priority
+                priority = constraint.priority
+                assert isinstance(priority, int)
+                violations += priority
 
         return violations
 
@@ -915,12 +916,12 @@ class ListPartitioner:
         """
         if isinstance(constraint, BatchCoverageConstraint):
             return self._compute_batch_coverage_score(lists, constraint, metadata)
-        elif isinstance(constraint, BatchBalanceConstraint):
+        if isinstance(constraint, BatchBalanceConstraint):
             return self._compute_batch_balance_score(lists, constraint, metadata)
-        elif isinstance(constraint, BatchDiversityConstraint):
+        if isinstance(constraint, BatchDiversityConstraint):
             return self._compute_batch_diversity_score(lists, constraint, metadata)
-        else:  # BatchMinOccurrenceConstraint
-            return self._compute_batch_min_occurrence_score(lists, constraint, metadata)
+        assert isinstance(constraint, BatchMinOccurrenceConstraint)
+        return self._compute_batch_min_occurrence_score(lists, constraint, metadata)
 
     def _compute_batch_coverage_score(
         self,
