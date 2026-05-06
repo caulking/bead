@@ -5,6 +5,69 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+#### `bead.protocol`: annotation protocol primitives
+
+A new top-level package providing a type-theoretic stack for defining
+annotation protocols: anchors as types, contexts as dependent
+indices, realization strategies as computational content, and drift
+guards as type-checkers.
+
+- `bead.protocol.anchor` defines `SemanticAnchor` (the type-level
+  spec of a question, with required span labels, required keywords,
+  optional embedding center and `max_drift`) and `ResponseSpace` /
+  `SemanticPoles`.
+- `bead.protocol.context` defines a generic `ProtocolContext` and
+  `ContextItem` plus a module-level **predicate registry**
+  (`register_context_predicate`, `get_context_predicate`,
+  `list_context_predicates`) for callers to register named context
+  predicates at import time.
+- `bead.protocol.realization` provides `RealizationStrategy`
+  (`typing.Protocol`), `TemplateRealization`,
+  `ContextualTemplateRealization` (rule-based selection from ranked
+  variants), and `LMRealization` (with caching and FIFO eviction)
+  plus an `LMClient` `Protocol` with explicit
+  `temperature` / `max_tokens` keyword parameters.
+- `bead.protocol.drift` defines `DriftScore`, the `DriftValidator`
+  `Protocol`, and three concrete validators
+  (`StructuralDriftValidator`, `EmbeddingDriftValidator`,
+  `PerplexityDriftValidator`) plus a composite `DriftGuard`. The
+  embedding and perplexity validators consume narrow
+  `EmbeddingAdapter` / `PerplexityAdapter` `Protocol`s, so any object
+  exposing the right method (including bead's
+  `bead.items.adapters.ModelAdapter`) conforms.
+- `bead.protocol.family` defines `QuestionFamily` (with explicit
+  `depends_on` for conditional dependencies) and `AnnotationProtocol`
+  (the iterated dependent product), with `realize_all` threading
+  responses through the context.
+- `bead.protocol.encoding` defines `ScaleType`
+  (`StrEnum: binary / ordinal / nominal`), `ResponseEncoding`, and
+  `encode_response_space`.
+- `bead.protocol.diagnostics` defines `DiagnosticLevel`,
+  `DiagnosticRecord`, `DatasetReport` (immutable, with `with_*`
+  mutators), and `ConditionalObservationValidator` operating directly
+  on `AnnotationProtocol`.
+
+#### `bead.evaluation.reliability`: per-annotator reliability
+
+- `AnnotationRecord` is a `BeadBaseModel` with the canonical
+  `(annotator_id, item_id, question_name, response_label)` shape.
+- `annotator_reliability(records, encodings=...)` returns
+  per-annotator response distributions and Shannon entropy in bits,
+  optionally filtering unrecognized labels.
+- `low_entropy_annotators(profiles, threshold=...)` flags annotators
+  who collapse the response space.
+
+### Documentation
+
+- `docs/api/protocol.md` and `docs/api/evaluation.md` updates expose
+  the new modules through `mkdocstrings`.
+- `docs/user-guide/protocols.md` walks through anchors, contexts,
+  realization, drift, protocols, diagnostics, and reliability.
+
 ## [0.3.0] - 2026-05-06
 
 ### Changed

@@ -1,0 +1,307 @@
+# Annotation Protocols
+
+The `bead.protocol` package gives you a type-theoretic stack for
+defining annotation protocols. Four roles work together:
+
+- A **semantic anchor** is the *type* of a question: a declarative
+  specification of what is being measured.
+- A **protocol context** is the dependent *index*: everything known
+  about the current target.
+- A **realization strategy** is the computational *content* of the
+  dependent function `Pi(ctx). Question(ctx)`: it produces the
+  prompt string a participant will see.
+- A **drift guard** is the *type-checker*: it verifies that a realized
+  prompt still inhabits the type defined by its anchor.
+
+`QuestionFamily` packages these together; `AnnotationProtocol`
+sequences families into the iterated dependent product
+`Sigma(a_1 : Q_1(ctx)). Sigma(a_2 : Q_2(ctx, a_1)). ...`, threading
+responses through the context so later questions can condition on
+earlier answers.
+
+## Why a protocol layer?
+
+Without a separation between the question's type and its phrasing,
+two questions that elicit different responses can look identical, and
+two phrasings of the *same* question can look different. The protocol
+layer makes the invariants explicit:
+
+- The anchor declares which property is measured, the response space,
+  required keywords, and required span references.
+- The realization can vary by context (template variants, LM
+  paraphrase) but must preserve the anchor's invariants.
+- The drift guard catches realizations that fail to preserve them.
+
+## Defining an anchor
+
+```python
+from bead.protocol import ResponseSpace, SemanticAnchor
+from bead.protocol.anchor import SemanticPoles
+
+response_space = ResponseSpace(
+    options=(
+        "definitely no",
+        "probably no",
+        "unsure",
+        "probably yes",
+        "definitely yes",
+    ),
+    is_ordered=True,
+    semantic_poles=SemanticPoles(
+        low="definitely no", high="definitely yes",
+    ),
+)
+
+completion = SemanticAnchor(
+    name="completion",
+    target_property="telicity",
+    canonical_prompt="Does [[situation]] reach a definite endpoint?",
+    response_space=response_space,
+    required_span_labels=frozenset({"situation"}),
+    required_keywords=frozenset({"endpoint"}),
+    description="Whether the event reaches a culmination.",
+)
+```
+
+Use `SemanticAnchor.from_response_options` for the common case of an
+anchor whose response space is built inline:
+
+```python
+completion = SemanticAnchor.from_response_options(
+    name="completion",
+    target_property="telicity",
+    canonical_prompt="Does [[situation]] reach an endpoint?",
+    options=("no", "yes"),
+    is_ordered=False,
+    required_span_labels=frozenset({"situation"}),
+)
+```
+
+## Building a context
+
+`ProtocolContext` carries sentence-level, target-level, and
+dependent-level information common to most annotation protocols.
+Domain-specific data lives in the inherited `metadata` map (a JSON
+dict from `BeadBaseModel`):
+
+```python
+from bead.protocol import ContextItem, ProtocolContext
+
+ctx = ProtocolContext(
+    sentence="Mary built a sandcastle.",
+    target_lemma="build",
+    target_form="built",
+    target_upos="VERB",
+    target_position=2,
+    target_span_text="built a sandcastle",
+    target_span_positions=(2, 3, 4),
+    dependents=(
+        ContextItem(
+            head_lemma="Mary", head_upos="PROPN",
+            head_position=1, span_text="Mary",
+        ),
+        ContextItem(
+            head_lemma="sandcastle", head_upos="NOUN",
+            head_position=4, span_text="a sandcastle",
+            attributes={"definiteness": 0.0},
+        ),
+    ),
+)
+```
+
+## Threading dependent responses
+
+`ProtocolContext.with_response` returns a new context with one
+additional response recorded; the original is unchanged.
+
+```python
+ctx2 = ctx.with_response("change", "yes")
+ctx3 = ctx2.with_response("completion", "probably yes")
+ctx3.previous_responses
+# {'change': 'yes', 'completion': 'probably yes'}
+```
+
+## Realization strategies
+
+`TemplateRealization` returns a fixed template (or the anchor's
+canonical prompt when no template is configured):
+
+```python
+from bead.protocol import TemplateRealization
+
+tr = TemplateRealization()  # echoes anchor.canonical_prompt
+```
+
+`ContextualTemplateRealization` selects from ranked variants:
+
+```python
+from bead.protocol import ContextualTemplateRealization, TemplateVariant
+
+contextual = ContextualTemplateRealization(
+    variants=(
+        TemplateVariant(
+            template="Does [[situation]] end at a specific point?",
+            condition=lambda ctx: ctx.target_upos == "VERB",
+            priority=10,
+        ),
+        TemplateVariant(
+            template="Does [[situation]] have a specific end?",
+            priority=0,
+        ),
+    ),
+)
+```
+
+`LMRealization` paraphrases the canonical prompt via a language-model
+client. Always pair it with a drift guard.
+
+```python
+from bead.protocol import LMClient, LMRealization
+
+class StubClient:
+    def complete(
+        self, prompt: str, *, temperature: float, max_tokens: int,
+    ) -> str:
+        return "Did the event reach an endpoint?"
+
+assert isinstance(StubClient(), LMClient)
+lm = LMRealization(StubClient(), temperature=0.3, max_tokens=200)
+```
+
+## Drift validation
+
+The drift guard composes structural, embedding, and perplexity
+validators.
+
+```python
+from bead.protocol import (
+    DriftGuard,
+    EmbeddingDriftValidator,
+    PerplexityDriftValidator,
+    StructuralDriftValidator,
+)
+
+# `adapter` is any object exposing `get_embedding(text)` and
+# `compute_perplexity(text)`. bead.items.adapters.ModelAdapter
+# instances conform structurally.
+guard = DriftGuard(
+    validators=[
+        StructuralDriftValidator(min_length=15),
+        EmbeddingDriftValidator(adapter, max_distance=0.4),
+        PerplexityDriftValidator(adapter, max_perplexity=80.0),
+    ],
+)
+```
+
+`StructuralDriftValidator` checks `[[label]]` references, required
+keywords, length, and trailing `?`. `EmbeddingDriftValidator` runs on
+the embedding adapter; if the anchor sets `embedding_center` and
+`max_drift`, those are used as the cosine ceiling. `PerplexityDriftValidator`
+flags realizations whose perplexity exceeds a configured ceiling.
+
+## Composing a protocol
+
+```python
+from bead.protocol import AnnotationProtocol, QuestionFamily
+
+change = QuestionFamily(
+    anchor=change_anchor,
+    realization=contextual,
+    drift_guard=guard,
+)
+
+uniformity = QuestionFamily(
+    anchor=uniformity_anchor,
+    realization=TemplateRealization(),
+    drift_guard=guard,
+    condition=(
+        lambda ctx: ctx.previous_responses.get("change") == "yes"
+    ),
+    depends_on=("change",),
+)
+
+protocol = AnnotationProtocol(
+    families=[change, uniformity], name="aspect-protocol",
+)
+
+realizations = protocol.realize_all(
+    ctx, responses={"change": "yes"},
+)
+```
+
+`realize_all` threads each response into the context before evaluating
+the next family; non-applicable families are skipped. When a response
+is not pre-supplied, the first option of the family's response space
+is used as a placeholder so downstream conditional families can still
+be exercised in dry-run mode.
+
+## Diagnostics
+
+`DatasetReport` accumulates immutable diagnostic findings. Every
+mutating method returns a new instance.
+
+```python
+from bead.protocol import DatasetReport, DiagnosticLevel
+
+report = (
+    DatasetReport(n_records_input=42, n_items=20)
+    .with_coverage("change", 0.95)
+    .add(DiagnosticLevel.WARNING, "missing_response", "item i12 has no response")
+)
+print(report.summary())
+```
+
+`ConditionalObservationValidator` inspects records against the
+protocol's `depends_on` graph:
+
+```python
+from bead.protocol import ConditionalObservationValidator
+from bead.evaluation import AnnotationRecord
+
+records = {
+    "change": [
+        AnnotationRecord(
+            annotator_id="a1", item_id="i1",
+            question_name="change", response_label="yes",
+        ),
+    ],
+    "uniformity": [
+        AnnotationRecord(
+            annotator_id="a1", item_id="i1",
+            question_name="uniformity", response_label="yes",
+        ),
+    ],
+}
+
+validator = ConditionalObservationValidator(
+    conditioning_values={"uniformity": {"yes"}},
+)
+findings = validator.validate(records, protocol)
+```
+
+## Reliability
+
+`bead.evaluation.reliability` complements
+`bead.evaluation.InterAnnotatorMetrics` with per-annotator entropy:
+
+```python
+from bead.evaluation import (
+    annotator_reliability, low_entropy_annotators,
+)
+
+profiles = annotator_reliability(records_flat)
+flagged = low_entropy_annotators(profiles, threshold=0.5)
+```
+
+Low entropy means the annotator is collapsing the response space
+(always picking the same label, always picking the midpoint, ...).
+
+## Bridging to bead's item layer
+
+`QuestionRealization.prompt` is a string. It can be passed straight
+into bead's existing item-construction pipeline (`ItemTemplate`,
+`ItemConstructor`, ...) where the `[[label]]` markers in the
+realization are resolved against the item's spans. The protocol layer
+deliberately does *not* perform that resolution itself: the anchor
+and the realization stay agnostic to bead's `{slot}` template syntax,
+so the same realization can be reused across runtimes.
