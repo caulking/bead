@@ -25,7 +25,6 @@ type JsonValue = (
     | float
     | bool
     | None
-    | list["JsonValue"]
     | tuple["JsonValue", ...]
     | dict[str, "JsonValue"]
 )

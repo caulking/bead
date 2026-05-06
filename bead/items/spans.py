@@ -8,6 +8,12 @@ and two label sources (fixed sets and Wikidata entity search).
 
 from __future__ import annotations
 
+from typing import Literal
+
+import didactic.api as dx
+
+from bead.data.base import BeadBaseModel
+
 type MetadataValue = (
     str
     | int
@@ -17,14 +23,6 @@ type MetadataValue = (
     | tuple[MetadataValue, ...]
     | dict[str, MetadataValue]
 )
-
-
-
-from typing import Literal
-
-import didactic.api as dx
-
-from bead.data.base import BeadBaseModel
 
 # same recursive type as in item.py and item_template.py; duplicated here
 # to avoid circular imports.

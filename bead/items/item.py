@@ -2,6 +2,14 @@
 
 from __future__ import annotations
 
+from typing import Self
+from uuid import UUID
+
+import didactic.api as dx
+
+from bead.data.base import BeadBaseModel
+from bead.items.spans import Span, SpanRelation
+
 type MetadataValue = (
     str
     | int
@@ -11,17 +19,6 @@ type MetadataValue = (
     | tuple[MetadataValue, ...]
     | dict[str, MetadataValue]
 )
-
-
-
-from typing import Self
-from uuid import UUID
-
-import didactic.api as dx
-
-from bead.data.base import BeadBaseModel
-from bead.items.spans import Span, SpanRelation
-
 
 
 class ConstraintSatisfaction(BeadBaseModel):

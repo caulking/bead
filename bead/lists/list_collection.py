@@ -7,18 +7,6 @@ them.
 
 from __future__ import annotations
 
-type MetadataValue = (
-    str
-    | int
-    | float
-    | bool
-    | None
-    | tuple[MetadataValue, ...]
-    | dict[str, MetadataValue]
-)
-
-
-
 import json
 from pathlib import Path
 from typing import Self, TypedDict
@@ -29,7 +17,15 @@ import didactic.api as dx
 from bead.data.base import BeadBaseModel
 from bead.lists.experiment_list import ExperimentList
 
-
+type MetadataValue = (
+    str
+    | int
+    | float
+    | bool
+    | None
+    | tuple[MetadataValue, ...]
+    | dict[str, MetadataValue]
+)
 
 class CoverageValidationResult(TypedDict):
     """Outcome of a coverage check across a ``ListCollection``."""
