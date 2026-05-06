@@ -8,6 +8,7 @@ from uuid import uuid4
 import pytest
 
 from bead.items.item import Item
+from bead.items.item_template import ScaleBounds, ScalePointLabel
 from bead.items.ordinal_scale import (
     create_filtered_ordinal_scale_items,
     create_likert_5_item,

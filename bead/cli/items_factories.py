@@ -294,8 +294,12 @@ def create_ordinal_scale_from_texts(
             task = progress.add_task(
                 "Creating ordinal scale items...", total=len(texts)
             )
+            from bead.items.item_template import ScaleBounds  # noqa: PLC0415
+
             items = create_ordinal_scale_items_from_texts(
-                texts, scale_bounds=(scale_min, scale_max), prompt=prompt
+                texts,
+                scale_bounds=ScaleBounds(min=scale_min, max=scale_max),
+                prompt=prompt,
             )
             progress.update(task, completed=len(texts))
 

@@ -1,12 +1,13 @@
-from bead.deployment.jspsych.config import InstructionsConfig
 """Tests for cloze item creation utilities."""
 
 from __future__ import annotations
 
-import didactic.api as dx
 from uuid import uuid4
 
+import didactic.api as dx
 import pytest
+
+from bead.deployment.jspsych.config import InstructionsConfig
 
 from bead.items.cloze import (
     create_cloze_item,
@@ -194,7 +195,7 @@ class TestCreateClozeItem:
             template,
             unfilled_slot_names=["verb"],
             filled_slots={"subj": "She"},
-            instructions=InstructionsConfig.from_text("Fill in the verb"),
+            instructions="Fill in the verb",
         )
 
         assert item.rendered_elements["instructions"] == "Fill in the verb"
@@ -419,7 +420,7 @@ class TestCreateSimpleClozeItem:
         item = create_simple_cloze_item(
             text="The cat runs",
             blank_positions=[2],
-            instructions=InstructionsConfig.from_text("Fill in the missing word"),
+            instructions="Fill in the missing word",
         )
 
         assert item.rendered_elements["instructions"] == "Fill in the missing word"

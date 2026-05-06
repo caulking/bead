@@ -19,11 +19,12 @@ from itertools import product
 from uuid import UUID, uuid4
 
 from bead.items.item import Item, MetadataValue
+from bead.items.item_template import ScaleBounds, ScalePointLabel
 
 
 def create_ordinal_scale_item(
     text: str,
-    scale_bounds: tuple[int, int] = (1, 7),
+    scale_bounds: ScaleBounds = ScaleBounds(min=1, max=7),
     prompt: str | None = None,
     scale_labels: dict[int, str] | None = None,
     item_template_id: UUID | None = None,
@@ -87,14 +88,16 @@ def create_ordinal_scale_item(
     if not text or not text.strip():
         raise ValueError("text cannot be empty")
 
-    scale_min, scale_max = scale_bounds
+    scale_min, scale_max = scale_bounds.min, scale_bounds.max
 
     if scale_min >= scale_max:
         raise ValueError(
             f"scale_min ({scale_min}) must be less than scale_max ({scale_max})"
         )
 
-    # Validate scale_labels if provided
+    # Normalize scale_labels: accept dict[int, str] or tuple[ScalePointLabel, ...]
+    if isinstance(scale_labels, tuple):
+        scale_labels = {sl.point: sl.label for sl in scale_labels}
     if scale_labels:
         for value in scale_labels.keys():
             if not (scale_min <= value <= scale_max):
@@ -135,7 +138,7 @@ def create_ordinal_scale_item(
 
 def create_ordinal_scale_items_from_texts(
     texts: list[str],
-    scale_bounds: tuple[int, int] = (1, 7),
+    scale_bounds: ScaleBounds = ScaleBounds(min=1, max=7),
     prompt: str | None = None,
     scale_labels: dict[int, str] | None = None,
     *,
@@ -201,7 +204,7 @@ def create_ordinal_scale_items_from_texts(
 def create_ordinal_scale_items_from_groups(
     items: list[Item],
     group_by: Callable[[Item], Hashable],
-    scale_bounds: tuple[int, int] = (1, 7),
+    scale_bounds: ScaleBounds = ScaleBounds(min=1, max=7),
     prompt: str | None = None,
     scale_labels: dict[int, str] | None = None,
     *,
@@ -296,7 +299,7 @@ def create_ordinal_scale_items_from_groups(
 def create_ordinal_scale_items_cross_product(
     texts: list[str],
     prompts: list[str],
-    scale_bounds: tuple[int, int] = (1, 7),
+    scale_bounds: ScaleBounds = ScaleBounds(min=1, max=7),
     scale_labels: dict[int, str] | None = None,
     *,
     item_template_id: UUID | None = None,
@@ -358,7 +361,7 @@ def create_ordinal_scale_items_cross_product(
 
 def create_filtered_ordinal_scale_items(
     items: list[Item],
-    scale_bounds: tuple[int, int] = (1, 7),
+    scale_bounds: ScaleBounds = ScaleBounds(min=1, max=7),
     prompt: str | None = None,
     scale_labels: dict[int, str] | None = None,
     *,
