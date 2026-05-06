@@ -27,7 +27,7 @@ from bead.items.item_template import (
     TaskSpec,
 )
 from bead.lists import ExperimentList
-from bead.lists.constraints import OrderingConstraint
+from bead.lists.constraints import OrderingConstraint, OrderingPair
 
 
 @pytest.fixture

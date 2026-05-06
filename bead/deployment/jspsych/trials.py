@@ -1283,7 +1283,7 @@ def _resolve_prompt_references(
     return result
 
 
-def _build_transform_context(label: str, item: Item) -> TransformContext:
+def _build_transform_context(label: str, item: Item) -> "TransformContext":
     """Build a TransformContext from an item's span metadata.
 
     Extracts head index, tokens, lemma, and POS from the first span
