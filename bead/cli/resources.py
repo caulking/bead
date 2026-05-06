@@ -924,8 +924,7 @@ def generate_template_variants(
                 print_error("Base template file is empty")
                 ctx.exit(1)
 
-            base_template_data = json.loads(first_line)
-            base_template = Template.model_validate(base_template_data)
+            base_template = Template.model_validate_json(first_line)
 
         variants: list[Template] = []
         base_name = base_template.name

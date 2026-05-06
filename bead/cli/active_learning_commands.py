@@ -211,8 +211,7 @@ def _load_items(path: Path) -> list[Item]:
             line = line.strip()
             if not line:
                 continue
-            item_data = json.loads(line)
-            items.append(Item(**item_data))
+            items.append(Item.model_validate_json(line))
     return items
 
 
@@ -450,8 +449,7 @@ def select_items(
                 line = line.strip()
                 if not line:
                     continue
-                item_data = json.loads(line)
-                item = Item(**item_data)
+                item = Item.model_validate_json(line)
                 unlabeled_items.append(item)
 
         if len(unlabeled_items) == 0:

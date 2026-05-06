@@ -156,7 +156,7 @@ class FilledTemplate(BeadBaseModel):
     template_name: str
     slot_fillers: dict[str, dx.Embed[LexicalItem]]
     rendered_text: str
-    strategy_name: str
+    strategy_name: str = "exhaustive"
     template_slots: dict[str, bool] = dx.field(default_factory=dict)
 
     @property
