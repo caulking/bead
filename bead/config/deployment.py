@@ -166,7 +166,7 @@ class DeploymentConfig(dx.Model):
     """
 
     platform: str = "jspsych"
-    jspsych_version: str = "7.3.0"
+    jspsych_version: str | None = "7.3.0"
     apply_material_design: bool = True
     include_demographics: bool = True
     include_attention_checks: bool = True

@@ -151,7 +151,7 @@ class ListDistributionStrategy(BeadBaseModel):
         List index to use in debug mode (>= 0).
     """
 
-    strategy_type: DistributionStrategyType
+    strategy_type: DistributionStrategyType = DistributionStrategyType.BALANCED
     strategy_config: dict[str, JsonValue] = dx.field(default_factory=dict)
     max_participants: int | None = None
     error_on_exhaustion: bool = True

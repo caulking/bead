@@ -35,3 +35,9 @@ class ModelConfig(dx.Model):
     max_length: int = 512
     temperature: float = 1.0
     cache_outputs: bool = True
+
+    __axioms__ = (
+        dx.axiom("batch_size > 0", message="batch_size must be positive"),
+        dx.axiom("max_length > 0", message="max_length must be positive"),
+        dx.axiom("temperature >= 0", message="temperature must be non-negative"),
+    )

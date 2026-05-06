@@ -201,7 +201,7 @@ def get_profile(name: str) -> BeadConfig:
         raise ValueError(
             f"Profile {name!r} not found. Available profiles: {available}"
         )
-    return PROFILES[name]
+    return PROFILES[name].with_()
 
 
 def list_profiles() -> list[str]:

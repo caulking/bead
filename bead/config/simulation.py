@@ -31,6 +31,21 @@ class NoiseModelConfig(dx.Model):
     bias_type: str | None = None
     random_noise_stddev: float = 0.0
 
+    __axioms__ = (
+        dx.axiom(
+            "temperature >= 0.01 and temperature <= 10.0",
+            message="temperature must be between 0.01 and 10.0",
+        ),
+        dx.axiom(
+            "bias_strength >= 0 and bias_strength <= 1",
+            message="bias_strength must be between 0 and 1",
+        ),
+        dx.axiom(
+            "random_noise_stddev >= 0",
+            message="random_noise_stddev must be non-negative",
+        ),
+    )
+
 
 def _default_noise_model() -> NoiseModelConfig:
     return NoiseModelConfig()
@@ -93,3 +108,15 @@ class SimulationRunnerConfig(dx.Model):
     inter_annotator_correlation: float | None = None
     output_format: Literal["dict", "dataframe", "jsonl"] = "dict"
     save_path: Path | None = None
+
+    __axioms__ = (
+        dx.axiom(
+            "n_annotators >= 1 and n_annotators <= 100",
+            message="n_annotators must be between 1 and 100",
+        ),
+        dx.axiom(
+            "inter_annotator_correlation == None or "
+            "(inter_annotator_correlation >= 0 and inter_annotator_correlation <= 1)",
+            message="inter_annotator_correlation must be between 0 and 1",
+        ),
+    )

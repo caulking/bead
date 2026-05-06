@@ -33,15 +33,18 @@ DEFAULT_CONFIG = BeadConfig(
 
 
 def get_default_config() -> BeadConfig:
-    """Return the default ``BeadConfig``.
+    """Return a fresh default ``BeadConfig``.
 
-    didactic Models are frozen, so the returned instance is shared with
-    ``DEFAULT_CONFIG``; callers may pass it to ``with_(...)`` to derive
-    overrides without affecting other consumers.
+    didactic Models are frozen; this constructor builds a new instance
+    each call so callers can use ``with_(...)`` to derive overrides.
     """
-    return DEFAULT_CONFIG
+    return BeadConfig()
 
 
 def get_default_for_model[T: dx.Model](model_type: type[T]) -> T:
     """Return a default instance of the given didactic Model class."""
+    if not isinstance(model_type, type) or not issubclass(model_type, dx.Model):
+        raise TypeError(
+            f"{model_type!r} must be a didactic Model class (BaseModel-like)"
+        )
     return model_type()

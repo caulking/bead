@@ -94,6 +94,12 @@ class TemplateConfig(dx.Model):
             raise ValueError(f"max_combinations must be positive, got {value}")
         return value
 
+    @dx.validates("batch_size")
+    def _check_batch_size(self, value: int) -> int:
+        if value <= 0:
+            raise ValueError(f"batch_size must be positive, got {value}")
+        return value
+
 
 def validate_template_config(config: TemplateConfig) -> None:
     """Raise ``ValueError`` if MLM / mixed-strategy fields are inconsistent."""
