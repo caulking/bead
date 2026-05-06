@@ -8,7 +8,12 @@ import pytest
 
 from bead.config.simulation import SimulatedAnnotatorConfig
 from bead.items.item import Item, UnfilledSlot
-from bead.items.item_template import ItemTemplate, PresentationSpec, TaskSpec, ScaleBounds
+from bead.items.item_template import (
+    ItemTemplate,
+    PresentationSpec,
+    ScaleBounds,
+    TaskSpec,
+)
 from bead.simulation.annotators.random import RandomAnnotator
 
 

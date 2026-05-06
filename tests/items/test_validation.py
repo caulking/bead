@@ -3,9 +3,9 @@
 
 from __future__ import annotations
 
-import didactic.api as dx
 from uuid import uuid4
 
+import didactic.api as dx
 import pytest
 from didactic.api import ValidationError
 
@@ -14,8 +14,8 @@ from bead.items.item_template import (
     ItemElement,
     ItemTemplate,
     PresentationSpec,
-    TaskSpec,
     ScaleBounds,
+    TaskSpec,
 )
 from bead.items.validation import (
     _check_option_keys,

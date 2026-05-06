@@ -1265,7 +1265,6 @@ def _resolve_prompt_references(
 
         # apply transforms if requested and a registry is available
         if ref.transforms and transform_registry is not None:
-            from bead.transforms.base import TransformContext
 
             context = _build_transform_context(ref.label, item)
             pipeline = transform_registry.resolve_pipeline(ref.transforms)

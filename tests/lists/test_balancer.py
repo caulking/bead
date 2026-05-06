@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import didactic.api as dx
 from uuid import UUID, uuid4
 
+import didactic.api as dx
 import pytest
 
 from bead.lists.balancer import QuantileBalancer

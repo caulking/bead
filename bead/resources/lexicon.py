@@ -7,7 +7,6 @@ conversion to and from pandas / polars DataFrames.
 
 from __future__ import annotations
 
-import json
 from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import Literal, Self

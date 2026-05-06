@@ -8,7 +8,12 @@ import numpy as np
 import pytest
 
 from bead.items.item import Item, ModelOutput
-from bead.items.item_template import ItemTemplate, PresentationSpec, TaskSpec, ScaleBounds
+from bead.items.item_template import (
+    ItemTemplate,
+    PresentationSpec,
+    ScaleBounds,
+    TaskSpec,
+)
 from bead.simulation.strategies.forced_choice import ForcedChoiceStrategy
 
 

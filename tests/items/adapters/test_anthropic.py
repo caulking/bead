@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import didactic.api as dx
 import os
 
+import didactic.api as dx
 import pytest
 from pytest_mock import MockerFixture
 

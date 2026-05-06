@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import didactic.api as dx
 from uuid import uuid4
 
+import didactic.api as dx
 import pytest
 
 from bead.lists.stratification import assign_quantiles, assign_quantiles_by_uuid

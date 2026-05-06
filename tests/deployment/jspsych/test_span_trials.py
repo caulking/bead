@@ -9,8 +9,8 @@ from bead.deployment.distribution import (
     ListDistributionStrategy,
 )
 from bead.deployment.jspsych.config import (
-    InstructionsConfig,
     ExperimentConfig,
+    InstructionsConfig,
     SpanDisplayConfig,
 )
 from bead.deployment.jspsych.trials import (

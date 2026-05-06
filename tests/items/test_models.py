@@ -26,7 +26,6 @@ from bead.items.item_template import (
     TimingParams,
 )
 
-
 # ItemElement tests
 
 

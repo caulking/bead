@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import didactic.api as dx
 from pathlib import Path
 
+import didactic.api as dx
 import pytest
 
 from bead.resources.loaders import from_csv, from_tsv

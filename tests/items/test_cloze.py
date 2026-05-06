@@ -7,8 +7,6 @@ from uuid import uuid4
 import didactic.api as dx
 import pytest
 
-from bead.deployment.jspsych.config import InstructionsConfig
-
 from bead.items.cloze import (
     create_cloze_item,
     create_cloze_items_from_groups,

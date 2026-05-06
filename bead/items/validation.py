@@ -7,7 +7,7 @@ meet all requirements and contain complete, valid data.
 from __future__ import annotations
 
 from bead.items.item import Item, ModelOutput
-from bead.items.item_template import ItemTemplate, TaskType, ScaleBounds
+from bead.items.item_template import ItemTemplate, TaskType
 
 
 def validate_item(item: Item, item_template: ItemTemplate) -> list[str]:

@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-import didactic.api as dx
 import time
 from uuid import UUID, uuid4
 
+import didactic.api as dx
 import pytest
 from didactic.api import ValidationError
 

@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import didactic.api as dx
 import time
 
+import didactic.api as dx
 import pytest
 
 from bead.data.base import BeadBaseModel
@@ -63,7 +63,7 @@ def test_beadbasemodel_is_frozen() -> None:
     """Frozen Models reject in-place attribute assignment."""
     obj = SampleModel(name="test", value=42)
     with pytest.raises((AttributeError, TypeError)):
-        setattr(obj, "value", 99)
+        obj.value = 99
 
 
 def test_beadbasemodel_timestamps_ordered() -> None:

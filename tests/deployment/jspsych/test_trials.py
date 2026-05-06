@@ -35,7 +35,12 @@ from bead.deployment.jspsych.trials import (
     create_trial,
 )
 from bead.items.item import Item
-from bead.items.item_template import ItemTemplate, PresentationSpec, TaskSpec, ScaleBounds
+from bead.items.item_template import (
+    ItemTemplate,
+    PresentationSpec,
+    ScaleBounds,
+    TaskSpec,
+)
 from bead.items.spans import Span, SpanLabel, SpanSegment
 
 

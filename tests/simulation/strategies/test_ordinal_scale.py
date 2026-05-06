@@ -8,7 +8,13 @@ import numpy as np
 import pytest
 
 from bead.items.item import Item, ModelOutput
-from bead.items.item_template import ItemTemplate, PresentationSpec, TaskSpec, ScaleBounds, ScalePointLabel
+from bead.items.item_template import (
+    ItemTemplate,
+    PresentationSpec,
+    ScaleBounds,
+    ScalePointLabel,
+    TaskSpec,
+)
 from bead.simulation.strategies.ordinal_scale import OrdinalScaleStrategy
 
 

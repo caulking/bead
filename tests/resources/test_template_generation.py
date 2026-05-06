@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import didactic.api as dx
 from typing import Any
 
+import didactic.api as dx
 import pytest
 
 from bead.resources.constraints import Constraint

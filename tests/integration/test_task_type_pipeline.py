@@ -26,7 +26,12 @@ from bead.items.cloze import create_simple_cloze_item
 from bead.items.forced_choice import create_forced_choice_item
 from bead.items.free_text import create_free_text_item
 from bead.items.item import Item
-from bead.items.item_template import ItemTemplate, PresentationSpec, TaskSpec, ScaleBounds
+from bead.items.item_template import (
+    ItemTemplate,
+    PresentationSpec,
+    ScaleBounds,
+    TaskSpec,
+)
 from bead.items.magnitude import create_magnitude_item
 from bead.items.multi_select import create_multi_select_item
 from bead.items.ordinal_scale import create_likert_7_item

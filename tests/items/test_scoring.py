@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-import didactic.api as dx
 from pathlib import Path
 from uuid import uuid4
 
+import didactic.api as dx
 import pytest
 
 from bead.items.item import Item

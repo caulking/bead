@@ -13,13 +13,19 @@ from bead.deployment.distribution import (
     ListDistributionStrategy,
 )
 from bead.deployment.jspsych.config import (
-    InstructionsConfig,
     ChoiceConfig,
     ExperimentConfig,
+    InstructionsConfig,
     RatingScaleConfig,
 )
 from bead.items.item import Item
-from bead.items.item_template import ItemTemplate, PresentationSpec, TaskSpec, ScaleBounds, ScalePointLabel
+from bead.items.item_template import (
+    ItemTemplate,
+    PresentationSpec,
+    ScaleBounds,
+    ScalePointLabel,
+    TaskSpec,
+)
 from bead.lists import ExperimentList
 from bead.lists.constraints import OrderingConstraint
 

@@ -18,8 +18,8 @@ from bead.items.item import Item
 from bead.items.item_template import (
     ItemTemplate,
     PresentationSpec,
-    TaskSpec,
     ScaleBounds,
+    TaskSpec,
 )
 from bead.simulation.annotators.base import SimulatedAnnotator
 from bead.simulation.runner import SimulationRunner

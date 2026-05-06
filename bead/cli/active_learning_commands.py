@@ -12,9 +12,9 @@ from pathlib import Path
 from typing import Any, Literal
 
 import click
+import didactic.api as dx
 import numpy as np
 import yaml
-import didactic.api as dx
 from didactic.api import ValidationError
 from rich.console import Console
 from rich.progress import (
