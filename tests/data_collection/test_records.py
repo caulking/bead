@@ -153,9 +153,7 @@ def test_custom_annotator_key() -> None:
             ],
         ),
     ]
-    records = jatos_results_to_annotation_records(
-        results, annotator_id_key="custom_id"
-    )
+    records = jatos_results_to_annotation_records(results, annotator_id_key="custom_id")
     assert records[0].annotator_id == "C42"
 
 

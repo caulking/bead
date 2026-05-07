@@ -130,15 +130,11 @@ def family_to_item_template(
         derived from the scale, and ``elements`` covering ``"text"``
         (the sentence) and ``"prompt"`` (the realized question).
     """
-    encoding = encode_response_space(
-        family.anchor.name, family.anchor.response_space
-    )
+    encoding = encode_response_space(family.anchor.name, family.anchor.response_space)
     task_type = scale_type_to_task_type(encoding.scale_type)
 
     if encoding.is_ordinal:
-        scale_bounds: ScaleBounds | None = ScaleBounds(
-            min=0, max=encoding.n_levels - 1
-        )
+        scale_bounds: ScaleBounds | None = ScaleBounds(min=0, max=encoding.n_levels - 1)
         scale_labels = tuple(
             ScalePointLabel(point=i, label=label)
             for i, label in enumerate(encoding.labels)
@@ -222,16 +218,12 @@ def _spans_from_context(
                         segments=(
                             SpanSegment(
                                 element_name="text",
-                                indices=tuple(
-                                    i - 1 for i in dep.span_positions
-                                ),
+                                indices=tuple(i - 1 for i in dep.span_positions),
                             ),
                         ),
                         label=SpanLabel(label=label),
                         head_index=(
-                            dep.head_position - 1
-                            if dep.head_position > 0
-                            else None
+                            dep.head_position - 1 if dep.head_position > 0 else None
                         ),
                     )
                 )
@@ -244,9 +236,7 @@ def _spans_from_context(
                     segments=(
                         SpanSegment(
                             element_name="text",
-                            indices=tuple(
-                                i - 1 for i in context.target_span_positions
-                            ),
+                            indices=tuple(i - 1 for i in context.target_span_positions),
                         ),
                     ),
                     label=SpanLabel(label=label),

@@ -12,9 +12,7 @@ from click.testing import CliRunner
 from bead.cli.protocol import protocol
 
 
-def _project(
-    tmp_path: Path, *, with_families: bool = True
-) -> Path:
+def _project(tmp_path: Path, *, with_families: bool = True) -> Path:
     """Write a minimal bead.toml-equivalent YAML config and return its path."""
     cfg: dict[str, object] = {
         "profile": "default",
@@ -61,9 +59,7 @@ def runner() -> CliRunner:
     return CliRunner()
 
 
-def test_validate_reports_families(
-    runner: CliRunner, tmp_path: Path
-) -> None:
+def test_validate_reports_families(runner: CliRunner, tmp_path: Path) -> None:
     config_path = _project(tmp_path)
     result = runner.invoke(protocol, ["validate", "--config-file", str(config_path)])
     assert result.exit_code == 0, result.output
@@ -80,9 +76,7 @@ def test_validate_empty_protocol_still_passes(
     assert "0 families" in result.output
 
 
-def test_realize_writes_realizations(
-    runner: CliRunner, tmp_path: Path
-) -> None:
+def test_realize_writes_realizations(runner: CliRunner, tmp_path: Path) -> None:
     config_path = _project(tmp_path)
     contexts_file = tmp_path / "contexts.jsonl"
     contexts = [
@@ -98,14 +92,17 @@ def test_realize_writes_realizations(
         }
         for i in range(3)
     ]
-    contexts_file.write_text(
-        "\n".join(json.dumps(c) for c in contexts) + "\n"
-    )
+    contexts_file.write_text("\n".join(json.dumps(c) for c in contexts) + "\n")
     output_file = tmp_path / "realizations.jsonl"
     result = runner.invoke(
         protocol,
-        ["realize", str(contexts_file), str(output_file),
-         "--config-file", str(config_path)],
+        [
+            "realize",
+            str(contexts_file),
+            str(output_file),
+            "--config-file",
+            str(config_path),
+        ],
     )
     assert result.exit_code == 0, result.output
     lines = output_file.read_text().strip().splitlines()
@@ -169,17 +166,20 @@ def test_items_writes_templates(runner: CliRunner, tmp_path: Path) -> None:
     assert record["task_type"] == "binary"
 
 
-def test_realize_empty_protocol_errors(
-    runner: CliRunner, tmp_path: Path
-) -> None:
+def test_realize_empty_protocol_errors(runner: CliRunner, tmp_path: Path) -> None:
     config_path = _project(tmp_path, with_families=False)
     contexts_file = tmp_path / "contexts.jsonl"
     contexts_file.write_text("")
     output_file = tmp_path / "out.jsonl"
     result = runner.invoke(
         protocol,
-        ["realize", str(contexts_file), str(output_file),
-         "--config-file", str(config_path)],
+        [
+            "realize",
+            str(contexts_file),
+            str(output_file),
+            "--config-file",
+            str(config_path),
+        ],
     )
     assert result.exit_code == 1
     assert "empty" in result.output.lower()

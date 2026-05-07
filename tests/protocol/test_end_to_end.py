@@ -52,9 +52,7 @@ class _StubLMClient:
     ) -> str:
         del prompt, temperature, max_tokens
         self.calls += 1
-        return (
-            "Does anything change in [[situation]] that has an endpoint?"
-        )
+        return "Does anything change in [[situation]] that has an endpoint?"
 
 
 class _StubAdapter:
@@ -86,7 +84,8 @@ def _build_anchors() -> tuple[SemanticAnchor, SemanticAnchor, SemanticAnchor]:
         ),
         is_ordered=True,
         semantic_poles=SemanticPoles(
-            low="definitely no", high="definitely yes",
+            low="definitely no",
+            high="definitely yes",
         ),
     )
 
@@ -101,9 +100,7 @@ def _build_anchors() -> tuple[SemanticAnchor, SemanticAnchor, SemanticAnchor]:
     completion = SemanticAnchor(
         name="completion",
         target_property="telicity",
-        canonical_prompt=(
-            "Does [[situation]] reach a definite endpoint?"
-        ),
+        canonical_prompt=("Does [[situation]] reach a definite endpoint?"),
         response_space=likert,
         required_span_labels=frozenset({"situation"}),
         required_keywords=frozenset({"endpoint"}),
@@ -138,17 +135,13 @@ def test_protocol_end_to_end() -> None:
         variants=(
             TemplateVariant(
                 template=(
-                    "Does anything happen during [[situation]] that is "
-                    "changing?"
+                    "Does anything happen during [[situation]] that is changing?"
                 ),
                 condition=lambda ctx: ctx.target_upos == "VERB",
                 priority=10,
             ),
             TemplateVariant(
-                template=(
-                    "Is [[situation]] something that is changing in any "
-                    "way?"
-                ),
+                template=("Is [[situation]] something that is changing in any way?"),
                 priority=0,
             ),
         ),

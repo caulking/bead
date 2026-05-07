@@ -143,9 +143,7 @@ class TestAnnotationProtocol:
         assert [r.anchor.name for r in results2] == ["change"]
 
     def test_realize_all_rejects_unknown_response(self) -> None:
-        proto = AnnotationProtocol(
-            families=[QuestionFamily(anchor=_anchor("a"))]
-        )
+        proto = AnnotationProtocol(families=[QuestionFamily(anchor=_anchor("a"))])
         with pytest.raises(ValueError, match="unknown anchors"):
             proto.realize_all(ProtocolContext(), responses={"missing": "yes"})
 
@@ -154,7 +152,8 @@ class TestAnnotationProtocol:
             AnnotationProtocol(
                 families=[
                     QuestionFamily(
-                        anchor=_anchor("a"), depends_on=("a",),
+                        anchor=_anchor("a"),
+                        depends_on=("a",),
                     ),
                 ],
             )
@@ -164,7 +163,8 @@ class TestAnnotationProtocol:
             AnnotationProtocol(
                 families=[
                     QuestionFamily(
-                        anchor=_anchor("a"), depends_on=("b",),
+                        anchor=_anchor("a"),
+                        depends_on=("b",),
                     ),
                     QuestionFamily(anchor=_anchor("b")),
                 ],
@@ -175,7 +175,8 @@ class TestAnnotationProtocol:
             AnnotationProtocol(
                 families=[
                     QuestionFamily(
-                        anchor=_anchor("a"), depends_on=("ghost",),
+                        anchor=_anchor("a"),
+                        depends_on=("ghost",),
                     ),
                 ],
             )
@@ -187,7 +188,8 @@ class TestAnnotationProtocol:
         with pytest.raises(ValueError, match="not in the protocol"):
             proto.append(
                 QuestionFamily(
-                    anchor=_anchor("second"), depends_on=("ghost",),
+                    anchor=_anchor("second"),
+                    depends_on=("ghost",),
                 ),
             )
 
@@ -198,6 +200,7 @@ class TestAnnotationProtocol:
         with pytest.raises(ValueError, match="depends on itself"):
             proto.append(
                 QuestionFamily(
-                    anchor=_anchor("second"), depends_on=("second",),
+                    anchor=_anchor("second"),
+                    depends_on=("second",),
                 ),
             )

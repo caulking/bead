@@ -95,11 +95,7 @@ def validate(config_file: Path | None, profile: str) -> None:
     for family in proto.families:
         anchor = family.anchor
         rs = anchor.response_space
-        scale = (
-            "ordinal" if rs.is_ordered
-            else "binary" if len(rs) == 2
-            else "nominal"
-        )
+        scale = "ordinal" if rs.is_ordered else "binary" if len(rs) == 2 else "nominal"
         deps = ", ".join(family.depends_on) if family.depends_on else "(none)"
         print_info(
             f"  {family.name:20s}  scale={scale:8s}  "
@@ -108,9 +104,7 @@ def validate(config_file: Path | None, profile: str) -> None:
 
 
 @protocol.command()
-@click.argument(
-    "contexts_file", type=click.Path(exists=True, path_type=Path)
-)
+@click.argument("contexts_file", type=click.Path(exists=True, path_type=Path))
 @click.argument("output_file", type=click.Path(path_type=Path))
 @click.option(
     "--config-file",
@@ -129,10 +123,7 @@ def validate(config_file: Path | None, profile: str) -> None:
 @click.option(
     "--judgment-type",
     default="acceptability",
-    help=(
-        "Judgment type for emitted ItemTemplates "
-        "(used when --emit-items is set)."
-    ),
+    help=("Judgment type for emitted ItemTemplates (used when --emit-items is set)."),
 )
 def realize(
     contexts_file: Path,
@@ -169,8 +160,7 @@ def realize(
                 items.append(item)
         write_jsonlines(items, output_file)
         print_success(
-            f"Wrote {len(items)} Items from {len(contexts)} contexts "
-            f"to {output_file}"
+            f"Wrote {len(items)} Items from {len(contexts)} contexts to {output_file}"
         )
         return
 
@@ -219,6 +209,4 @@ def items(
         for family in proto.families
     ]
     write_jsonlines(templates, output_file)
-    print_success(
-        f"Wrote {len(templates)} ItemTemplates to {output_file}"
-    )
+    print_success(f"Wrote {len(templates)} ItemTemplates to {output_file}")

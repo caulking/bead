@@ -1219,9 +1219,7 @@ def _resolve_prompt_references(
             f'<span class="bead-q-chip" style="background:{dark}">'
             f"{ref.label}</span></span>"
         )
-        result = (
-            result[: ref.start_offset] + html + result[ref.end_offset :]
-        )
+        result = result[: ref.start_offset] + html + result[ref.end_offset :]
 
     return result
 

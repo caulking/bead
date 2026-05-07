@@ -66,9 +66,7 @@ class TestContextualTemplateRealization:
             condition=always,
             priority=0,
         )
-        ctr = ContextualTemplateRealization(
-            variants=(fallback_variant, verb_variant)
-        )
+        ctr = ContextualTemplateRealization(variants=(fallback_variant, verb_variant))
         assert ctr.realize(anchor, ctx) == "VERB-specific [[situation]]?"
 
     def test_fallback_when_no_match(self) -> None:
@@ -79,9 +77,7 @@ class TestContextualTemplateRealization:
             return c.target_upos == "VERB"
 
         ctr = ContextualTemplateRealization(
-            variants=(
-                TemplateVariant(template="V", condition=is_verb, priority=10),
-            ),
+            variants=(TemplateVariant(template="V", condition=is_verb, priority=10),),
             fallback="Custom fallback?",
         )
         assert ctr.realize(anchor, ctx) == "Custom fallback?"
@@ -188,9 +184,7 @@ class TestLMRealization:
 
     def test_calls_pass_kwargs(self) -> None:
         client = _StubLMClient("Did it end?")
-        lm = LMRealization(
-            client, model_name="stub", temperature=0.5, max_tokens=128
-        )
+        lm = LMRealization(client, model_name="stub", temperature=0.5, max_tokens=128)
         lm.realize(_build_anchor(), ProtocolContext())
         assert len(client.calls) == 1
         _, temperature, max_tokens = client.calls[0]

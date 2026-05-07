@@ -119,8 +119,7 @@ class ResponseEncoding(BeadBaseModel):
             )
         if len(set(self.labels)) != len(self.labels):
             raise ValueError(
-                f"Duplicate labels in encoding {self.name!r}: "
-                f"{self.labels}"
+                f"Duplicate labels in encoding {self.name!r}: {self.labels}"
             )
         if self.scale_type == ScaleType.BINARY and self.n_levels != 2:
             raise ValueError(

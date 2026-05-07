@@ -404,8 +404,7 @@ class LMRealization:
 
         if anchor.required_span_labels:
             parts.append(
-                f"Required span references: "
-                f"{sorted(anchor.required_span_labels)}"
+                f"Required span references: {sorted(anchor.required_span_labels)}"
             )
 
         return "\n".join(parts)
@@ -465,11 +464,10 @@ class LMRealization:
                 f"LM realization failed for anchor {anchor.name!r}: {exc}"
             ) from exc
 
-        cleaned = raw.strip().strip('"\'').strip()
+        cleaned = raw.strip().strip("\"'").strip()
         if not cleaned:
             raise RuntimeError(
-                f"LM realization returned an empty response for anchor "
-                f"{anchor.name!r}"
+                f"LM realization returned an empty response for anchor {anchor.name!r}"
             )
         if not cleaned.endswith("?"):
             cleaned = f"{cleaned}?"
@@ -483,5 +481,3 @@ class LMRealization:
             )
 
         return cleaned
-
-

@@ -199,9 +199,7 @@ class TestPerplexityDriftValidator:
     def test_fails_when_exceeds_ceiling(self) -> None:
         adapter = _StubAdapter(perplexity=200.0)
         validator = PerplexityDriftValidator(adapter, max_perplexity=50.0)
-        score = validator.validate(
-            "Garbled output", _anchor(), ProtocolContext()
-        )
+        score = validator.validate("Garbled output", _anchor(), ProtocolContext())
         assert score.passed is False
         assert any("Perplexity" in f for f in score.findings)
 

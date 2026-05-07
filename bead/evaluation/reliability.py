@@ -90,9 +90,7 @@ class AnnotatorReliability(BeadBaseModel):
 
     annotator_id: str
     n_responses: int = 0
-    response_distribution: dict[str, dict[str, int]] = dx.field(
-        default_factory=dict
-    )
+    response_distribution: dict[str, dict[str, int]] = dx.field(default_factory=dict)
     entropy_per_question: dict[str, float] = dx.field(default_factory=dict)
 
     def entropy(self, question_name: str) -> float | None:
@@ -195,9 +193,7 @@ def annotator_reliability(
                 encoding = encodings.get(rec.question_name)
                 if encoding is not None and rec.response_label not in encoding.labels:
                     continue
-            by_question.setdefault(rec.question_name, []).append(
-                rec.response_label
-            )
+            by_question.setdefault(rec.question_name, []).append(rec.response_label)
 
         for q_name, labels in by_question.items():
             counts: dict[str, int] = {}

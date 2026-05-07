@@ -96,9 +96,7 @@ def parse_label_refs(prompt: str) -> tuple[LabelRef, ...]:
             transforms = tuple(
                 t.strip() for t in raw_transforms.split("|") if t.strip()
             )
-        display_text = (
-            match.group(2).strip() if match.group(2) else None
-        )
+        display_text = match.group(2).strip() if match.group(2) else None
         refs.append(
             LabelRef(
                 label=match.group(1).strip(),
@@ -165,9 +163,5 @@ def replace_label_refs(
     result = prompt
     for ref in reversed(refs):
         replacement = render(ref)
-        result = (
-            result[: ref.start_offset]
-            + replacement
-            + result[ref.end_offset :]
-        )
+        result = result[: ref.start_offset] + replacement + result[ref.end_offset :]
     return result

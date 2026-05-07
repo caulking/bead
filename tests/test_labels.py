@@ -63,9 +63,7 @@ class TestFindLabelNames:
     """Tests for :func:`find_label_names`."""
 
     def test_distinct_labels(self) -> None:
-        names = find_label_names(
-            "[[a]] and [[b:bee]] and [[a|gerund]] and [[c]]"
-        )
+        names = find_label_names("[[a]] and [[b:bee]] and [[a|gerund]] and [[c]]")
         assert names == frozenset({"a", "b", "c"})
 
     def test_empty_prompt(self) -> None:
@@ -79,9 +77,7 @@ class TestReplaceLabelRefs:
         assert replace_label_refs("plain", lambda r: "X") == "plain"
 
     def test_replaces_in_order(self) -> None:
-        out = replace_label_refs(
-            "[[a]] [[b]]", lambda r: f"<{r.label}>"
-        )
+        out = replace_label_refs("[[a]] [[b]]", lambda r: f"<{r.label}>")
         assert out == "<a> <b>"
 
     def test_replacement_uses_explicit_text(self) -> None:

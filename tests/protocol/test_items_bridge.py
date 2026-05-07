@@ -39,9 +39,7 @@ def _build_binary_anchor() -> SemanticAnchor:
         name="completion",
         target_property="telicity",
         canonical_prompt="Does [[situation]] reach an endpoint?",
-        response_space=ResponseSpace(
-            options=("no", "yes"), is_ordered=False
-        ),
+        response_space=ResponseSpace(options=("no", "yes"), is_ordered=False),
         required_span_labels=frozenset({"situation"}),
         required_keywords=frozenset({"endpoint"}),
         description="Telicity probe.",
@@ -66,9 +64,7 @@ class TestFamilyToItemTemplate:
 
     def test_binary_family(self) -> None:
         family = QuestionFamily(anchor=_build_binary_anchor())
-        template = family_to_item_template(
-            family, judgment_type="acceptability"
-        )
+        template = family_to_item_template(family, judgment_type="acceptability")
         assert isinstance(template, ItemTemplate)
         assert template.task_type == "binary"
         assert template.task_spec.options == ("no", "yes")
@@ -79,9 +75,7 @@ class TestFamilyToItemTemplate:
 
     def test_ordinal_family(self) -> None:
         family = QuestionFamily(anchor=_build_ordinal_anchor())
-        template = family_to_item_template(
-            family, judgment_type="acceptability"
-        )
+        template = family_to_item_template(family, judgment_type="acceptability")
         assert template.task_type == "ordinal_scale"
         assert template.task_spec.scale_bounds is not None
         assert template.task_spec.scale_bounds.min == 0
@@ -102,9 +96,7 @@ class TestFamilyToItemTemplate:
 
     def test_judgment_type_propagates(self) -> None:
         family = QuestionFamily(anchor=_build_binary_anchor())
-        template = family_to_item_template(
-            family, judgment_type="inference"
-        )
+        template = family_to_item_template(family, judgment_type="inference")
         assert template.judgment_type == "inference"
 
 
@@ -113,9 +105,7 @@ class TestRealizationToItem:
 
     def test_basic_round_trip(self) -> None:
         family = QuestionFamily(anchor=_build_binary_anchor())
-        template = family_to_item_template(
-            family, judgment_type="acceptability"
-        )
+        template = family_to_item_template(family, judgment_type="acceptability")
         ctx = ProtocolContext(
             sentence="Mary built a sandcastle.",
             tokens=("Mary", "built", "a", "sandcastle", "."),
@@ -144,14 +134,10 @@ class TestRealizationToItem:
             name="dummy",
             target_property="dummy",
             canonical_prompt="Question?",
-            response_space=ResponseSpace(
-                options=("no", "yes"), is_ordered=False
-            ),
+            response_space=ResponseSpace(options=("no", "yes"), is_ordered=False),
         )
         family = QuestionFamily(anchor=anchor)
-        template = family_to_item_template(
-            family, judgment_type="acceptability"
-        )
+        template = family_to_item_template(family, judgment_type="acceptability")
         ctx = ProtocolContext(sentence="Plain text.")
         realization = family.realize(ctx)
         item = realization_to_item(realization, item_template=template)
@@ -164,15 +150,11 @@ class TestRealizationToItem:
             canonical_prompt=(
                 "Did [[situation]] involve [[participant]] one at a time?"
             ),
-            response_space=ResponseSpace(
-                options=("no", "yes"), is_ordered=False
-            ),
+            response_space=ResponseSpace(options=("no", "yes"), is_ordered=False),
             required_span_labels=frozenset({"situation", "participant"}),
         )
         family = QuestionFamily(anchor=anchor)
-        template = family_to_item_template(
-            family, judgment_type="acceptability"
-        )
+        template = family_to_item_template(family, judgment_type="acceptability")
         ctx = ProtocolContext(
             sentence="The kids ran.",
             tokens=("The", "kids", "ran", "."),
@@ -212,9 +194,7 @@ class TestProtocolToItemTemplates:
                 QuestionFamily(anchor=_build_ordinal_anchor()),
             ]
         )
-        templates = protocol_to_item_templates(
-            proto, judgment_type="acceptability"
-        )
+        templates = protocol_to_item_templates(proto, judgment_type="acceptability")
         assert set(templates) == {"completion", "confidence"}
         assert templates["completion"].task_type == "binary"
         assert templates["confidence"].task_type == "ordinal_scale"
@@ -228,25 +208,21 @@ class TestProtocolToItemTemplates:
             target_span_text="built a sandcastle",
             target_span_positions=(2, 3, 4),
         )
-        pairs = realize_protocol_to_items(
-            proto, ctx, judgment_type="acceptability"
-        )
+        pairs = realize_protocol_to_items(proto, ctx, judgment_type="acceptability")
         assert len(pairs) == 1
         realization, item = pairs[0]
         assert realization.anchor.name == "completion"
         assert item.rendered_elements["prompt"] == realization.prompt
 
 
-def test_unknown_template_in_protocol_realize(_pytest_request: object | None = None) -> None:
+def test_unknown_template_in_protocol_realize(
+    _pytest_request: object | None = None,
+) -> None:
     """``realize_protocol_to_items`` raises if a family has no template."""
-    proto = AnnotationProtocol(
-        families=[QuestionFamily(anchor=_build_binary_anchor())]
-    )
+    proto = AnnotationProtocol(families=[QuestionFamily(anchor=_build_binary_anchor())])
     other = QuestionFamily(anchor=_build_ordinal_anchor())
     other_templates = {
-        "confidence": family_to_item_template(
-            other, judgment_type="acceptability"
-        )
+        "confidence": family_to_item_template(other, judgment_type="acceptability")
     }
     with pytest.raises(KeyError):
         realize_protocol_to_items(

@@ -41,9 +41,7 @@ def _experiment_config() -> ExperimentConfig:
 
 
 def test_protocol_to_jspsych_trials_emits_one_per_realization() -> None:
-    proto = AnnotationProtocol(
-        families=[QuestionFamily(anchor=_binary_anchor())]
-    )
+    proto = AnnotationProtocol(families=[QuestionFamily(anchor=_binary_anchor())])
     contexts = [
         ProtocolContext(
             sentence=f"Mary built sandcastle {i}.",

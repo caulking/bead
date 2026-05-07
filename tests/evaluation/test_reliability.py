@@ -15,7 +15,9 @@ from bead.evaluation.reliability import (
 from bead.protocol.encoding import ResponseEncoding, ScaleType
 
 
-def _record(annotator: str, item: str, label: str, question: str = "q") -> AnnotationRecord:
+def _record(
+    annotator: str, item: str, label: str, question: str = "q"
+) -> AnnotationRecord:
     return AnnotationRecord(
         annotator_id=annotator,
         item_id=item,

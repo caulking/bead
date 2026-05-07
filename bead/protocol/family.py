@@ -256,14 +256,10 @@ class AnnotationProtocol:
         seen: set[str] = set()
         for family in self.families:
             if family.name in seen:
-                raise ValueError(
-                    f"Duplicate anchor name in protocol: {family.name!r}"
-                )
+                raise ValueError(f"Duplicate anchor name in protocol: {family.name!r}")
             for dep in family.depends_on:
                 if dep == family.name:
-                    raise ValueError(
-                        f"Family {family.name!r} depends on itself"
-                    )
+                    raise ValueError(f"Family {family.name!r} depends on itself")
                 if dep not in seen:
                     raise ValueError(
                         f"Family {family.name!r} depends on {dep!r}, "
@@ -289,13 +285,9 @@ class AnnotationProtocol:
         """
         existing = {f.name for f in self.families}
         if family.name in existing:
-            raise ValueError(
-                f"Duplicate anchor name in protocol: {family.name!r}"
-            )
+            raise ValueError(f"Duplicate anchor name in protocol: {family.name!r}")
         if family.name in family.depends_on:
-            raise ValueError(
-                f"Family {family.name!r} depends on itself"
-            )
+            raise ValueError(f"Family {family.name!r} depends on itself")
         for dep in family.depends_on:
             if dep not in existing:
                 raise ValueError(
@@ -401,5 +393,3 @@ class AnnotationProtocol:
     def __len__(self) -> int:
         """Return the number of families in the protocol."""
         return len(self.families)
-
-

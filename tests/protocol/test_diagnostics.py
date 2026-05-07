@@ -85,8 +85,10 @@ class TestDatasetReport:
     def test_summary(self) -> None:
         report = (
             DatasetReport(
-                n_records_input=10, n_items=5,
-                n_records_encoded=8, n_records_dropped=2,
+                n_records_input=10,
+                n_items=5,
+                n_records_encoded=8,
+                n_records_dropped=2,
             )
             .with_coverage("completion", 0.8)
             .add(DiagnosticLevel.WARNING, "missing", "msg")
@@ -151,9 +153,7 @@ class TestConditionalObservationValidator:
         assert findings[0].category == "conditional_inapplicable"
 
     def test_skips_unconditional_families(self) -> None:
-        proto = AnnotationProtocol(
-            families=[QuestionFamily(anchor=_anchor("solo"))]
-        )
+        proto = AnnotationProtocol(families=[QuestionFamily(anchor=_anchor("solo"))])
         records = {
             "solo": [_Record("i1", "yes", "solo")],
         }

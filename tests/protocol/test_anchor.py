@@ -20,9 +20,7 @@ class TestResponseSpace:
         rs = ResponseSpace(
             options=("definitely no", "unsure", "definitely yes"),
             is_ordered=True,
-            semantic_poles=SemanticPoles(
-                low="definitely no", high="definitely yes"
-            ),
+            semantic_poles=SemanticPoles(low="definitely no", high="definitely yes"),
         )
         assert len(rs) == 3
         assert "unsure" in rs

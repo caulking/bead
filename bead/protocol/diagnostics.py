@@ -215,16 +215,12 @@ class DatasetReport(BeadBaseModel):
     @property
     def warnings(self) -> tuple[DiagnosticRecord, ...]:
         """All warning-level findings, in discovery order."""
-        return tuple(
-            f for f in self.findings if f.level == DiagnosticLevel.WARNING
-        )
+        return tuple(f for f in self.findings if f.level == DiagnosticLevel.WARNING)
 
     @property
     def errors(self) -> tuple[DiagnosticRecord, ...]:
         """All error-level findings, in discovery order."""
-        return tuple(
-            f for f in self.findings if f.level == DiagnosticLevel.ERROR
-        )
+        return tuple(f for f in self.findings if f.level == DiagnosticLevel.ERROR)
 
     def by_category(self, category: str) -> tuple[DiagnosticRecord, ...]:
         """Filter findings by category tag.
@@ -250,16 +246,13 @@ class DatasetReport(BeadBaseModel):
             A summary string suitable for logging.
         """
         lines = [
-            f"DatasetReport: {self.n_items} items, "
-            f"{self.n_records_input} records",
-            f"  encoded: {self.n_records_encoded}, "
-            f"dropped: {self.n_records_dropped}",
+            f"DatasetReport: {self.n_items} items, {self.n_records_input} records",
+            f"  encoded: {self.n_records_encoded}, dropped: {self.n_records_dropped}",
         ]
 
         if self.items_missing_embeddings:
             lines.append(
-                f"  items missing embeddings: "
-                f"{len(self.items_missing_embeddings)}"
+                f"  items missing embeddings: {len(self.items_missing_embeddings)}"
             )
 
         if self.coverage:

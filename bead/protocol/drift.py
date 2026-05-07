@@ -239,18 +239,12 @@ class StructuralDriftValidator:
         found_labels = find_label_names(realization)
         for required in anchor.required_span_labels:
             if required not in found_labels:
-                findings.append(
-                    f"Missing required span reference [[{required}]]"
-                )
+                findings.append(f"Missing required span reference [[{required}]]")
                 structural_ok = False
 
-        check_text = (
-            realization if self.keyword_case_sensitive else realization.lower()
-        )
+        check_text = realization if self.keyword_case_sensitive else realization.lower()
         for keyword in anchor.required_keywords:
-            check_keyword = (
-                keyword if self.keyword_case_sensitive else keyword.lower()
-            )
+            check_keyword = keyword if self.keyword_case_sensitive else keyword.lower()
             if check_keyword not in check_text:
                 findings.append(f"Missing required keyword: {keyword!r}")
                 structural_ok = False
@@ -286,9 +280,7 @@ def _cosine_distance(a: tuple[float, ...], b: tuple[float, ...]) -> float:
         If ``a`` and ``b`` have different lengths.
     """
     if len(a) != len(b):
-        raise ValueError(
-            f"Vector dimension mismatch: {len(a)} vs {len(b)}"
-        )
+        raise ValueError(f"Vector dimension mismatch: {len(a)} vs {len(b)}")
     dot = sum(ai * bi for ai, bi in zip(a, b, strict=True))
     norm_a = math.sqrt(sum(ai * ai for ai in a))
     norm_b = math.sqrt(sum(bi * bi for bi in b))
@@ -377,17 +369,14 @@ class EmbeddingDriftValidator:
         distance = _cosine_distance(canonical, realization_emb)
 
         max_dist = (
-            self.max_distance
-            if self.max_distance is not None
-            else anchor.max_drift
+            self.max_distance if self.max_distance is not None else anchor.max_drift
         )
         passed = distance <= max_dist
 
         findings: tuple[str, ...] = ()
         if not passed:
             findings = (
-                f"Embedding distance {distance:.3f} exceeds "
-                f"maximum {max_dist:.3f}",
+                f"Embedding distance {distance:.3f} exceeds maximum {max_dist:.3f}",
             )
 
         return DriftScore(

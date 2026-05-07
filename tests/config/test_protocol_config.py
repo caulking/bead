@@ -213,7 +213,8 @@ class TestFamilySpec:
                 return "Did [[s]] happen?"
 
         spec = FamilySpec(
-            anchor=self._anchor(), realization_kind="lm",
+            anchor=self._anchor(),
+            realization_kind="lm",
         )
         family = spec.build(
             drift_guard=DriftConfig().build(),

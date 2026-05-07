@@ -367,9 +367,7 @@ class FamilySpec(BeadBaseModel):
                 temperature=lm_temperature,
                 max_tokens=lm_max_tokens,
             )
-        raise ValueError(
-            f"Unknown realization_kind: {self.realization_kind!r}"
-        )
+        raise ValueError(f"Unknown realization_kind: {self.realization_kind!r}")
 
     def build(
         self,

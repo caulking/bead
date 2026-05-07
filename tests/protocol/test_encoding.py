@@ -36,9 +36,7 @@ class TestResponseEncoding:
                 "probably yes",
                 "definitely yes",
             ),
-            semantic_poles=SemanticPoles(
-                low="definitely no", high="definitely yes"
-            ),
+            semantic_poles=SemanticPoles(low="definitely no", high="definitely yes"),
         )
 
     def test_label_index_round_trip(self) -> None:
