@@ -6,7 +6,6 @@ repo_name: FACTSlab/bead
 
 theme:
   name: cinder
-  custom_dir: docs/overrides
   highlightjs: false
 
 extra_css:
