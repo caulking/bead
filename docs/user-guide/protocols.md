@@ -109,6 +109,46 @@ ctx = ProtocolContext(
 )
 ```
 
+### Domain-specific dependent attributes
+
+Each `ContextItem` carries an `attributes: dict[str, float]` map for
+domain-specific scalar properties (semantic-role probabilities,
+definiteness scores, frequency, ...). `ContextItem.attribute(name)`
+returns `None` when the attribute is absent so callers do not have
+to handle a separate `KeyError`:
+
+```python
+mary, sandcastle = ctx.dependents
+sandcastle.attribute("definiteness")   # 0.0
+sandcastle.attribute("missing") is None  # True
+```
+
+### The context-predicate registry
+
+`ContextualTemplateRealization` and other strategies look predicates
+up by name from a module-level registry rather than passing functions
+directly. Register at import time, look up at realization time:
+
+```python
+from bead.protocol import (
+    register_context_predicate, get_context_predicate,
+    list_context_predicates, ProtocolContext,
+)
+
+def has_plural_dependent(ctx: ProtocolContext) -> bool:
+    return any(d.is_plural for d in ctx.dependents)
+
+register_context_predicate("has_plural_dependent", has_plural_dependent)
+
+assert get_context_predicate("has_plural_dependent") is has_plural_dependent
+assert "has_plural_dependent" in list_context_predicates()
+```
+
+The protocol layer ships one predicate, `always`, which is also the
+default condition for `TemplateVariant`. The registry is global
+mutable state, populated at import time and read at realization
+time; it is not designed for per-request mutation.
+
 ## Threading dependent responses
 
 `ProtocolContext.with_response` returns a new context with one
@@ -168,6 +208,12 @@ assert isinstance(StubClient(), LMClient)
 lm = LMRealization(StubClient(), temperature=0.3, max_tokens=200)
 ```
 
+`LMClient` is a `typing.Protocol`: any object with a `complete(prompt,
+*, temperature, max_tokens) -> str` method conforms. `LMRealization`
+caches realizations by full prompt (FIFO eviction at `max_cache_size`)
+and raises `RuntimeError` on backend failures or empty responses, so
+a misbehaving LM cannot silently pollute the cache with whitespace.
+
 ## Drift validation
 
 The drift guard composes structural, embedding, and perplexity
@@ -181,9 +227,6 @@ from bead.protocol import (
     StructuralDriftValidator,
 )
 
-# `adapter` is any object exposing `get_embedding(text)` and
-# `compute_perplexity(text)`. bead.items.adapters.ModelAdapter
-# instances conform structurally.
 guard = DriftGuard(
     validators=[
         StructuralDriftValidator(min_length=15),
@@ -196,8 +239,28 @@ guard = DriftGuard(
 `StructuralDriftValidator` checks `[[label]]` references, required
 keywords, length, and trailing `?`. `EmbeddingDriftValidator` runs on
 the embedding adapter; if the anchor sets `embedding_center` and
-`max_drift`, those are used as the cosine ceiling. `PerplexityDriftValidator`
-flags realizations whose perplexity exceeds a configured ceiling.
+`max_drift`, those are used as the cosine ceiling.
+`PerplexityDriftValidator` flags realizations whose perplexity
+exceeds a configured ceiling.
+
+The embedding and perplexity validators consume narrow
+`typing.Protocol`s, so any object with the right shape can serve as
+the backend:
+
+```python
+from bead.protocol import EmbeddingAdapter, PerplexityAdapter
+
+# Conforms structurally:
+class MyBackend:
+    def get_embedding(self, text: str) -> Sequence[float]: ...
+    def compute_perplexity(self, text: str) -> float: ...
+
+assert isinstance(MyBackend(), EmbeddingAdapter)
+assert isinstance(MyBackend(), PerplexityAdapter)
+```
+
+Bead's `bead.items.adapters.ModelAdapter` family conforms out of the
+box.
 
 ## Composing a protocol
 
@@ -234,6 +297,50 @@ the next family; non-applicable families are skipped. When a response
 is not pre-supplied, the first option of the family's response space
 is used as a placeholder so downstream conditional families can still
 be exercised in dry-run mode.
+
+## Constructor invariants
+
+The protocol layer enforces a small set of structural invariants at
+construction time so configuration errors fail loudly instead of
+manifesting as confusing behavior at realization time:
+
+- `ResponseEncoding` requires `n_levels == len(labels)`, rejects
+  duplicate labels, and rejects `BINARY` scales with anything other
+  than 2 levels. (`encode_response_space` derives all three from the
+  source `ResponseSpace` so it never produces an invalid encoding.)
+- `AnnotationProtocol` rejects duplicate anchor names, families that
+  depend on themselves, and families whose `depends_on` references a
+  family that is not present *earlier* in the sequence (forward
+  references and unknown references are both refused). The same
+  validation runs on `AnnotationProtocol.append`.
+- `LMRealization(client, max_cache_size=...)` requires
+  `max_cache_size > 0`.
+- `PerplexityDriftValidator(..., max_perplexity=...)` requires
+  `max_perplexity > 0`.
+
+Together with the drift validators that fire at realization time,
+these invariants make the construction of an
+`AnnotationProtocol` a complete static check: if construction
+succeeds, every realization is well-formed up to the LM's behavior,
+and any LM misbehavior is caught by the drift guard.
+
+## Bridging to the modeling layer
+
+`encode_response_space` converts a `ResponseSpace` into a
+likelihood-agnostic `ResponseEncoding`:
+
+```python
+from bead.protocol import encode_response_space
+
+encoding = encode_response_space("change", change_anchor.response_space)
+encoding.is_binary       # True for two-option, unordered spaces
+encoding.label_to_index("yes")
+encoding.index_to_label(0)
+```
+
+The encoding does not pick a likelihood family; downstream modeling
+code (for example `bead.active_learning.models`) selects the
+appropriate model class based on `ScaleType`.
 
 ## Diagnostics
 
@@ -279,6 +386,11 @@ validator = ConditionalObservationValidator(
 findings = validator.validate(records, protocol)
 ```
 
+`ConditionalObservationValidator` accepts any record type conforming
+to the `RecordLike` Protocol (anything with `item_id`,
+`response_label`, and `question_name` string attributes), so callers
+are not bound to `bead.evaluation.AnnotationRecord` specifically.
+
 ## Reliability
 
 `bead.evaluation.reliability` complements
@@ -295,6 +407,21 @@ flagged = low_entropy_annotators(profiles, threshold=0.5)
 
 Low entropy means the annotator is collapsing the response space
 (always picking the same label, always picking the midpoint, ...).
+
+`annotator_reliability(records, encodings=...)` accepts an optional
+`Mapping[str, ResponseEncoding]` keyed by anchor name. When supplied,
+response labels not present in the encoding for a question are
+silently skipped, which is useful after schema evolution invalidates
+some legacy labels.
+
+`low_entropy_annotators` accepts two refinements:
+
+- `question_name="..."` restricts the threshold check to a single
+  question's entropy (otherwise the *minimum* per-question entropy
+  is checked).
+- `require_min_responses=N` skips annotators with fewer than `N`
+  recorded responses, so an annotator who answered only one or two
+  items is not flagged purely on small-sample entropy.
 
 ## Bridging to bead's item layer
 

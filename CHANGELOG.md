@@ -42,14 +42,22 @@ guards as type-checkers.
 - `bead.protocol.family` defines `QuestionFamily` (with explicit
   `depends_on` for conditional dependencies) and `AnnotationProtocol`
   (the iterated dependent product), with `realize_all` threading
-  responses through the context.
+  responses through the context. `AnnotationProtocol` rejects
+  duplicate anchor names, self-dependencies, and forward / unknown
+  `depends_on` references at construction and on `append`.
 - `bead.protocol.encoding` defines `ScaleType`
-  (`StrEnum: binary / ordinal / nominal`), `ResponseEncoding`, and
-  `encode_response_space`.
+  (`StrEnum: binary / ordinal / nominal`) and `ResponseEncoding` (with
+  invariant validators for `n_levels == len(labels)`, label
+  uniqueness, and `BINARY` having exactly 2 levels), plus
+  `encode_response_space` as the bridge from `ResponseSpace`.
 - `bead.protocol.diagnostics` defines `DiagnosticLevel`,
   `DiagnosticRecord`, `DatasetReport` (immutable, with `with_*`
-  mutators), and `ConditionalObservationValidator` operating directly
-  on `AnnotationProtocol`.
+  mutators), `ConditionalObservationValidator` (which operates on
+  `AnnotationProtocol.depends_on`), and the `RecordLike` `Protocol`
+  for the structural record shape consumed by the validator.
+- `LMRealization` raises `RuntimeError` on backend failures and on
+  empty / whitespace-only responses (instead of caching an empty
+  string).
 
 #### `bead.evaluation.reliability`: per-annotator reliability
 
@@ -65,8 +73,18 @@ guards as type-checkers.
 
 - `docs/api/protocol.md` and `docs/api/evaluation.md` updates expose
   the new modules through `mkdocstrings`.
-- `docs/user-guide/protocols.md` walks through anchors, contexts,
-  realization, drift, protocols, diagnostics, and reliability.
+- `docs/user-guide/protocols.md` walks through anchors, contexts
+  (including the predicate registry and per-dependent attributes),
+  the three realization strategies, drift validation (with the named
+  `EmbeddingAdapter` and `PerplexityAdapter` Protocols), protocol
+  composition, the structural construction-time invariants, the
+  `encode_response_space` bridge to modeling, conditional-observation
+  diagnostics (including the `RecordLike` Protocol), and reliability.
+- The protocol layer is cross-linked from
+  `docs/user-guide/concepts.md`, `docs/user-guide/index.md`,
+  `docs/index.md`, the project `README.md`, and a new "Protocol layer"
+  paragraph in `docs/developer-guide/architecture.md` that places it
+  as a cross-cutting layer feeding into the existing 6-stage pipeline.
 
 ## [0.3.0] - 2026-05-06
 
