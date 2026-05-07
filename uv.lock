@@ -208,6 +208,8 @@ dev = [
     { name = "pytest-examples" },
     { name = "pytest-mock" },
     { name = "ruff" },
+    { name = "spacy" },
+    { name = "stanza" },
 ]
 stats = [
     { name = "statsmodels" },
@@ -261,7 +263,9 @@ requires-dist = [
     { name = "scipy", specifier = ">=1.11.0" },
     { name = "sentence-transformers", specifier = ">=2.0.0" },
     { name = "slopit", marker = "extra == 'behavioral-analysis'", specifier = ">=0.1.0" },
+    { name = "spacy", marker = "extra == 'dev'", specifier = ">=3.7" },
     { name = "spacy", marker = "extra == 'tokenization'", specifier = ">=3.7" },
+    { name = "stanza", marker = "extra == 'dev'", specifier = ">=1.8" },
     { name = "stanza", marker = "extra == 'tokenization'", specifier = ">=1.8" },
     { name = "statsmodels", specifier = ">=0.14.6" },
     { name = "statsmodels", marker = "extra == 'stats'", specifier = ">=0.14.0" },

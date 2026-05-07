@@ -70,6 +70,8 @@ dev = [
     "ruff>=0.1.0",
     "pyright>=1.1.0",
     "pandas-stubs>=2.0.0",
+    "spacy>=3.7",
+    "stanza>=1.8",
 ]
 api = [
     "openai>=1.0.0",

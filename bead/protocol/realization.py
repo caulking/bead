@@ -26,10 +26,13 @@ not accept :class:`~collections.abc.Callable` field types.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 from bead.protocol.anchor import SemanticAnchor
 from bead.protocol.context import ContextPredicate, ProtocolContext, always
+
+if TYPE_CHECKING:
+    from bead.items.cache import ModelOutputCache
 
 
 @runtime_checkable
@@ -315,16 +318,23 @@ class LMRealization:
     :class:`~bead.protocol.drift.DriftGuard` to validate that the
     paraphrase preserves semantic content.
 
-    When ``cache`` is ``True`` (the default), realized questions are
-    cached by the full LM prompt string. Identical contexts produce
-    identical prompts, so repeated calls with the same anchor-and-
-    context pair avoid redundant LM calls. Cache eviction is FIFO once
-    ``max_cache_size`` is reached.
+    When ``cache`` is supplied (a :class:`~bead.items.cache.ModelOutputCache`),
+    realized prompts are stored under the
+    ``(model_name, "lm_completion", prompt=full_prompt)`` key. Repeated
+    calls with the same anchor-and-context pair avoid redundant LM
+    calls. The cache is the single canonical caching surface across
+    bead; this class does not maintain its own.
 
     Parameters
     ----------
     client : LMClient
         Language-model backend.
+    model_name : str
+        Identifier for the model behind ``client``. Used as the cache
+        key prefix.
+    cache : ModelOutputCache | None, optional
+        Output cache shared with the rest of bead. Pass ``None`` to
+        disable caching. Defaults to ``None``.
     system_prompt : str, optional
         System prompt controlling paraphrase behavior. Defaults to
         :data:`_DEFAULT_SYSTEM_PROMPT`.
@@ -333,36 +343,24 @@ class LMRealization:
         Defaults to ``0.3``.
     max_tokens : int, optional
         Maximum response length in tokens. Defaults to ``200``.
-    cache : bool, optional
-        Whether to cache realized questions. Defaults to ``True``.
-    max_cache_size : int, optional
-        Maximum number of cache entries. Defaults to ``4096``.
-
-    Attributes
-    ----------
-    cache_size : int
-        Number of entries currently in the cache.
     """
 
     def __init__(
         self,
         client: LMClient,
         *,
+        model_name: str,
+        cache: ModelOutputCache | None = None,
         system_prompt: str = _DEFAULT_SYSTEM_PROMPT,
         temperature: float = 0.3,
         max_tokens: int = 200,
-        cache: bool = True,
-        max_cache_size: int = 4096,
     ) -> None:
-        if max_cache_size <= 0:
-            raise ValueError("max_cache_size must be positive")
         self._client = client
+        self._model_name = model_name
+        self._cache = cache
         self._system_prompt = system_prompt
         self._temperature = temperature
         self._max_tokens = max_tokens
-        self._cache_enabled = cache
-        self._max_cache_size = max_cache_size
-        self._cache: dict[str, str] = {}
 
     def _build_user_prompt(
         self, anchor: SemanticAnchor, context: ProtocolContext
@@ -412,15 +410,6 @@ class LMRealization:
 
         return "\n".join(parts)
 
-    @property
-    def cache_size(self) -> int:
-        """Number of entries currently in the cache."""
-        return len(self._cache)
-
-    def clear_cache(self) -> None:
-        """Discard all cached realizations."""
-        self._cache.clear()
-
     def realize(
         self,
         anchor: SemanticAnchor,
@@ -428,9 +417,9 @@ class LMRealization:
     ) -> str:
         """Generate a context-adapted question via the LM.
 
-        When caching is enabled and a cached result exists for the
-        same prompt, the cached value is returned without calling the
-        LM.
+        When a cache was supplied at construction time and a cached
+        result exists for the same prompt, the cached value is
+        returned without calling the LM.
 
         Parameters
         ----------
@@ -449,7 +438,8 @@ class LMRealization:
         Raises
         ------
         RuntimeError
-            If the LM backend raises during the call.
+            If the LM backend raises, or if the LM returns an empty
+            response.
         """
         full_prompt = (
             f"{self._system_prompt}\n\n"
@@ -457,8 +447,12 @@ class LMRealization:
             f"Rephrased question:"
         )
 
-        if self._cache_enabled and full_prompt in self._cache:
-            return self._cache[full_prompt]
+        if self._cache is not None:
+            cached = self._cache.get(
+                self._model_name, "lm_completion", prompt=full_prompt
+            )
+            if isinstance(cached, str):
+                return cached
 
         try:
             raw = self._client.complete(
@@ -480,11 +474,13 @@ class LMRealization:
         if not cleaned.endswith("?"):
             cleaned = f"{cleaned}?"
 
-        if self._cache_enabled:
-            if len(self._cache) >= self._max_cache_size:
-                oldest_key = next(iter(self._cache))
-                del self._cache[oldest_key]
-            self._cache[full_prompt] = cleaned
+        if self._cache is not None:
+            self._cache.set(
+                self._model_name,
+                "lm_completion",
+                cleaned,
+                prompt=full_prompt,
+            )
 
         return cleaned
 

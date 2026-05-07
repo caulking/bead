@@ -25,12 +25,12 @@ when every validator passes.
 from __future__ import annotations
 
 import math
-import re
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import Protocol, runtime_checkable
 
 from bead.data.base import BeadBaseModel
+from bead.labels import find_label_names
 from bead.protocol.anchor import SemanticAnchor
 from bead.protocol.context import ProtocolContext
 
@@ -90,14 +90,6 @@ class PerplexityAdapter(Protocol):
             Perplexity in the open interval ``(0, +inf)``.
         """
         ...
-
-
-_LABEL_PATTERN = re.compile(r"\[\[([^\]:|]+?)(?:[:|][^\]]*?)?\]\]")
-"""Compiled regex matching ``[[label]]``, ``[[label|x]]``, ``[[label:x]]``.
-
-The first capture group is the label name. Anything after a ``|`` or
-``:`` separator (a transform tag or inline-text override) is ignored.
-"""
 
 
 class DriftScore(BeadBaseModel):
@@ -244,7 +236,7 @@ class StructuralDriftValidator:
             )
             structural_ok = False
 
-        found_labels = set(_LABEL_PATTERN.findall(realization))
+        found_labels = find_label_names(realization)
         for required in anchor.required_span_labels:
             if required not in found_labels:
                 findings.append(

@@ -65,6 +65,13 @@ from bead.protocol.family import (
     QuestionFamily,
     QuestionRealization,
 )
+from bead.protocol.items import (
+    family_to_item_template,
+    protocol_to_item_templates,
+    realization_to_item,
+    realize_protocol_to_items,
+    scale_type_to_task_type,
+)
 from bead.protocol.realization import (
     ContextualTemplateRealization,
     LMClient,
@@ -107,6 +114,11 @@ __all__ = [
     "TemplateVariant",
     "always",
     "encode_response_space",
+    "family_to_item_template",
+    "protocol_to_item_templates",
+    "realization_to_item",
+    "realize_protocol_to_items",
+    "scale_type_to_task_type",
     "get_context_predicate",
     "list_context_predicates",
     "register_context_predicate",

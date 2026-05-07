@@ -162,7 +162,7 @@ def test_protocol_end_to_end() -> None:
     # Family B: LM realization, conditional on change=='yes'
     family_completion = QuestionFamily(
         anchor=completion_anchor,
-        realization=LMRealization(_StubLMClient()),
+        realization=LMRealization(_StubLMClient(), model_name="stub-lm"),
         drift_guard=guard,
         condition=lambda ctx: ctx.previous_responses.get("change") == "yes",
         depends_on=("change",),

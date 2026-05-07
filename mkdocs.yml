@@ -90,6 +90,7 @@ nav:
     - bead.active_learning: api/active_learning.md
     - bead.simulation: api/simulation.md
     - bead.evaluation: api/evaluation.md
+    - bead.labels: api/labels.md
     - bead.protocol: api/protocol.md
     - bead.dsl: api/dsl.md
     - bead.behavioral: api/behavioral.md

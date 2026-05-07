@@ -9,6 +9,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### Pipeline-wide integration of the protocol layer
+
+- `bead.labels` is the single canonical home for the
+  `[[label]]` / `[[label:text]]` / `[[label|transform]]` syntax.
+  `parse_label_refs`, `find_label_names`, and `replace_label_refs`
+  replace the three independent regex implementations that previously
+  lived in `bead.protocol.drift`, `bead.deployment.jspsych.trials`,
+  and `bead.items.span_labeling`.
+- `bead.config.protocol.ProtocolConfig` plugs into `BeadConfig.protocol`
+  with declarative TOML/YAML configuration: anchor specs, drift
+  settings, realization strategies (template / contextual / lm), and
+  family composition. `ProtocolConfig.build(lm_client=..., cache=...)`
+  materializes a live `AnnotationProtocol`.
+- `bead.protocol.items` provides the canonical
+  `QuestionRealization → Item` and protocol-wide
+  `family_to_item_template` / `protocol_to_item_templates` /
+  `realize_protocol_to_items` bridges, plus `scale_type_to_task_type`
+  as the single canonical mapping from `ScaleType` to `TaskType`.
+- `bead.active_learning.models.registry` exposes
+  `MODEL_CLASSES` / `CONFIG_CLASSES` and
+  `model_class_for_task_type` / `config_class_for_task_type` /
+  `model_class_for_encoding` / `config_class_for_encoding` as the
+  single canonical task-type → model-class / config-class registry.
+  `bead.cli.models` and `bead.cli.training` consume the registry
+  directly, replacing two parallel string-keyed dicts and a dynamic
+  `_import_class` helper.
+- `bead.deployment.protocol_trials.protocol_to_jspsych_trials` is the
+  canonical end-to-end bridge from an `AnnotationProtocol` and a
+  sequence of `ProtocolContext` records to a flat list of jsPsych
+  trial dicts.
+- `bead.data_collection.jatos_results_to_annotation_records` converts
+  raw JATOS results into `AnnotationRecord` instances, the input
+  shape consumed by `annotator_reliability` and
+  `InterAnnotatorMetrics`.
+- `bead protocol` CLI subcommand: `bead protocol validate`,
+  `bead protocol realize`, `bead protocol items` drive the
+  configured protocol from the shell.
+
+### Changed
+
+- `LMRealization` accepts a `ModelOutputCache` (the bead-wide
+  content-addressable cache) via its required `cache` keyword and a
+  required `model_name` keyword for cache-key isolation. The internal
+  FIFO dict and the `cache` / `max_cache_size` / `clear_cache` /
+  `cache_size` parameters and methods are removed; the
+  `ModelOutputCache` is the single canonical caching surface.
+- `bead.cli.models` no longer maintains `TASK_TYPE_MODELS` /
+  `TASK_TYPE_CONFIGS` string-path dicts or the `_import_class`
+  helper; they are replaced by direct calls into
+  `bead.active_learning.models.registry`. `bead.cli.training` follows
+  the same pattern.
+- `bead.deployment.jspsych.trials._parse_prompt_references`,
+  `_SpanReference`, `_SPAN_REF_PATTERN`, and the duplicated
+  `_SPAN_REF_PATTERN` in `bead.items.span_labeling` are removed in
+  favor of `bead.labels.parse_label_refs` / `LabelRef`.
+
 #### `bead.protocol`: annotation protocol primitives
 
 A new top-level package providing a type-theoretic stack for defining

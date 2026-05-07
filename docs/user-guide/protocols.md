@@ -193,9 +193,12 @@ contextual = ContextualTemplateRealization(
 ```
 
 `LMRealization` paraphrases the canonical prompt via a language-model
-client. Always pair it with a drift guard.
+client. Always pair it with a drift guard, and pass a
+`bead.items.cache.ModelOutputCache` so realizations participate in
+bead's single canonical caching surface:
 
 ```python
+from bead.items.cache import ModelOutputCache
 from bead.protocol import LMClient, LMRealization
 
 class StubClient:
@@ -205,14 +208,25 @@ class StubClient:
         return "Did the event reach an endpoint?"
 
 assert isinstance(StubClient(), LMClient)
-lm = LMRealization(StubClient(), temperature=0.3, max_tokens=200)
+cache = ModelOutputCache(backend="memory")
+lm = LMRealization(
+    StubClient(),
+    model_name="stub-paraphraser",
+    cache=cache,
+    temperature=0.3,
+    max_tokens=200,
+)
 ```
 
 `LMClient` is a `typing.Protocol`: any object with a `complete(prompt,
-*, temperature, max_tokens) -> str` method conforms. `LMRealization`
-caches realizations by full prompt (FIFO eviction at `max_cache_size`)
-and raises `RuntimeError` on backend failures or empty responses, so
-a misbehaving LM cannot silently pollute the cache with whitespace.
+*, temperature, max_tokens) -> str` method conforms. Cache entries
+key off `(model_name, "lm_completion", prompt=full_prompt)`; passing
+the same `ModelOutputCache` to multiple `LMRealization`s with
+different `model_name` values keeps their entries isolated. Without a
+cache (`cache=None`), every `realize()` call hits the backend.
+`LMRealization.realize` raises `RuntimeError` on backend failures or
+empty / whitespace-only responses, so a misbehaving LM cannot silently
+pollute the cache.
 
 ## Drift validation
 
@@ -338,9 +352,196 @@ encoding.label_to_index("yes")
 encoding.index_to_label(0)
 ```
 
-The encoding does not pick a likelihood family; downstream modeling
-code (for example `bead.active_learning.models`) selects the
-appropriate model class based on `ScaleType`.
+`bead.active_learning.models` registers the canonical
+`ScaleType` → model-class mapping. To pick the active-learning model
+class for an encoding:
+
+```python
+from bead.active_learning.models import (
+    config_class_for_encoding,
+    model_class_for_encoding,
+)
+
+ModelClass = model_class_for_encoding(encoding)   # e.g. BinaryModel
+ConfigClass = config_class_for_encoding(encoding)  # e.g. BinaryModelConfig
+model = ModelClass(ConfigClass(model_name="bert-base-uncased"))
+```
+
+The same registry (`MODEL_CLASSES` / `CONFIG_CLASSES`) drives the
+`bead models train-model` and `bead training` CLI commands, so there
+is exactly one mapping from task type to model class across the
+codebase.
+
+## Bridging to item construction
+
+`bead.protocol.items` is the single canonical bridge from a realized
+question to a fully-populated `bead.items.Item`:
+
+```python
+from bead.protocol import (
+    family_to_item_template,
+    realization_to_item,
+    realize_protocol_to_items,
+)
+
+# Per-family templates (one per anchor):
+template = family_to_item_template(
+    family_change, judgment_type="acceptability",
+)
+
+# Per-context realization → Item:
+realization = family_change.realize(ctx)
+item = realization_to_item(realization, item_template=template)
+
+# Whole-protocol convenience:
+pairs = realize_protocol_to_items(
+    protocol, ctx, judgment_type="acceptability",
+)
+for realization, item in pairs:
+    ...  # downstream item processing
+```
+
+`scale_type_to_task_type` is the canonical translation used here and
+in the active-learning registry. There is no other mapping: every
+protocol family produces exactly one `ItemTemplate`.
+
+## Bridging to deployment
+
+`bead.deployment.protocol_trials.protocol_to_jspsych_trials` is the
+single canonical bridge from a configured protocol and a sequence of
+contexts to a flat list of jsPsych trial dicts ready for batch
+deployment:
+
+```python
+from bead.deployment.protocol_trials import protocol_to_jspsych_trials
+
+trials = protocol_to_jspsych_trials(
+    protocol,
+    contexts,
+    experiment_config=experiment_config,
+    judgment_type="acceptability",
+    rating_config=rating_config,    # for ordinal scales
+    choice_config=choice_config,    # for binary / categorical
+)
+```
+
+Each context is realized through every applicable family; each
+resulting realization is packaged as an `Item`, bound to its
+family's `ItemTemplate`, and fed through
+`bead.deployment.jspsych.trials.create_trial`. Trials are returned
+in `(context_order, family_order)` with consecutive `trial_number`
+fields.
+
+## Bridging back from JATOS
+
+After deployment, `bead.data_collection.jatos_results_to_annotation_records`
+is the single canonical conversion from raw JATOS results to
+`bead.evaluation.AnnotationRecord` instances:
+
+```python
+from bead.data_collection import (
+    JATOSDataCollector,
+    jatos_results_to_annotation_records,
+)
+from bead.evaluation import annotator_reliability
+
+results = JATOSDataCollector(...).download_results(Path("results.jsonl"))
+records = jatos_results_to_annotation_records(results)
+profiles = annotator_reliability(records)
+```
+
+The bridge looks up the annotator id in `urlQueryParameters`
+(`"PROLIFIC_PID"` by default; configurable), then walks each result's
+trial array picking the trials with `item_id` and `template_name`
+fields populated by the jsPsych deployment layer. Trials missing
+those fields (instructions, consent, demographics) are skipped.
+Numeric responses are stringified so the resulting
+`response_label` matches the encoding's labels for the corresponding
+family.
+
+## Configuration-driven workflow
+
+`bead.config.protocol.ProtocolConfig` is the single canonical
+declarative form of a protocol. It plugs into `BeadConfig` as the
+`protocol` section, and a complete protocol is materialized via
+`ProtocolConfig.build()`:
+
+```yaml
+# bead.yaml
+protocol:
+  name: aspect-protocol
+  drift:
+    min_length: 15
+    require_question_mark: true
+  lm_model_name: gpt-4o-mini
+  lm_temperature: 0.3
+  families:
+    - anchor:
+        name: change
+        target_property: dynamicity
+        canonical_prompt: "Is anything changing in [[situation]] over time?"
+        options: ["no", "yes"]
+        is_ordered: false
+        required_span_labels: [situation]
+      realization_kind: contextual
+      variants:
+        - template: "Is [[situation]] something that is changing?"
+          condition_name: always
+          priority: 0
+    - anchor:
+        name: completion
+        target_property: telicity
+        canonical_prompt: "Does [[situation]] reach a definite endpoint?"
+        options: ["definitely no", "probably no", "unsure",
+                  "probably yes", "definitely yes"]
+        is_ordered: true
+        semantic_pole_low: "definitely no"
+        semantic_pole_high: "definitely yes"
+        required_span_labels: [situation]
+      realization_kind: lm
+      condition_name: always
+      depends_on: [change]
+```
+
+```python
+from bead.config import load_config
+
+config = load_config("bead.yaml")
+protocol = config.protocol.build(
+    lm_client=my_lm_client,
+    cache=ModelOutputCache(backend="filesystem"),
+)
+```
+
+Predicates (`condition_name`) are looked up by name from the registry
+documented above. Every realization strategy (`template`,
+`contextual`, `lm`) and drift validator
+(`StructuralDriftValidator` always on; `EmbeddingDriftValidator` and
+`PerplexityDriftValidator` opt-in via `drift.enable_embedding` and
+`drift.enable_perplexity`) is reachable from configuration without
+writing Python.
+
+## CLI
+
+The `bead protocol` subcommand drives the configuration-loaded
+protocol from the shell:
+
+```bash
+# Validate the protocol config and report each family's scale + deps
+bead protocol validate
+
+# Realize prompts for every context in contexts.jsonl
+bead protocol realize contexts.jsonl realizations.jsonl
+
+# Realize and emit fully-populated Items (skip the realization step)
+bead protocol realize contexts.jsonl items.jsonl --emit-items
+
+# Emit per-family ItemTemplates
+bead protocol items templates.jsonl --judgment-type acceptability
+```
+
+Every CLI command reads the same `BeadConfig` as the Python API, so
+configuration is the single source of truth.
 
 ## Diagnostics
 

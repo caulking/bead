@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 
+from bead.items.cache import ModelOutputCache
 from bead.protocol.anchor import ResponseSpace, SemanticAnchor
 from bead.protocol.context import ProtocolContext
 from bead.protocol.realization import (
@@ -118,48 +119,44 @@ class _StubLMClient:
         return self.response
 
 
+def _memory_cache() -> ModelOutputCache:
+    """Return an in-memory ModelOutputCache for use in tests."""
+    return ModelOutputCache(backend="memory")
+
+
 class TestLMRealization:
     """Tests for :class:`LMRealization`."""
 
     def test_realize_appends_question_mark(self) -> None:
         client = _StubLMClient("What does the situation do")
-        lm = LMRealization(client)
+        lm = LMRealization(client, model_name="stub")
         prompt = lm.realize(_build_anchor(), ProtocolContext())
         assert prompt.endswith("?")
 
     def test_realize_strips_quotes_and_whitespace(self) -> None:
         client = _StubLMClient('  "Did the event end?"  ')
-        lm = LMRealization(client)
+        lm = LMRealization(client, model_name="stub")
         prompt = lm.realize(_build_anchor(), ProtocolContext())
         assert prompt == "Did the event end?"
 
     def test_caching(self) -> None:
         client = _StubLMClient("Did it end?")
-        lm = LMRealization(client, cache=True)
+        lm = LMRealization(client, model_name="stub", cache=_memory_cache())
         anchor = _build_anchor()
         ctx = ProtocolContext(sentence="Mary ran.")
         out1 = lm.realize(anchor, ctx)
         out2 = lm.realize(anchor, ctx)
         assert out1 == out2
         assert len(client.calls) == 1
-        assert lm.cache_size == 1
 
     def test_caching_disabled(self) -> None:
         client = _StubLMClient("Did it end?")
-        lm = LMRealization(client, cache=False)
+        lm = LMRealization(client, model_name="stub")
         anchor = _build_anchor()
         ctx = ProtocolContext()
         lm.realize(anchor, ctx)
         lm.realize(anchor, ctx)
         assert len(client.calls) == 2
-
-    def test_clear_cache(self) -> None:
-        client = _StubLMClient("Did it end?")
-        lm = LMRealization(client)
-        lm.realize(_build_anchor(), ProtocolContext())
-        assert lm.cache_size == 1
-        lm.clear_cache()
-        assert lm.cache_size == 0
 
     def test_lm_failure_wraps_runtime_error(self) -> None:
         class FailingClient:
@@ -173,43 +170,42 @@ class TestLMRealization:
                 del prompt, temperature, max_tokens
                 raise ConnectionError("network down")
 
-        lm = LMRealization(FailingClient())
+        lm = LMRealization(FailingClient(), model_name="stub")
         with pytest.raises(RuntimeError, match="LM realization failed"):
             lm.realize(_build_anchor(), ProtocolContext())
 
-    def test_invalid_cache_size_raises(self) -> None:
-        with pytest.raises(ValueError, match="positive"):
-            LMRealization(_StubLMClient("x"), max_cache_size=0)
-
     def test_empty_response_raises(self) -> None:
         client = _StubLMClient("   ")
-        lm = LMRealization(client)
+        lm = LMRealization(client, model_name="stub")
         with pytest.raises(RuntimeError, match="empty response"):
             lm.realize(_build_anchor(), ProtocolContext())
 
     def test_quoted_empty_response_raises(self) -> None:
         client = _StubLMClient('  ""  ')
-        lm = LMRealization(client)
+        lm = LMRealization(client, model_name="stub")
         with pytest.raises(RuntimeError, match="empty response"):
             lm.realize(_build_anchor(), ProtocolContext())
 
-    def test_cache_eviction_at_capacity(self) -> None:
-        client = _StubLMClient("Did it end?")
-        lm = LMRealization(client, cache=True, max_cache_size=2)
-        ctx_a = ProtocolContext(sentence="A")
-        ctx_b = ProtocolContext(sentence="B")
-        ctx_c = ProtocolContext(sentence="C")
-        anchor = _build_anchor()
-        lm.realize(anchor, ctx_a)
-        lm.realize(anchor, ctx_b)
-        lm.realize(anchor, ctx_c)
-        assert lm.cache_size == 2
-
     def test_calls_pass_kwargs(self) -> None:
         client = _StubLMClient("Did it end?")
-        lm = LMRealization(client, temperature=0.5, max_tokens=128)
+        lm = LMRealization(
+            client, model_name="stub", temperature=0.5, max_tokens=128
+        )
         lm.realize(_build_anchor(), ProtocolContext())
         assert len(client.calls) == 1
         _, temperature, max_tokens = client.calls[0]
         assert temperature == pytest.approx(0.5)
         assert max_tokens == 128
+
+    def test_cache_isolated_by_model_name(self) -> None:
+        """Two realizations sharing a cache but different model_names
+        do not collide."""
+        cache = _memory_cache()
+        client_a = _StubLMClient("Answer A?")
+        client_b = _StubLMClient("Answer B?")
+        lm_a = LMRealization(client_a, model_name="model-a", cache=cache)
+        lm_b = LMRealization(client_b, model_name="model-b", cache=cache)
+        anchor = _build_anchor()
+        ctx = ProtocolContext()
+        assert lm_a.realize(anchor, ctx) == "Answer A?"
+        assert lm_b.realize(anchor, ctx) == "Answer B?"

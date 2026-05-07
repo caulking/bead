@@ -54,3 +54,14 @@ annotation pipeline.
     options:
       show_root_heading: true
       show_source: false
+
+## Item-Layer Bridge
+
+Single canonical bridge from a realized question to a fully-populated
+:class:`~bead.items.item.Item` and from a configured protocol to the
+per-family :class:`~bead.items.item_template.ItemTemplate` collection.
+
+::: bead.protocol.items
+    options:
+      show_root_heading: true
+      show_source: false
