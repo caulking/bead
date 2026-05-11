@@ -1,9 +1,9 @@
 # bead
 
 [![CI](https://github.com/FACTSlab/bead/actions/workflows/ci.yml/badge.svg)](https://github.com/FACTSlab/bead/actions/workflows/ci.yml)
-[![Python 3.13](https://img.shields.io/badge/python-3.13-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.14](https://img.shields.io/badge/python-3.14-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Documentation](https://img.shields.io/badge/docs-readthedocs-blue.svg)](https://bead.readthedocs.io)
+[![Documentation](https://img.shields.io/badge/docs-readthedocs-blue.svg)](https://factslab.io/bead/)
 
 A Python framework for constructing, deploying, and analyzing large-scale linguistic judgment experiments with active learning.
 
@@ -108,12 +108,12 @@ bead training run           # Train with active learning
 
 ## Documentation
 
-Full documentation: [bead.readthedocs.io](https://bead.readthedocs.io)
+Full documentation: [bead.readthedocs.io](https://factslab.io/bead/)
 
-- [Installation Guide](https://bead.readthedocs.io/installation/)
-- [User Guide](https://bead.readthedocs.io/user-guide/)
-- [API Reference](https://bead.readthedocs.io/api/)
-- [Gallery Examples](https://bead.readthedocs.io/examples/)
+- [Installation Guide](https://factslab.io/bead/installation/)
+- [User Guide](https://factslab.io/bead/user-guide/)
+- [API Reference](https://factslab.io/bead/api/)
+- [Gallery Examples](https://factslab.io/bead/examples/)
 
 ## Contributing
 
