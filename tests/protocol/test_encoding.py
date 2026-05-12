@@ -88,9 +88,7 @@ class TestResponseEncoding:
 
     def test_encode_response_space_scale_type_arg_overrides(self) -> None:
         rs = ResponseSpace(options=("a", "b"), is_ordered=False)
-        enc = encode_response_space(
-            "x", rs, scale_type=ScaleType.FORCED_CHOICE
-        )
+        enc = encode_response_space("x", rs, scale_type=ScaleType.FORCED_CHOICE)
         assert enc.is_forced_choice
 
     def test_scale_predicates(self) -> None:

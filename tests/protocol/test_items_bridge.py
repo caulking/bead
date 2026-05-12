@@ -36,10 +36,7 @@ class TestScaleTypeToTaskType:
         assert scale_type_to_task_type(ScaleType.NOMINAL) == "categorical"
 
     def test_forced_choice_maps(self) -> None:
-        assert (
-            scale_type_to_task_type(ScaleType.FORCED_CHOICE)
-            == "forced_choice"
-        )
+        assert scale_type_to_task_type(ScaleType.FORCED_CHOICE) == "forced_choice"
 
 
 def _build_forced_choice_anchor() -> SemanticAnchor:
@@ -61,9 +58,7 @@ class TestForcedChoiceFamilyTemplate:
 
     def test_forced_choice_template(self) -> None:
         family = QuestionFamily(anchor=_build_forced_choice_anchor())
-        template = family_to_item_template(
-            family, judgment_type="acceptability"
-        )
+        template = family_to_item_template(family, judgment_type="acceptability")
         assert template.task_type == "forced_choice"
         # forced-choice templates carry no per-template options;
         # the per-item alternatives live on each Item.
@@ -73,9 +68,7 @@ class TestForcedChoiceFamilyTemplate:
 
     def test_model_class_for_forced_choice_encoding(self) -> None:
         anchor = _build_forced_choice_anchor()
-        encoding = encode_response_space(
-            anchor.name, anchor.response_space
-        )
+        encoding = encode_response_space(anchor.name, anchor.response_space)
         assert model_class_for_encoding(encoding) is ForcedChoiceModel
 
 
