@@ -29,7 +29,7 @@ standalone distribution without changes.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass, field
@@ -84,7 +84,7 @@ def active_root() -> dict[str, ComposeValue] | None:
 @contextmanager
 def _activate_root(
     root: dict[str, ComposeValue],
-) -> Iterator[None]:
+) -> Generator[None]:
     token = _ACTIVE_ROOT.set(root)
     try:
         yield
